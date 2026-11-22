@@ -24,6 +24,8 @@ export type ToastFace = {
   type: string;
   /** Work still going, or pinned in view: its updates are ticks. */
   quiet: boolean;
+  /** Pinned in view (`toast-pinned`): it holds above the dock by itself. */
+  pinned: boolean;
   /** The words it shows. */
   text: string;
 };
@@ -55,9 +57,11 @@ function hasClass(toast: ToastT, name: string): boolean {
 export function faceOf(toast: ToastT, bare = "default"): ToastFace {
   const title = textOf(toast.title);
   const description = textOf(toast.description);
+  const pinned = hasClass(toast, PINNED_CLASS);
   return {
     type: toast.type ?? bare,
-    quiet: toast.type === "loading" || hasClass(toast, PROGRESS_CLASS) || hasClass(toast, PINNED_CLASS),
+    quiet: toast.type === "loading" || hasClass(toast, PROGRESS_CLASS) || pinned,
+    pinned,
     text: description ? `${title}\n${description}` : title,
   };
 }

@@ -23,6 +23,8 @@ export type ToastFace = {
     type: string;
     /** Work still going, or pinned in view: its updates are ticks. */
     quiet: boolean;
+    /** Pinned in view (`toast-pinned`): it holds above the dock by itself. */
+    pinned: boolean;
     /** The words it shows. */
     text: string;
 };

@@ -28,9 +28,11 @@ function hasClass(toast, name) {
 export function faceOf(toast, bare = "default") {
     const title = textOf(toast.title);
     const description = textOf(toast.description);
+    const pinned = hasClass(toast, PINNED_CLASS);
     return {
         type: toast.type ?? bare,
-        quiet: toast.type === "loading" || hasClass(toast, PROGRESS_CLASS) || hasClass(toast, PINNED_CLASS),
+        quiet: toast.type === "loading" || hasClass(toast, PROGRESS_CLASS) || pinned,
+        pinned,
         text: description ? `${title}\n${description}` : title,
     };
 }

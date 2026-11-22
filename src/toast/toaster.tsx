@@ -138,6 +138,9 @@ const GROUNDED: Flight = { phase: null, again: false };
  * and whenever a live toast is updated in place in a way worth telling
  * (toast-update.ts): a change of kind, or of words.
  *
+ * A pinned toast's arrival does not start it: that toast holds above the
+ * dock, or out from the desktop's edge, for as long as it is pinned.
+ *
  * It runs only while `active`. The choreography is how a toast gets in
  * behind the pill, so on the phone it runs while the stack is tucked: with
  * the stack fanned out there is nothing to dive behind, and an arrival
@@ -189,8 +192,12 @@ function useAnnouncePhase(
       const now = faceOf(t, bareKind);
       const was = seen.current.get(id);
       faces.set(id, now);
-      if (!was) arrived.push(t);
-      else if (announcesUpdate(was, now)) changed.push(t);
+      // A pinned toast holds in view by itself (toast.css, PINNED), so its
+      // arrival is no announce: the clock would hide every waiting card for
+      // a hold the pinned toast does not need.
+      if (!was) {
+        if (!now.pinned) arrived.push(t);
+      } else if (announcesUpdate(was, now)) changed.push(t);
     }
     seen.current = faces;
     if (!active) return;
