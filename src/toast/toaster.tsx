@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 import { Toaster as SonnerToaster, useSonner } from "sonner";
 import type { ToastT } from "sonner";
@@ -9,7 +9,12 @@ import {
   setToastsExpanded,
   useToastsExpanded,
 } from "./toast-stack.js";
-import { refreshToastDock, useToastDockState, type ToastDock } from "./toast-dock.js";
+import {
+  measureToastCover,
+  refreshToastDock,
+  useToastDockState,
+  type ToastDock,
+} from "./toast-dock.js";
 import { setPhoneMaxWidth, usePhoneLayout } from "./use-phone-layout.js";
 
 // How long a freshly-arrived mobile toast stays popped above the card
@@ -115,13 +120,18 @@ function useAnnouncePhase(
  * is still above it would otherwise drop the toast to the pill mid-flight; the
  * toast finishes over the line it started on, and the stack is behind the
  * pill when the phases end.
+ *
+ * `measured` is the cover `<Toaster cover>` found as the toast arrived. It
+ * lasts for that toast's announce and dive and no longer: the stack then
+ * waits behind the pill, which the cover itself hides.
  */
-function useHeldDock(phase: Phase, phone: boolean): ToastDock | null {
+function useHeldDock(phase: Phase, phone: boolean, measured: ToastDock | null): ToastDock | null {
   const live = useToastDockState();
   const held = useRef<ToastDock | null>(null);
   if (live) held.current = live;
   else if (phase === null) held.current = null;
-  return phone ? (live ?? held.current) : null;
+  if (!phone) return null;
+  return live ?? held.current ?? (phase !== null ? measured : null);
 }
 
 /**
@@ -262,6 +272,22 @@ export type ToasterProps = {
    * `<ToastBand>` follows the same width without being told.
    */
   phoneMaxWidth?: number;
+  /**
+   * Extra classes for Sonner's list, beside the kit's own. The hook for a
+   * rule only this app has, keyed on the kit's phase classes
+   * (`toast-announcing`, `toast-slotting`), so the app never restates the
+   * kit's clock to know when a toast is announcing.
+   */
+  className?: string;
+  /**
+   * A selector for the surfaces that cover the bottom bar on a phone: the
+   * app's sheets, dialogs and viewers. As each toast arrives the kit looks
+   * for one on screen and, finding it, announces the toast above its top
+   * edge and dives it behind (see `useToastDock`, which does the same for a
+   * surface that registers itself). Name every full-screen overlay here, or
+   * its toasts announce under its scrim.
+   */
+  cover?: string;
 };
 
 /**
@@ -295,7 +321,7 @@ export type ToasterProps = {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export function Toaster({ gateOpen = true, phoneMaxWidth }: ToasterProps) {
+export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover }: ToasterProps) {
   // The width is shared, so the band and the app's own `usePhoneLayout`
   // switch at the same pixel as the toaster.
   useEffect(() => {
@@ -307,8 +333,15 @@ export function Toaster({ gateOpen = true, phoneMaxWidth }: ToasterProps) {
   const tucked = !isMobile;
   const expanded = useToastsExpanded();
   const { toasts } = useSonner();
-  const phase = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold, refreshToastDock);
-  const dock = useHeldDock(phase, isMobile);
+  // Where a toast announces is measured as it arrives: the registered docks
+  // again, and the app's `cover` selector if it named one.
+  const [measured, setMeasured] = useState<ToastDock | null>(null);
+  const onAnnounce = useCallback(() => {
+    refreshToastDock();
+    setMeasured(cover && isMobile ? measureToastCover(cover) : null);
+  }, [cover, isMobile]);
+  const phase = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold, onAnnounce);
+  const dock = useHeldDock(phase, isMobile, measured);
 
   // Mirror the live toast count into the shared store. This Toaster never
   // unmounts (it's at the layout root), so the count is always authoritative.
@@ -364,6 +397,7 @@ export function Toaster({ gateOpen = true, phoneMaxWidth }: ToasterProps) {
       // on the bottom edge where there is no room above it.
       dock && "toast-over",
       dock && dock.line === 0 && "toast-over-edge",
+      appClassName,
     ]
       .filter(Boolean)
       .join(" ") || undefined;

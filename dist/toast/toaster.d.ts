@@ -14,6 +14,22 @@ export type ToasterProps = {
      * `<ToastBand>` follows the same width without being told.
      */
     phoneMaxWidth?: number;
+    /**
+     * Extra classes for Sonner's list, beside the kit's own. The hook for a
+     * rule only this app has, keyed on the kit's phase classes
+     * (`toast-announcing`, `toast-slotting`), so the app never restates the
+     * kit's clock to know when a toast is announcing.
+     */
+    className?: string;
+    /**
+     * A selector for the surfaces that cover the bottom bar on a phone: the
+     * app's sheets, dialogs and viewers. As each toast arrives the kit looks
+     * for one on screen and, finding it, announces the toast above its top
+     * edge and dives it behind (see `useToastDock`, which does the same for a
+     * surface that registers itself). Name every full-screen overlay here, or
+     * its toasts announce under its scrim.
+     */
+    cover?: string;
 };
 /**
  * The family's toaster. Mount it once at the layout root and never unmount
@@ -46,5 +62,5 @@ export type ToasterProps = {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export declare function Toaster({ gateOpen, phoneMaxWidth }: ToasterProps): import("react").JSX.Element;
+export declare function Toaster({ gateOpen, phoneMaxWidth, className: appClassName, cover }: ToasterProps): import("react").JSX.Element;
 //# sourceMappingURL=toaster.d.ts.map

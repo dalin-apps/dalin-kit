@@ -130,6 +130,25 @@ export function refreshToastDock(): void {
   apply();
 }
 
+/**
+ * The cover named by a selector, measured now: the highest top edge among the
+ * matching surfaces that are on screen, or null with none up. This is what
+ * `<Toaster cover>` reads as each toast arrives, for an app that would rather
+ * name its sheets and dialogs once than register each as a dock. A copy still
+ * fading out (`data-dl-leaving`, the kit's close fade) covers nothing.
+ */
+export function measureToastCover(selector: string): ToastDock | null {
+  if (typeof document === "undefined") return null;
+  let top = Number.POSITIVE_INFINITY;
+  for (const el of document.querySelectorAll(selector)) {
+    if (el.closest("[data-dl-leaving]")) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.height > 0) top = Math.min(top, rect.top);
+  }
+  if (top === Number.POSITIVE_INFINITY) return null;
+  return { kind: "cover", line: dockLine(window.innerHeight - top, window.innerHeight, barHeight()) };
+}
+
 /** The dock the toaster draws now, or null while it is the pill. */
 export function readToastDock(): ToastDock | null {
   return current;

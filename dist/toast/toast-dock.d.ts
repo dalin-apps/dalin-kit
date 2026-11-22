@@ -52,6 +52,14 @@ export type ToastDockOptions = {
 export declare function dockLine(edgeFromBottom: number, viewportHeight: number, barH: number): number;
 /** Measures the winning dock again. The `<Toaster>` calls it as each toast arrives. */
 export declare function refreshToastDock(): void;
+/**
+ * The cover named by a selector, measured now: the highest top edge among the
+ * matching surfaces that are on screen, or null with none up. This is what
+ * `<Toaster cover>` reads as each toast arrives, for an app that would rather
+ * name its sheets and dialogs once than register each as a dock. A copy still
+ * fading out (`data-dl-leaving`, the kit's close fade) covers nothing.
+ */
+export declare function measureToastCover(selector: string): ToastDock | null;
 /** The dock the toaster draws now, or null while it is the pill. */
 export declare function readToastDock(): ToastDock | null;
 /** The dock the toaster draws now, or null while it is the pill. */

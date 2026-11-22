@@ -1,9 +1,9 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Toaster as SonnerToaster, useSonner } from "sonner";
 import { setToastCount, setToastsExpanded, useToastsExpanded, } from "./toast-stack.js";
-import { refreshToastDock, useToastDockState } from "./toast-dock.js";
+import { measureToastCover, refreshToastDock, useToastDockState, } from "./toast-dock.js";
 import { setPhoneMaxWidth, usePhoneLayout } from "./use-phone-layout.js";
 // How long a freshly-arrived mobile toast stays popped above the card
 // (bubble-in + hold) before it starts slotting into the stack.
@@ -91,15 +91,21 @@ function useAnnouncePhase(toasts, holdFor, onAnnounce) {
  * is still above it would otherwise drop the toast to the pill mid-flight; the
  * toast finishes over the line it started on, and the stack is behind the
  * pill when the phases end.
+ *
+ * `measured` is the cover `<Toaster cover>` found as the toast arrived. It
+ * lasts for that toast's announce and dive and no longer: the stack then
+ * waits behind the pill, which the cover itself hides.
  */
-function useHeldDock(phase, phone) {
+function useHeldDock(phase, phone, measured) {
     const live = useToastDockState();
     const held = useRef(null);
     if (live)
         held.current = live;
     else if (phase === null)
         held.current = null;
-    return phone ? (live ?? held.current) : null;
+    if (!phone)
+        return null;
+    return live ?? held.current ?? (phase !== null ? measured : null);
 }
 /**
  * Sonner pauses every toast's dismiss timer while a pointer is down on the
@@ -262,7 +268,7 @@ function useNoHoverExpand(root, docked) {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export function Toaster({ gateOpen = true, phoneMaxWidth }) {
+export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover }) {
     // The width is shared, so the band and the app's own `usePhoneLayout`
     // switch at the same pixel as the toaster.
     useEffect(() => {
@@ -275,8 +281,15 @@ export function Toaster({ gateOpen = true, phoneMaxWidth }) {
     const tucked = !isMobile;
     const expanded = useToastsExpanded();
     const { toasts } = useSonner();
-    const phase = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold, refreshToastDock);
-    const dock = useHeldDock(phase, isMobile);
+    // Where a toast announces is measured as it arrives: the registered docks
+    // again, and the app's `cover` selector if it named one.
+    const [measured, setMeasured] = useState(null);
+    const onAnnounce = useCallback(() => {
+        refreshToastDock();
+        setMeasured(cover && isMobile ? measureToastCover(cover) : null);
+    }, [cover, isMobile]);
+    const phase = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold, onAnnounce);
+    const dock = useHeldDock(phase, isMobile, measured);
     // Mirror the live toast count into the shared store. This Toaster never
     // unmounts (it's at the layout root), so the count is always authoritative.
     // The toast band reads it from the store instead of its own `useSonner`,
@@ -328,6 +341,7 @@ export function Toaster({ gateOpen = true, phoneMaxWidth }) {
         // on the bottom edge where there is no room above it.
         dock && "toast-over",
         dock && dock.line === 0 && "toast-over-edge",
+        appClassName,
     ]
         .filter(Boolean)
         .join(" ") || undefined;

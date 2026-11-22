@@ -18,6 +18,7 @@ export {
 } from "./toast-stack.js";
 export {
   dockLine,
+  measureToastCover,
   readToastDock,
   refreshToastDock,
   registerToastDock,
