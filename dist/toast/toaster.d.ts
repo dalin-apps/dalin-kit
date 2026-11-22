@@ -90,7 +90,8 @@ export type ToasterProps = {
  * cards briefly hide, then after ~1s it dives down through the pill's exact
  * size and tucks in behind it as the others reappear. Two timed phases drive
  * the CSS: `toast-announcing` (pop + hold) then `toast-slotting` (the
- * card-shuffle into the stack).
+ * card-shuffle into the stack). With the stack fanned out there is nothing
+ * to dive behind: an arrival joins the fan, and the stack stays open.
  *
  * A toast updated in place announces again, the same way, when the update
  * changed its kind or its words (toast-update.ts): work that became its

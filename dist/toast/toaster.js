@@ -95,10 +95,19 @@ function desktopHold(arrived) {
 }
 /** The mark on the one card an update announces again (toast.css). */
 const AGAIN_ATTR = "data-again";
+/** No toast in flight. One object, so setting it twice is not a second render. */
+const GROUNDED = { phase: null, again: false };
 /**
  * The announce -> slot clock. It restarts whenever a new toast id appears,
  * and whenever a live toast is updated in place in a way worth telling
  * (toast-update.ts): a change of kind, or of words.
+ *
+ * It runs only while `active`. The choreography is how a toast gets in
+ * behind the pill, so on the phone it runs while the stack is tucked: with
+ * the stack fanned out there is nothing to dive behind, and an arrival
+ * simply joins the fan. Every toast is recorded either way, so one that
+ * landed in the fan is not announced later as if it were new. Fanning the
+ * stack out while a toast is in flight ends the flight.
  *
  * An arriving toast is always Sonner's front (newest) one, and the phone's
  * pill choreography and the desktop tuck (toast.css) key off the phase
@@ -109,12 +118,20 @@ const AGAIN_ATTR = "data-again";
  * is found (toast-tags.ts); an update whose card can't be found is not
  * announced, since announcing would pop the wrong toast.
  */
-function useAnnouncePhase(toasts, holdFor, onAnnounce, find, bareKind) {
-    const [phase, setPhase] = useState(null);
-    const [again, setAgain] = useState(false);
+function useAnnouncePhase(toasts, active, holdFor, onAnnounce, find, bareKind) {
+    const [flight, setFlight] = useState(GROUNDED);
     const seen = useRef(new Map());
     const marked = useRef(null);
     const timers = useRef([]);
+    // Crossing into or out of `active` ends whatever was in flight. This is
+    // state adjusted on a changed input, during render, and not an effect: an
+    // effect would paint one frame of the dive over the fan first.
+    const [wasActive, setWasActive] = useState(active);
+    if (wasActive !== active) {
+        setWasActive(active);
+        if (flight !== GROUNDED)
+            setFlight(GROUNDED);
+    }
     // A layout effect, so the first frame that shows an arriving toast is
     // already the announce. As a passive effect it ran after that frame was
     // painted, and a busy frame (the list re-rendering for the move that raised
@@ -134,6 +151,8 @@ function useAnnouncePhase(toasts, holdFor, onAnnounce, find, bareKind) {
                 changed.push(t);
         }
         seen.current = faces;
+        if (!active)
+            return;
         if (arrived.length === 0 && changed.length === 0)
             return;
         // An arrival is the front card and needs no mark. With none, the newest
@@ -146,29 +165,39 @@ function useAnnouncePhase(toasts, holdFor, onAnnounce, find, bareKind) {
         marked.current?.removeAttribute(AGAIN_ATTR);
         marked.current = card;
         card?.setAttribute(AGAIN_ATTR, "");
-        setAgain(card !== null);
+        const again = card !== null;
         // Before the phase class lands, so where the toast announces is measured
         // in the same commit that starts it.
         onAnnounce();
         // The hold is measured by what arrived or changed, not by what is
         // already stacked.
         const hold = holdFor(arrived.length > 0 ? arrived : changed);
-        setPhase("announce");
+        setFlight({ phase: "announce", again });
         timers.current = [
-            setTimeout(() => setPhase("slotting"), hold),
+            setTimeout(() => setFlight({ phase: "slotting", again }), hold),
             setTimeout(() => {
-                setPhase(null);
-                setAgain(false);
+                setFlight(GROUNDED);
                 marked.current?.removeAttribute(AGAIN_ATTR);
                 marked.current = null;
             }, hold + SLOT_MS),
         ];
-    }, [toasts, holdFor, onAnnounce, find, bareKind]);
+    }, [toasts, active, holdFor, onAnnounce, find, bareKind]);
+    // The clock's timers and the mark are side effects, so they are cleared
+    // here and not beside the reset above. That leaves one commit in which a
+    // timer that came due can still land; the masked return below covers it.
+    useLayoutEffect(() => {
+        if (active)
+            return;
+        timers.current.forEach(clearTimeout);
+        timers.current = [];
+        marked.current?.removeAttribute(AGAIN_ATTR);
+        marked.current = null;
+    }, [active]);
     useEffect(() => () => {
         timers.current.forEach(clearTimeout);
         marked.current?.removeAttribute(AGAIN_ATTR);
     }, []);
-    return { phase, again };
+    return active ? flight : GROUNDED;
 }
 /**
  * The dock the phone's toaster draws: the live one (toast-dock.ts), held for
@@ -370,7 +399,8 @@ function useTuckedTabStops(root, hidden) {
  * cards briefly hide, then after ~1s it dives down through the pill's exact
  * size and tucks in behind it as the others reappear. Two timed phases drive
  * the CSS: `toast-announcing` (pop + hold) then `toast-slotting` (the
- * card-shuffle into the stack).
+ * card-shuffle into the stack). With the stack fanned out there is nothing
+ * to dive behind: an arrival joins the fan, and the stack stays open.
  *
  * A toast updated in place announces again, the same way, when the update
  * changed its kind or its words (toast-update.ts): work that became its
@@ -420,7 +450,10 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         return () => setNamedToastCover(false);
     }, [coverUp]);
     const find = useToastTags(root, toasts);
-    const { phase, again } = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold, onAnnounce, find, defaultKind);
+    const { phase, again } = useAnnouncePhase(toasts, 
+    // The desktop column announces always. The phone announces only while
+    // its stack is tucked: a toast that arrives in a fanned stack joins it.
+    tucked || !expanded, tucked ? desktopHold : mobileHold, onAnnounce, find, defaultKind);
     // One object for as long as the default kind stands, so Sonner's cards
     // are not handed new class names on every render.
     const classNames = useMemo(() => (defaultKind ? { ...TOAST_CLASS_NAMES, default: bareClass(defaultKind) } : TOAST_CLASS_NAMES), [defaultKind]);
@@ -461,7 +494,7 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
     // Sonner's own hover-expand. `toast-stack-open` mirrors this to the DOM so
     // the CSS can keep the collapsed stack pointer-inert (killing the
     // hover-expand flicker) while letting the expanded toasts stay interactive.
-    const stackOpen = isMobile && expanded && !choreographing && !covered;
+    const stackOpen = isMobile && expanded && !covered;
     // Tucked behind the pill (or under a line), a phone toast is out of sight,
     // so its buttons leave the tab order too. Not during the announce, when the
     // arriving toast and its button are on screen. The desktop's tucked tabs

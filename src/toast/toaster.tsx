@@ -127,10 +127,23 @@ function desktopHold(arrived: ToastT[]): number {
 /** The mark on the one card an update announces again (toast.css). */
 const AGAIN_ATTR = "data-again";
 
+/** What the announce clock says: the phase, and whether it is about a marked card. */
+type Flight = { phase: Phase; again: boolean };
+
+/** No toast in flight. One object, so setting it twice is not a second render. */
+const GROUNDED: Flight = { phase: null, again: false };
+
 /**
  * The announce -> slot clock. It restarts whenever a new toast id appears,
  * and whenever a live toast is updated in place in a way worth telling
  * (toast-update.ts): a change of kind, or of words.
+ *
+ * It runs only while `active`. The choreography is how a toast gets in
+ * behind the pill, so on the phone it runs while the stack is tucked: with
+ * the stack fanned out there is nothing to dive behind, and an arrival
+ * simply joins the fan. Every toast is recorded either way, so one that
+ * landed in the fan is not announced later as if it were new. Fanning the
+ * stack out while a toast is in flight ends the flight.
  *
  * An arriving toast is always Sonner's front (newest) one, and the phone's
  * pill choreography and the desktop tuck (toast.css) key off the phase
@@ -143,16 +156,25 @@ const AGAIN_ATTR = "data-again";
  */
 function useAnnouncePhase(
   toasts: ToastT[],
+  active: boolean,
   holdFor: (arrived: ToastT[]) => number,
   onAnnounce: () => void,
   find: (id: string) => HTMLElement | null,
   bareKind: string | undefined,
-): { phase: Phase; again: boolean } {
-  const [phase, setPhase] = useState<Phase>(null);
-  const [again, setAgain] = useState(false);
+): Flight {
+  const [flight, setFlight] = useState<Flight>(GROUNDED);
   const seen = useRef<Map<string, ToastFace>>(new Map());
   const marked = useRef<HTMLElement | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Crossing into or out of `active` ends whatever was in flight. This is
+  // state adjusted on a changed input, during render, and not an effect: an
+  // effect would paint one frame of the dive over the fan first.
+  const [wasActive, setWasActive] = useState(active);
+  if (wasActive !== active) {
+    setWasActive(active);
+    if (flight !== GROUNDED) setFlight(GROUNDED);
+  }
 
   // A layout effect, so the first frame that shows an arriving toast is
   // already the announce. As a passive effect it ran after that frame was
@@ -171,6 +193,7 @@ function useAnnouncePhase(
       else if (announcesUpdate(was, now)) changed.push(t);
     }
     seen.current = faces;
+    if (!active) return;
     if (arrived.length === 0 && changed.length === 0) return;
 
     // An arrival is the front card and needs no mark. With none, the newest
@@ -183,24 +206,34 @@ function useAnnouncePhase(
     marked.current?.removeAttribute(AGAIN_ATTR);
     marked.current = card;
     card?.setAttribute(AGAIN_ATTR, "");
-    setAgain(card !== null);
+    const again = card !== null;
     // Before the phase class lands, so where the toast announces is measured
     // in the same commit that starts it.
     onAnnounce();
     // The hold is measured by what arrived or changed, not by what is
     // already stacked.
     const hold = holdFor(arrived.length > 0 ? arrived : changed);
-    setPhase("announce");
+    setFlight({ phase: "announce", again });
     timers.current = [
-      setTimeout(() => setPhase("slotting"), hold),
+      setTimeout(() => setFlight({ phase: "slotting", again }), hold),
       setTimeout(() => {
-        setPhase(null);
-        setAgain(false);
+        setFlight(GROUNDED);
         marked.current?.removeAttribute(AGAIN_ATTR);
         marked.current = null;
       }, hold + SLOT_MS),
     ];
-  }, [toasts, holdFor, onAnnounce, find, bareKind]);
+  }, [toasts, active, holdFor, onAnnounce, find, bareKind]);
+
+  // The clock's timers and the mark are side effects, so they are cleared
+  // here and not beside the reset above. That leaves one commit in which a
+  // timer that came due can still land; the masked return below covers it.
+  useLayoutEffect(() => {
+    if (active) return;
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    marked.current?.removeAttribute(AGAIN_ATTR);
+    marked.current = null;
+  }, [active]);
 
   useEffect(
     () => () => {
@@ -209,7 +242,7 @@ function useAnnouncePhase(
     },
     [],
   );
-  return { phase, again };
+  return active ? flight : GROUNDED;
 }
 
 /**
@@ -461,7 +494,8 @@ export type ToasterProps = {
  * cards briefly hide, then after ~1s it dives down through the pill's exact
  * size and tucks in behind it as the others reappear. Two timed phases drive
  * the CSS: `toast-announcing` (pop + hold) then `toast-slotting` (the
- * card-shuffle into the stack).
+ * card-shuffle into the stack). With the stack fanned out there is nothing
+ * to dive behind: an arrival joins the fan, and the stack stays open.
  *
  * A toast updated in place announces again, the same way, when the update
  * changed its kind or its words (toast-update.ts): work that became its
@@ -520,6 +554,9 @@ export function Toaster({
   const find = useToastTags(root, toasts);
   const { phase, again } = useAnnouncePhase(
     toasts,
+    // The desktop column announces always. The phone announces only while
+    // its stack is tucked: a toast that arrives in a fanned stack joins it.
+    tucked || !expanded,
     tucked ? desktopHold : mobileHold,
     onAnnounce,
     find,
@@ -571,7 +608,7 @@ export function Toaster({
   // Sonner's own hover-expand. `toast-stack-open` mirrors this to the DOM so
   // the CSS can keep the collapsed stack pointer-inert (killing the
   // hover-expand flicker) while letting the expanded toasts stay interactive.
-  const stackOpen = isMobile && expanded && !choreographing && !covered;
+  const stackOpen = isMobile && expanded && !covered;
   // Tucked behind the pill (or under a line), a phone toast is out of sight,
   // so its buttons leave the tab order too. Not during the announce, when the
   // arriving toast and its button are on screen. The desktop's tucked tabs
