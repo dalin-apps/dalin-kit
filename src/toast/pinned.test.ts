@@ -15,6 +15,9 @@ import { PINNED_TOAST, Toaster } from "./toaster.js";
 const css = readCss("toast");
 const PHONE = '[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)';
 const TUCK = '[data-sonner-toaster][data-y-position="bottom"].toast-tuck';
+/** The two halves of each announce rule: the front card, or the card marked to announce again. */
+const FRONT = ":where(:not(.toast-again))";
+const AGAIN = ":where(.toast-again)";
 
 /** The selector of the one rule that contains every needle. */
 function selectorWith(...needles: string[]): string {
@@ -115,10 +118,12 @@ describe("a pinned toast on the phone", () => {
 
   it.each([
     ["the collapsed slot", `${PHONE} [data-sonner-toast][data-expanded="false"]:not([data-removed="true"])`],
-    ["the announce", `${PHONE}.toast-announcing [data-sonner-toast][data-front="true"]:not([data-removed="true"])`],
-    ["the cards hidden behind an announce", `${PHONE}.toast-announcing [data-sonner-toast][data-front="false"]`],
-    ["the dive", `${PHONE}.toast-slotting [data-sonner-toast][data-front="true"]:not([data-removed="true"])`],
-    ["the cards hidden over a line", `${PHONE}.toast-over.toast-slotting [data-sonner-toast][data-front="false"]`],
+    ["the announce", `${PHONE}.toast-announcing${FRONT} [data-sonner-toast][data-front="true"]:not([data-removed="true"])`],
+    ["the announce of a card again", `${PHONE}.toast-announcing${AGAIN} [data-sonner-toast][data-again]:not([data-removed="true"])`],
+    ["the cards hidden behind an announce", `${PHONE}.toast-announcing${FRONT} [data-sonner-toast][data-front="false"]`],
+    ["the dive", `${PHONE}.toast-slotting${FRONT} [data-sonner-toast][data-front="true"]:not([data-removed="true"])`],
+    ["the cards hidden over a line", `${PHONE}.toast-over.toast-slotting${FRONT} [data-sonner-toast][data-front="false"]`],
+    ["the cards hidden over a line, again", `${PHONE}.toast-over.toast-slotting${AGAIN} [data-sonner-toast]:not([data-again])`],
   ])("outweighs %s", (_name, other) => {
     // Each of these is a rule in the sheet, so the test fails if one is renamed.
     expect(rulesWith(css, other).length).toBeGreaterThan(0);
@@ -128,7 +133,7 @@ describe("a pinned toast on the phone", () => {
   it("is left out of the rule that parks waiting cards under a line", () => {
     const [list, parked] = rulesWith(css, `${PHONE}.toast-over:not(.toast-announcing)`)[0]!;
     expect(parked).toContain("--y: translateY(calc(100% + 20px)) scale(0.95) !important");
-    expect(splitList(list)).toHaveLength(2);
+    expect(splitList(list)).toHaveLength(3);
     for (const selector of splitList(list)) expect(selector).toContain(".toast-pinned)");
   });
 

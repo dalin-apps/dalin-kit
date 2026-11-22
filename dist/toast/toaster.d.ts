@@ -59,6 +59,10 @@ export type ToasterProps = {
  * the CSS: `toast-announcing` (pop + hold) then `toast-slotting` (the
  * card-shuffle into the stack).
  *
+ * A toast updated in place announces again, the same way, when the update
+ * changed its kind or its words (toast-update.ts): work that became its
+ * result is told, and a progress tick is not.
+ *
  * The pill is the dock unless a surface says otherwise (`useToastDock`): over
  * a parked chip, a sheet or a dialog the toast announces above that surface's
  * line and then leaves, and the stack waits out of sight until the pill is

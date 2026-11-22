@@ -350,8 +350,11 @@
    the window. It sits a full bar height above the band, so it takes no tap
    the band was owed. Sonner's hover-expand is held off in <Toaster> so
    the press does not fan the stack. */
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing:where(:not(.toast-again))
   [data-sonner-toast][data-front="true"]
+  [data-button],
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing:where(.toast-again)
+  [data-sonner-toast][data-again]
   [data-button] {
   pointer-events: auto !important;
 }
@@ -407,18 +410,31 @@
    up on the pill (--notif-pop), and holds for ~1s (timing/class from
    <Toaster>). The arriving toast is always Sonner's front (newest) one:
    it keeps its content and bubbles in while the existing stacked cards
-   briefly hide. */
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing
-  [data-sonner-toast][data-front="true"]:not([data-removed="true"]) {
+   briefly hide.
+
+   AGAIN: a toast updated in place announces the same way, and it can be any
+   card in the stack. The <Toaster> marks that card `data-again` and puts
+   `toast-again` on the list, and every rule here that names the front card
+   has a twin that names the marked one. The pair never overlap: the first
+   selector is off while `toast-again` is on. Both classes sit in :where(),
+   so the twins weigh the same and the cascade around them does not move. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing:where(:not(.toast-again))
+  [data-sonner-toast][data-front="true"]:not([data-removed="true"]),
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing:where(.toast-again)
+  [data-sonner-toast][data-again]:not([data-removed="true"]) {
   --y: translateY(calc(var(--lift) * var(--notif-base))) !important;
   animation: notif-bubble-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing
-  [data-sonner-toast][data-front="true"]:not([data-removed="true"]) > * {
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing:where(:not(.toast-again))
+  [data-sonner-toast][data-front="true"]:not([data-removed="true"]) > *,
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing:where(.toast-again)
+  [data-sonner-toast][data-again]:not([data-removed="true"]) > * {
   opacity: 1 !important;
 }
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing
-  [data-sonner-toast][data-front="false"] {
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing:where(:not(.toast-again))
+  [data-sonner-toast][data-front="false"],
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing:where(.toast-again)
+  [data-sonner-toast]:not([data-again]) {
   opacity: 0 !important;
 }
 
@@ -427,12 +443,16 @@
    existing cards riffle back in, staggered behind it. Base positions are
    the collapsed slots; the keyframes just animate the journey there, ending
    exactly on those slots so nothing jumps when the class drops. */
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-slotting
-  [data-sonner-toast][data-front="true"]:not([data-removed="true"]) {
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-slotting:where(:not(.toast-again))
+  [data-sonner-toast][data-front="true"]:not([data-removed="true"]),
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-slotting:where(.toast-again)
+  [data-sonner-toast][data-again]:not([data-removed="true"]) {
   animation: notif-slot-in 480ms cubic-bezier(0.45, 0, 0.2, 1) both;
 }
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-slotting
-  [data-sonner-toast][data-front="false"]:not([data-removed="true"]) {
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-slotting:where(:not(.toast-again))
+  [data-sonner-toast][data-front="false"]:not([data-removed="true"]),
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-slotting:where(.toast-again)
+  [data-sonner-toast]:not([data-again]):not([data-removed="true"]) {
   animation: notif-shuffle-back 380ms ease both;
   animation-delay: calc(var(--toasts-before) * 55ms);
 }
@@ -482,20 +502,26 @@
    `data-expanded` and take the fan's own rule. */
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over:not(.toast-announcing)
   [data-sonner-toast][data-expanded="false"]:not([data-removed="true"], .toast-pinned),
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-announcing
-  [data-sonner-toast][data-expanded="false"][data-front="false"]:not([data-removed="true"], .toast-pinned) {
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-announcing:where(:not(.toast-again))
+  [data-sonner-toast][data-expanded="false"][data-front="false"]:not([data-removed="true"], .toast-pinned),
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-announcing:where(.toast-again)
+  [data-sonner-toast][data-expanded="false"]:not([data-again]):not([data-removed="true"], .toast-pinned) {
   --y: translateY(calc(100% + 20px)) scale(0.95) !important;
 }
 /* The exit: no fade. It runs 700ms against the pill's 480ms because it
    carries the whole card past the line instead of stopping on a slot that
    still peeks. */
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-slotting
-  [data-sonner-toast][data-front="true"]:not([data-removed="true"]) {
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-slotting:where(:not(.toast-again))
+  [data-sonner-toast][data-front="true"]:not([data-removed="true"]),
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-slotting:where(.toast-again)
+  [data-sonner-toast][data-again]:not([data-removed="true"]) {
   animation: notif-slot-under 700ms cubic-bezier(0.45, 0, 0.2, 1) both;
 }
 /* The older cards do not riffle back into view over the line. */
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-slotting
-  [data-sonner-toast][data-front="false"] {
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-slotting:where(:not(.toast-again))
+  [data-sonner-toast][data-front="false"],
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-slotting:where(.toast-again)
+  [data-sonner-toast]:not([data-again]) {
   opacity: 0 !important;
   animation: none !important;
 }
@@ -525,9 +551,13 @@
   pointer-events: auto !important;
 }
 /* A toast that arrives meanwhile announces one card higher and dives past
-   the pinned one. */
+   the pinned one. So does a toast behind the pinned one that is announced
+   again (AGAIN above). */
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone):not(.toast-stack-open):has(
     [data-sonner-toast].toast-pinned[data-front="false"]
+  ),
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone):not(.toast-stack-open):where(.toast-again):has(
+    [data-sonner-toast].toast-pinned:not([data-again])
   ) {
   --notif-base: calc(var(--notif-floor) + var(--dl-bar-h) + 10px);
 }
@@ -559,8 +589,10 @@
 /* Card-shuffle slot-in for the arriving toast: from the announce hold it
    dives, shedding its extra size (through scale 1: the pill's exact size,
    which is the "shrink to the nav, then tuck" read), tilts one way then the
-   other, overshoots slightly and settles square. End frame matches the
-   collapsed front slot (translateY(-peek) scale(0.95)) so there's no jump. */
+   other, overshoots slightly and settles square. The end frame is the card's
+   own collapsed slot (--slot, set by the COLLAPSED rule), so there's no jump
+   when the class drops: the front slot for an arrival, translateY(-peek)
+   scale(0.95), and its place further back for a card announced again. */
 @keyframes notif-slot-in {
   0% {
     transform: translateY(calc(var(--lift) * var(--notif-base)))
@@ -573,7 +605,8 @@
     transform: translateY(-11px) scale(0.94) rotate(4deg);
   }
   100% {
-    transform: translateY(calc(-1 * var(--notif-peek))) scale(0.95) rotate(0deg);
+    transform: translateY(calc(-1 * var(--notif-peek) * var(--slot, 1)))
+      scale(calc(1 - 0.05 * var(--slot, 1))) rotate(0deg);
   }
 }
 
@@ -647,7 +680,9 @@
    exactly at that edge and clips what passes it, so a toast shifted right
    slides under the edge. A toast slides out from under it, holds in the corner
    while `toast-announcing` is on, then tucks until only a `--tab` of its own
-   glass shows; older toasts are the tabs above it. Hovering a tab, or tabbing
+   glass shows; older toasts are the tabs above it. A toast updated in place
+   comes out again from its own place in the column (`toast-again`, AGAIN
+   above). Hovering a tab, or tabbing
    into the stack, pulls the whole column out (a click's focus doesn't, or the
    column stayed out after the pointer left). Sonner lays the stack out
    expanded the whole time (`expand`), so the column is its fanned layout and
@@ -749,8 +784,10 @@
 }
 [data-sonner-toaster][data-y-position="bottom"].toast-tuck:is(:hover, :has(:focus-visible))
   [data-sonner-toast][data-mounted="true"]:not([data-removed="true"]),
-[data-sonner-toaster][data-y-position="bottom"].toast-tuck.toast-announcing
-  [data-sonner-toast][data-front="true"]:not([data-removed="true"]) {
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck.toast-announcing:where(:not(.toast-again))
+  [data-sonner-toast][data-front="true"]:not([data-removed="true"]),
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck.toast-announcing:where(.toast-again)
+  [data-sonner-toast][data-again]:not([data-removed="true"]) {
   --y: translateY(calc(var(--lift) * var(--offset))) !important;
   transition-delay: 0s;
 }

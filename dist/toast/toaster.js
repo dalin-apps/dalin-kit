@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Toaster as SonnerToaster, useSonner } from "sonner";
 import { setToastCount, setToastsExpanded, useToastsExpanded, } from "./toast-stack.js";
 import { measureToastCover, refreshToastDock, useToastDockState, } from "./toast-dock.js";
+import { useToastTags } from "./toast-tags.js";
+import { PINNED_CLASS, announcesUpdate, faceOf } from "./toast-update.js";
 import { setPhoneMaxWidth, usePhoneLayout } from "./use-phone-layout.js";
 // How long a freshly-arrived mobile toast stays popped above the card
 // (bubble-in + hold) before it starts slotting into the stack.
@@ -51,7 +53,7 @@ const TOAST_CLASS_NAMES = {
  * Give it `duration: Infinity` and dismiss it yourself, or update it in place
  * without the class to let it go.
  */
-export const PINNED_TOAST = "toast-pinned";
+export const PINNED_TOAST = PINNED_CLASS;
 /** The phone's announce hold. A toast with a button holds as long as the
  *  desktop's does, because the announce is the only window its button can
  *  be pressed in (toast.css); once it tucks behind the pill the
@@ -65,35 +67,78 @@ function desktopHold(arrived) {
         ? DESKTOP_ATTENTION_MS
         : DESKTOP_ANNOUNCE_MS;
 }
+/** The mark on the one card an update announces again (toast.css). */
+const AGAIN_ATTR = "data-again";
 /**
- * The announce -> slot clock, restarted whenever a new toast id appears. The
- * arriving toast is always Sonner's front (newest) one; the phone's pill
- * choreography and the desktop tuck (toast.css) key off the phase classes
- * this returns.
+ * The announce -> slot clock. It restarts whenever a new toast id appears,
+ * and whenever a live toast is updated in place in a way worth telling
+ * (toast-update.ts): a change of kind, or of words.
+ *
+ * An arriving toast is always Sonner's front (newest) one, and the phone's
+ * pill choreography and the desktop tuck (toast.css) key off the phase
+ * classes this returns and that front card. An updated toast can sit anywhere
+ * in the stack, so when it is not the front one its card is marked
+ * `data-again` and `again` is true, which turns the stylesheet from the front
+ * card to the marked one for the length of the phases. `find` is how the card
+ * is found (toast-tags.ts); an update whose card can't be found is not
+ * announced, since announcing would pop the wrong toast.
  */
-function useAnnouncePhase(toasts, holdFor, onAnnounce) {
+function useAnnouncePhase(toasts, holdFor, onAnnounce, find) {
     const [phase, setPhase] = useState(null);
-    const seenIds = useRef(new Set());
+    const [again, setAgain] = useState(false);
+    const seen = useRef(new Map());
+    const marked = useRef(null);
     const timers = useRef([]);
     useEffect(() => {
-        const arrived = toasts.filter((t) => !seenIds.current.has(String(t.id)));
-        seenIds.current = new Set(toasts.map((t) => String(t.id)));
-        if (arrived.length === 0)
+        const faces = new Map();
+        const arrived = [];
+        const changed = [];
+        for (const t of toasts) {
+            const id = String(t.id);
+            const now = faceOf(t);
+            const was = seen.current.get(id);
+            faces.set(id, now);
+            if (!was)
+                arrived.push(t);
+            else if (announcesUpdate(was, now))
+                changed.push(t);
+        }
+        seen.current = faces;
+        if (arrived.length === 0 && changed.length === 0)
+            return;
+        // An arrival is the front card and needs no mark. With none, the newest
+        // updated toast is the one announced, marked unless it is the front card.
+        const updated = arrived.length === 0 ? changed[0] : undefined;
+        const card = updated && updated !== toasts[0] ? find(String(updated.id)) : null;
+        if (updated && updated !== toasts[0] && !card)
             return;
         timers.current.forEach(clearTimeout);
+        marked.current?.removeAttribute(AGAIN_ATTR);
+        marked.current = card;
+        card?.setAttribute(AGAIN_ATTR, "");
+        setAgain(card !== null);
         // Before the phase class lands, so where the toast announces is measured
         // in the same commit that starts it.
         onAnnounce();
-        // The hold is measured by what arrived, not by what is already stacked.
-        const hold = holdFor(arrived);
+        // The hold is measured by what arrived or changed, not by what is
+        // already stacked.
+        const hold = holdFor(arrived.length > 0 ? arrived : changed);
         setPhase("announce");
         timers.current = [
             setTimeout(() => setPhase("slotting"), hold),
-            setTimeout(() => setPhase(null), hold + SLOT_MS),
+            setTimeout(() => {
+                setPhase(null);
+                setAgain(false);
+                marked.current?.removeAttribute(AGAIN_ATTR);
+                marked.current = null;
+            }, hold + SLOT_MS),
         ];
-    }, [toasts, holdFor, onAnnounce]);
-    useEffect(() => () => timers.current.forEach(clearTimeout), []);
-    return phase;
+    }, [toasts, holdFor, onAnnounce, find]);
+    useEffect(() => () => {
+        timers.current.forEach(clearTimeout);
+        marked.current?.removeAttribute(AGAIN_ATTR);
+    }, []);
+    return { phase, again };
 }
 /**
  * The dock the phone's toaster draws: the live one (toast-dock.ts), held for
@@ -265,6 +310,10 @@ function useNoHoverExpand(root, docked) {
  * the CSS: `toast-announcing` (pop + hold) then `toast-slotting` (the
  * card-shuffle into the stack).
  *
+ * A toast updated in place announces again, the same way, when the update
+ * changed its kind or its words (toast-update.ts): work that became its
+ * result is told, and a progress tick is not.
+ *
  * The pill is the dock unless a surface says otherwise (`useToastDock`): over
  * a parked chip, a sheet or a dialog the toast announces above that surface's
  * line and then leaves, and the stack waits out of sight until the pill is
@@ -298,7 +347,9 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         refreshToastDock();
         setMeasured(cover && isMobile ? measureToastCover(cover) : null);
     }, [cover, isMobile]);
-    const phase = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold, onAnnounce);
+    const root = useRef(null);
+    const find = useToastTags(root);
+    const { phase, again } = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold, onAnnounce, find);
     const dock = useHeldDock(phase, isMobile, measured);
     // Mirror the live toast count into the shared store. This Toaster never
     // unmounts (it's at the layout root), so the count is always authoritative.
@@ -328,7 +379,6 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         if (covered && expanded)
             setToastsExpanded(false);
     }, [covered, expanded]);
-    const root = useRef(null);
     useTimerRelease(root, toasts.length === 0);
     useNoHoverExpand(root, isMobile);
     const choreographing = phase !== null && toasts.length > 0;
@@ -346,6 +396,9 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         isMobile ? "toast-phone" : "toast-tuck",
         choreographing && phase === "announce" && "toast-announcing",
         choreographing && phase === "slotting" && "toast-slotting",
+        // The announce is about a toast updated in place that is not the front
+        // card: the stylesheet follows the card marked `data-again` instead.
+        choreographing && again && "toast-again",
         stackOpen && "toast-stack-open",
         // The dock is not the pill: the toaster stands on the dock's line, and
         // on the bottom edge where there is no room above it.
