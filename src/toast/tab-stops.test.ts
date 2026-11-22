@@ -82,6 +82,23 @@ describe("holdTabStops", () => {
     release();
   });
 
+  it("follows an exception named by which card is in front", async () => {
+    const root = stack();
+    const li = root.querySelector("li")!;
+    const release = holdTabStops(root, 'li[data-front="true"], li[data-again]');
+    expect(li.tabIndex).toBe(-1);
+    li.setAttribute("data-front", "true");
+    await Promise.resolve();
+    expect(stops(root)).toEqual(["-1", "0", null, null]);
+    li.setAttribute("data-front", "false");
+    await Promise.resolve();
+    expect(li.tabIndex).toBe(-1);
+    li.setAttribute("data-again", "");
+    await Promise.resolve();
+    expect(stops(root)).toEqual(["-1", "0", null, null]);
+    release();
+  });
+
   it("gives back a toast that becomes an exception, and takes one that stops being one", async () => {
     const root = stack();
     const li = root.querySelector("li")!;
@@ -161,6 +178,39 @@ describe("the toaster's tucked tab stops", () => {
     await raise(() => toast.info("Archived", { action: undo }));
     expect(card("Archived")?.tabIndex).toBe(0);
     expect(button("Archived")?.tabIndex).toBe(0);
+  });
+
+  it("keeps the older toasts, hidden behind an announce, out of the tab order", async () => {
+    await mount();
+    await raise(() => toast.info("Archived", { action: undo }));
+    await tuck();
+    await raise(() => toast.success("Moved", { action: undo }));
+    // The arrival is on screen; the card it hides is not.
+    expect(card("Moved")?.tabIndex).toBe(0);
+    expect(button("Moved")?.tabIndex).toBe(0);
+    expect(card("Archived")?.tabIndex).toBe(-1);
+    expect(button("Archived")?.tabIndex).toBe(-1);
+  });
+
+  it("follows the front card when a second toast arrives during the announce", async () => {
+    await mount();
+    await raise(() => toast.info("Archived", { action: undo }));
+    await raise(() => toast.success("Moved", { action: undo }));
+    expect(button("Moved")?.tabIndex).toBe(0);
+    expect(button("Archived")?.tabIndex).toBe(-1);
+  });
+
+  it("gives Tab to a toast announced again from behind, and to no other", async () => {
+    await mount();
+    await raise(() => toast.loading("Uploading", { id: "tab-up", action: undo }));
+    await raise(() => toast.info("Archived", { action: undo }));
+    await tuck();
+    await raise(() => toast.success("Uploaded", { id: "tab-up", action: undo }));
+    expect(card("Uploaded")?.hasAttribute("data-again")).toBe(true);
+    expect(button("Uploaded")?.tabIndex).toBe(0);
+    expect(button("Archived")?.tabIndex).toBe(-1);
+    await tuck();
+    expect(button("Uploaded")?.tabIndex).toBe(-1);
   });
 
   it("takes them out of the tab order once the toast has tucked behind the pill", async () => {

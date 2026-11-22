@@ -384,22 +384,31 @@ function useNoHoverExpand(root, docked) {
  * should not take Tab. The band's "Show notifications" is the way in, for a
  * keyboard as for a finger. A pinned toast is in view, so it keeps its stops.
  *
+ * During an announce one more card is in view, the one announcing, and it
+ * keeps its stops for the hold (`spared`). The cards it hides do not: the
+ * announce fades every other card out, and a faded Undo should not take Tab
+ * either.
+ *
  * Only the tab order: the region stays in the accessibility tree, since
  * Sonner's live section is inside it, and a toast that arrives tucked is
  * still announced. `inert` took the live section out with the buttons.
  */
-function useTuckedTabStops(root, hidden) {
+function useTuckedTabStops(root, hidden, spared) {
     useLayoutEffect(() => {
         const el = root.current;
         if (!el || !hidden)
             return;
-        const release = holdTabStops(el, `[data-sonner-toast].${PINNED_CLASS}`);
+        const release = holdTabStops(el, spared);
         const at = document.activeElement;
         if (at instanceof HTMLElement && el.contains(at) && at.tabIndex < 0)
             at.blur();
         return release;
-    }, [root, hidden]);
+    }, [root, hidden, spared]);
 }
+/** The cards that keep their tab stops while the phone's stack is tucked. */
+const PINNED_CARD = `[data-sonner-toast].${PINNED_CLASS}`;
+const FRONT_CARD = '[data-sonner-toast][data-front="true"]';
+const AGAIN_CARD = `[data-sonner-toast][${AGAIN_ATTR}]`;
 /**
  * The family's toaster. Mount it once at the layout root and never unmount
  * it; raise toasts through Sonner's `toast` as usual.
@@ -513,10 +522,13 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
     // hover-expand flicker) while letting the expanded toasts stay interactive.
     const stackOpen = isMobile && expanded && !covered;
     // Tucked behind the pill (or under a line), a phone toast is out of sight,
-    // so its buttons leave the tab order too. Not during the announce, when the
-    // arriving toast and its button are on screen. The desktop's tucked tabs
-    // stay reachable: tabbing into them is how the column pulls out.
-    useTuckedTabStops(root, isMobile && !stackOpen && !(choreographing && phase === "announce"));
+    // so its buttons leave the tab order too. During the announce the one
+    // toast on screen keeps its stops: the front card, or the marked one when
+    // the announce is about a toast updated in place. The desktop's tucked
+    // tabs stay reachable: tabbing into them is how the column pulls out.
+    const announcing = choreographing && phase === "announce";
+    const spared = announcing ? `${PINNED_CARD}, ${again ? AGAIN_CARD : FRONT_CARD}` : PINNED_CARD;
+    useTuckedTabStops(root, isMobile && !stackOpen, spared);
     const className = [
         // Gate closed: hide the whole stack (covers toasts that were already
         // showing when the bar left the screen).
@@ -524,7 +536,7 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         // The layout: the stylesheet has no width query of its own, so these
         // two classes are the whole switch between phone and desktop.
         isMobile ? "toast-phone" : "toast-tuck",
-        choreographing && phase === "announce" && "toast-announcing",
+        announcing && "toast-announcing",
         choreographing && phase === "slotting" && "toast-slotting",
         // The announce is about a toast updated in place that is not the front
         // card: the stylesheet follows the card marked `data-again` instead.

@@ -6,7 +6,9 @@
  *
  * `except` is a selector for what stays reachable: a stop that matches it, or
  * sits inside something that does, is left alone, and is given back if it
- * starts to match while held.
+ * starts to match while held. It is read again when a class changes, or one
+ * of the two marks that say which card is in view (`data-front`, which
+ * Sonner moves to each new arrival, and the kit's `data-again`).
  */
 export declare function holdTabStops(root: HTMLElement, except?: string): () => void;
 //# sourceMappingURL=tab-stops.d.ts.map
