@@ -1,0 +1,65 @@
+/* @dalin/kit tokens.css: the values the four dalin apps share.
+
+   What it is. Custom properties, named --dl-*, for what the owner has decided
+   so far: the typeface, the desktop sidebar's fill, the text colours, the
+   corners, the motion timings and the meaning colours. A question that is
+   still open has no token here, so a missing value means "not decided", and
+   the app keeps its own until it is.
+
+   How an app adopts it. Import this file once, on every route. Set two
+   things on :root and nothing else:
+
+     --dl-accent     the app's one accent colour
+     --dl-font-face  the app's loaded Inter, for example the variable that
+                     next/font writes (var(--font-inter))
+
+   Then read the tokens from the app's own rules: var(--dl-r-control) and so
+   on. Every value sits in :where(:root), which has no specificity, so load
+   order against the app's own sheets never matters.
+
+   What an app must not override. Any value below. A screen that needs a
+   different one is a question for the owner, and the answer lands here. */
+:where(:root) {
+  /* Typeface: Inter in all four apps. The emoji and symbol tail matters: a
+     custom family replaces the browser's default chain, and without the tail
+     emoji fall to the last resort font. The colour emoji fonts come before
+     "Segoe UI Symbol", which would otherwise draw many pictographs in grey. */
+  --dl-font:
+    var(--dl-font-face, "Inter"), ui-sans-serif, system-ui, -apple-system, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  /* The `dalin.` wordmark stays in Georgia, which ships on macOS and Windows. */
+  --dl-font-wordmark: Georgia, "Times New Roman", serif;
+
+  /* The desktop sidebar's fill. */
+  --dl-sidebar: #151515;
+
+  /* Text. Faint is the dimmest grey that still holds 4.5:1 on the lightest
+     surface it sits on, #2f2f2f (4.53:1 measured; #858d96 gave 3.98:1). */
+  --dl-fg: #ffffff;
+  --dl-fg-muted: #b8b8b8;
+  --dl-fg-faint: #8f97a0;
+
+  /* Corners: controls and tooltips, cards and menus, dialogs and phone
+     sheets. The create button has its own. */
+  --dl-r-control: 7px;
+  --dl-r-card: 10px;
+  --dl-r-sheet: 14px;
+  --dl-r-create: 8px;
+
+  /* The create button's height (create.css). */
+  --dl-create-h: 44px;
+
+  /* Motion. One curve; a hover, an open, a close, a phone sheet. Nothing
+     animates when the action started from the keyboard: the app skips the
+     transition there, since no token can know what started it. */
+  --dl-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dl-t-hover: 120ms;
+  --dl-t-open: 150ms;
+  --dl-t-close: 110ms;
+  --dl-t-sheet: 260ms;
+
+  /* Meaning colours, mail's hues: a row or icon whose place has a meaning shows its filled icon in this colour on hover and when open. */
+  --dl-meaning-archive: oklch(0.68 0.19 25);
+  --dl-meaning-starred: oklch(0.75 0.15 80);
+  --dl-meaning-spam: oklch(0.72 0.17 50);
+}

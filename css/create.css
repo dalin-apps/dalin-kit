@@ -1,0 +1,102 @@
+/* @dalin/kit create.css: the create button (Compose, New event, Upload).
+
+   What it is. Two classes for the one accent-glass button each app has.
+   `.dl-create` is the whole button: 44px tall, 8px corners, and calendar's
+   original glass written relative to --dl-accent, so every app gets the same
+   brightness in its own hue. `.dl-create-shape` is the height and corners
+   alone, for an app that keeps its own glass (notes).
+
+   How an app adopts it. Import this file, set --dl-accent on :root, and put
+   the class on the app's own <button>. The app keeps the button's layout: its
+   width, padding, icon and label. The glass uses both pseudo-elements, so the
+   button must not draw its own ::before or ::after.
+
+   What an app must not override. The height, the corners, and any colour or
+   filter in the recipe. The glass belongs to the create action only; every
+   other committing button stays neutral or solid.
+
+   The recipe uses relative colour syntax (oklch(from ...)), which needs
+   Chrome 119, Safari 16.4 or Firefox 128. */
+.dl-create,
+.dl-create-shape {
+  height: var(--dl-create-h, 44px);
+  border-radius: var(--dl-r-create, 8px);
+}
+
+.dl-create {
+  position: relative;
+  isolation: isolate;
+  color: var(--dl-fg, #fff);
+  background: linear-gradient(
+    180deg,
+    oklch(from var(--dl-accent) calc(l + 0.02) calc(c + 0.02) h / 0.4) 0%,
+    oklch(from var(--dl-accent) calc(l - 0.09) c h / 0.32) 100%
+  );
+  backdrop-filter: blur(10px);
+  border: 1px solid oklch(from var(--dl-accent) calc(l + 0.02) c h / 0.58);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.2);
+  transition:
+    background var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    border-color var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+
+/* The highlight: a soft light from the top right corner. */
+.dl-create::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    ellipse 140% 120% at 100% 0%,
+    oklch(from var(--dl-accent) calc(l + 0.14) calc(c + 0.03) calc(h + 5) / 0.18) 0%,
+    oklch(from var(--dl-accent) calc(l + 0.06) calc(c + 0.01) h / 0.06) 35%,
+    oklch(from var(--dl-accent) calc(l - 0.06) calc(c - 0.01) h / 0) 90%
+  );
+}
+
+/* The glint: a 1px inner rim, shown brightest at the top right and bottom
+   left by the conic mask, so the edge catches light the way glass does. */
+.dl-create::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px oklch(from var(--dl-accent) calc(l + 0.14) c calc(h + 5) / 0.48);
+  -webkit-mask: conic-gradient(
+    from 0deg at 50% 50%,
+    oklch(0 0 0 / 0.5) 0deg,
+    oklch(0 0 0 / 1) 71deg,
+    oklch(0 0 0 / 0.8) 100deg,
+    oklch(0 0 0 / 0.2) 120deg,
+    oklch(0 0 0 / 0.2) 250deg,
+    oklch(0 0 0 / 0.85) 270deg,
+    oklch(0 0 0 / 0.2) 290deg,
+    oklch(0 0 0 / 0.2) 305deg,
+    oklch(0 0 0 / 0.5) 360deg
+  );
+  mask: conic-gradient(
+    from 0deg at 50% 50%,
+    oklch(0 0 0 / 0.5) 0deg,
+    oklch(0 0 0 / 1) 71deg,
+    oklch(0 0 0 / 0.8) 100deg,
+    oklch(0 0 0 / 0.2) 120deg,
+    oklch(0 0 0 / 0.2) 250deg,
+    oklch(0 0 0 / 0.85) 270deg,
+    oklch(0 0 0 / 0.2) 290deg,
+    oklch(0 0 0 / 0.2) 305deg,
+    oklch(0 0 0 / 0.5) 360deg
+  );
+}
+
+@media (hover: hover) {
+  .dl-create:hover {
+    background: linear-gradient(
+      180deg,
+      oklch(from var(--dl-accent) calc(l + 0.06) calc(c + 0.03) h / 0.48) 0%,
+      oklch(from var(--dl-accent) calc(l - 0.06) c h / 0.4) 100%
+    );
+    border-color: oklch(from var(--dl-accent) calc(l + 0.08) c h / 0.72);
+  }
+}

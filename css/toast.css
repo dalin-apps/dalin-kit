@@ -1,0 +1,632 @@
+/* @dalin/kit toast.css: the family's toast, on desktop and on the phone.
+
+   What it is. The stylesheet for the kit's <Toaster>, <ToastBand> and
+   toastLine. It is dalin notes' toast as it stood on 2026-11-22: frosted glass
+   tinted in the kind's colour with white words, an Undo that is the toast's
+   right end, a desktop stack that tucks behind the window's right edge until
+   only a tab shows, and a phone pill that announces above the bottom bar and
+   then docks behind the nav pill.
+
+   How an app adopts it. Import this file once, on every route, after the
+   app's own base sheet. Mount <Toaster> at the layout root and <ToastBand>
+   wherever the bottom bar shows. Then tell it about the app, with the
+   variables below, set on :root or any element above the toaster:
+
+     --dl-toast-glass, --dl-toast-blur, --dl-toast-rim
+         The bottom bar's glass. The phone toast stands in for the nav pill,
+         so an app whose bar has its own glass points these three at it.
+     --dl-bar-w, --dl-bar-h
+         The nav pill's measured width and height, written by the app's bar.
+     --dl-bar-inset
+         How far the bar sits above the bottom safe area.
+     --dl-bar-z
+         The bar's z-index. The band sits one under it, the toaster two.
+     --dl-toast-floor
+         How far above the window's bottom the desktop column stands. An app
+         with a floating button in that corner raises it past the button.
+     --dl-toast-room
+         The gap between a pulled out desktop toast and the window's edge.
+     --dl-toast-level
+         The filter that levels what is behind a desktop toast, so white
+         words keep 4.5:1 over a white page. `contrast(1)` turns it off.
+
+   What an app must not override. The kinds' tints and rims, the white words,
+   the Undo segment, the shapes (Sonner's 8px card, the phone's pill), the
+   timings, and any rule keyed on a .toast-* class or a [data-sonner-*]
+   attribute. A toast is set in the app's own font: the toaster inherits it.
+   Reduced motion is the app's rule to apply, as for the rest of its screen.
+
+   The phone layout starts at 767px wide and under, the same width the
+   <Toaster> reads (PHONE_MAX_WIDTH_PX). */
+:where(:root) {
+  --dl-toast-glass: color-mix(
+    in oklch,
+    color-mix(in oklch, #2f2f2f 86%, oklch(1 0 0)) 30%,
+    transparent
+  );
+  --dl-toast-blur: blur(20px);
+  --dl-toast-rim: oklch(1 0 0 / 0.13);
+  --dl-toast-level: contrast(0.709) brightness(0.468);
+  --dl-toast-floor: 20px;
+  --dl-toast-room: 24px;
+  --dl-bar-w: 320px;
+  --dl-bar-h: 58px;
+  --dl-bar-inset: 16px;
+  --dl-bar-z: 30;
+}
+
+/* ============================================================
+   The kinds. The tint is laid over the bottom bar's frosted glass
+   (--dl-toast-glass) rather than straight over whatever is behind
+   the toast: a tucked desktop tab sits over page text, and the
+   bare tint let that text read through sharp.
+
+   The kind's colour is in the GLASS, at 22% with a 36% border, and in
+   the icon. The words are white on every kind, as the Undo label
+   always was: white keeps 4.5:1 on glass a good deal lighter than the
+   tinted words needed, so the glass can stay glass over a white page
+   instead of going dark to hold a red or a blue line of text.
+   The four tint literals are repeated in the phone block below, where
+   each kind layers its tint over the nav pill's glass. Change a hue
+   here and there together.
+
+   Sonner sets its own system font stack on the toaster, in a style
+   tag it appends after ours, so the second attribute is what lets
+   this win: a toast is set in the app's own font like everything else.
+   ============================================================ */
+[data-sonner-toaster][data-sonner-theme] {
+  font-family: inherit;
+}
+.toast-warning {
+  background: linear-gradient(oklch(0.75 0.15 80 / 0.22), oklch(0.75 0.15 80 / 0.22)),
+    var(--dl-toast-glass) !important;
+  backdrop-filter: var(--dl-toast-blur);
+  border: 1px solid oklch(0.75 0.15 80 / 0.36) !important;
+  color: var(--dl-fg, #fff) !important;
+}
+.toast-warning [data-icon] {
+  color: oklch(0.85 0.12 80);
+}
+.toast-success {
+  background: linear-gradient(oklch(0.65 0.18 155 / 0.22), oklch(0.65 0.18 155 / 0.22)),
+    var(--dl-toast-glass) !important;
+  backdrop-filter: var(--dl-toast-blur);
+  border: 1px solid oklch(0.65 0.18 155 / 0.36) !important;
+  color: var(--dl-fg, #fff) !important;
+}
+.toast-success [data-icon] {
+  color: oklch(0.80 0.14 155);
+}
+.toast-error {
+  background: linear-gradient(oklch(0.60 0.20 25 / 0.22), oklch(0.60 0.20 25 / 0.22)),
+    var(--dl-toast-glass) !important;
+  backdrop-filter: var(--dl-toast-blur);
+  border: 1px solid oklch(0.60 0.20 25 / 0.36) !important;
+  color: var(--dl-fg, #fff) !important;
+}
+.toast-error [data-icon] {
+  color: oklch(0.75 0.18 25);
+}
+/* Toast buttons: a button is the toast's right end, split off by a hairline in
+   the toast's own border colour. The text is white on every tint, since Undo
+   reverses what the toast reports rather than repeating it, and there is no
+   fill until hover. The toast gives its right padding to the button, and the
+   button's negative block margins take back the toast's 16px top and bottom,
+   so the whole end is the target and the toast keeps its height. The phone's
+   capsule redoes the shape (the phone block below).
+
+   Sonner draws BOTH buttons as `[data-button]`: the second action adds
+   `[data-cancel]` and renders first, so "Attach instead" sits left of Undo.
+   Each keeps its own hairline, and the second one takes back the toast's 6px
+   flex gap so the two segments meet at that line. Sonner injects its own
+   button styles in an order that isn't ours to decide, so these carry
+   !important the way the variants do. */
+[data-sonner-toast]:has([data-button]) {
+  padding-right: 0 !important;
+}
+[data-sonner-toast] [data-button] {
+  flex: none !important;
+  align-self: stretch !important;
+  height: auto !important;
+  margin-block: -16px !important;
+  margin-right: 0 !important;
+  padding: 0 16px !important;
+  border: 0 !important;
+  border-left: 1px solid !important;
+  border-left-color: inherit !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--dl-fg, #fff) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  transition: background var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+[data-sonner-toast] [data-button]:last-of-type {
+  border-radius: 0 calc(var(--border-radius) - 1px) calc(var(--border-radius) - 1px) 0 !important;
+}
+[data-sonner-toast] [data-button] + [data-button] {
+  margin-left: -6px !important;
+}
+@media (hover: hover) {
+  [data-sonner-toast] [data-button]:hover {
+    background: oklch(1 0 0 / 0.07) !important;
+  }
+}
+/* An Undo toast's line (toastLine): the item's name first, in the heavier
+   weight, then what happened to it. The name is the part
+   that gives way when the line is too long for the toast, so the verb and
+   the button always show whole. `pre` keeps the verb's leading space, which
+   a flex item would otherwise drop. */
+.toast-line {
+  display: flex;
+  min-width: 0;
+}
+.toast-line-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+.toast-line-verb {
+  flex: none;
+  white-space: pre;
+  font-weight: 400;
+}
+[data-sonner-toast] [data-content]:has(.toast-line) {
+  min-width: 0;
+}
+/* On a computer a long name carries the line right up to the button, and
+   Sonner's own 6px gap left the verb closer to the hairline than Undo sits
+   on its other side. These 8px make the two sides match (14px each). The
+   phone's pill sets its own gap and has no room to give. */
+[data-sonner-toaster].toast-tuck .toast-line {
+  margin-inline-end: 8px;
+}
+/* Blue: for neutral, informational notices. */
+.toast-info {
+  background: linear-gradient(oklch(0.62 0.16 255 / 0.22), oklch(0.62 0.16 255 / 0.22)),
+    var(--dl-toast-glass) !important;
+  backdrop-filter: var(--dl-toast-blur);
+  border: 1px solid oklch(0.62 0.16 255 / 0.36) !important;
+  color: var(--dl-fg, #fff) !important;
+}
+.toast-info [data-icon] {
+  color: oklch(0.80 0.13 255);
+}
+
+@media (max-width: 767px) {
+  [data-sonner-toaster][data-y-position="bottom"] {
+    /* The pill's exact footprint. It is centred on the viewport by the
+       bottom bar's construction, so centring the toaster IS anchoring it. */
+    left: calc(50% - var(--dl-bar-w) / 2) !important;
+    right: auto !important;
+    width: var(--dl-bar-w) !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--dl-bar-inset)) !important;
+    /* Behind the bar (z 30) and the tap band (29), so the pill reads as the
+       front of the stack; above the page list. */
+    z-index: calc(var(--dl-bar-z) - 2) !important;
+    /* How far each waiting card peeks above the one in front of it. */
+    --notif-peek: 16px;
+    /* The announce presentation: the same shape a size up. Uniform scale,
+       so the pill's rounded ends never distort. */
+    --notif-pop: 1.1;
+    /* Announce height above the stack base, and the lift that clears the
+       pill when the stack fans out. */
+    --notif-base: calc(var(--dl-bar-h) + 14px);
+  }
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast] {
+    width: 100% !important;
+    min-height: var(--dl-bar-h);
+    border-radius: 999px !important;
+    box-shadow:
+      0 2px 4px oklch(0 0 0 / 0.25),
+      0 12px 16px -4px oklch(0 0 0 / 0.45);
+    backdrop-filter: var(--dl-toast-blur);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 20px;
+  }
+  /* Plain toasts wear the pill's own glass; the kind classes above carry
+     !important and keep their tints over this. */
+  [data-sonner-toaster][data-y-position="bottom"]
+    [data-sonner-toast]:not(.toast-success):not(.toast-error):not(.toast-warning):not(.toast-info) {
+    background: var(--dl-toast-glass);
+    border: 1.5px solid var(--dl-toast-rim);
+    color: var(--dl-fg, #fff);
+  }
+  /* Coloured kinds ALSO wear the pill's material: nearly every toast is a
+     kind (only a bare toast.message is neutral), so the rule above covers
+     the rare case, and without this every everyday toast would announce as
+     a flat tint over a bare 1px rim instead of the pill's frosted glass,
+     then visibly change material tucking in behind it. The kind classes
+     above win on `!important`, so matching it here is the only way to
+     layer on top of them rather than lose to them. The tint rides as an opaque gradient
+     LAYER over `--bar-glass` (two background layers, tint first) so the hue
+     identity survives while the material underneath becomes the pill's; the
+     border keeps its existing tinted colour (untouched) and only widens to
+     the pill's 1.5px rim thickness. */
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast].toast-success {
+    background:
+      linear-gradient(oklch(0.65 0.18 155 / 0.22), oklch(0.65 0.18 155 / 0.22)),
+      var(--dl-toast-glass) !important;
+    border-width: 1.5px !important;
+  }
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast].toast-error {
+    background:
+      linear-gradient(oklch(0.60 0.20 25 / 0.22), oklch(0.60 0.20 25 / 0.22)),
+      var(--dl-toast-glass) !important;
+    border-width: 1.5px !important;
+  }
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast].toast-warning {
+    background:
+      linear-gradient(oklch(0.75 0.15 80 / 0.22), oklch(0.75 0.15 80 / 0.22)),
+      var(--dl-toast-glass) !important;
+    border-width: 1.5px !important;
+  }
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast].toast-info {
+    background:
+      linear-gradient(oklch(0.62 0.16 255 / 0.22), oklch(0.62 0.16 255 / 0.22)),
+      var(--dl-toast-glass) !important;
+    border-width: 1.5px !important;
+  }
+
+  /* A toast carrying a button stops being centred and becomes a line with
+     the answer at its end. The toast is the
+     pill's width and cannot grow, so the status icon goes, and the button
+     takes the capsule's full-height rounded right end behind its hairline
+     (the split above): these margins take back the capsule's 8px top and
+     bottom, and the rule above already took its right padding. The phone
+     has room for one button; keep a toast with two for the desktop. */
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast]:has([data-button]) {
+    justify-content: space-between;
+    text-align: left;
+    gap: 8px;
+    padding-left: 16px;
+  }
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast] [data-button] {
+    margin-block: -8px !important;
+    padding: 0 16px 0 14px !important;
+    border-radius: 0 999px 999px 0 !important;
+  }
+  [data-sonner-toaster][data-y-position="bottom"]
+    [data-sonner-toast]:has([data-button])
+    [data-icon] {
+    display: none;
+  }
+  /* One line, and never a word of it outside the capsule: `[data-content]`
+     is the flex item holding the line, so a floor of zero is what lets the
+     ellipsis work. */
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast]:has([data-button]) [data-content] {
+    min-width: 0;
+  }
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast]:has([data-button]) [data-title] {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Band-driven expansion ONLY. Sonner also expands on hover (its internal
+     `expanded` state, set from the toaster's mouseenter); a toast renders
+     expanded when `expanded || expandByDefault`. On a narrow *desktop* window,
+     hover present and width<768 so this mobile stack shows: hovering the
+     sliver of a collapsed toast peeking above the pill flips that hover state:
+     the stack lifts out from under the cursor → mouseleave → collapses → slides
+     back under the cursor → re-expands, a fast flicker loop. The tap band
+     (<ToastBand>, one z step over the toaster) owns the tap that toggles the
+     stack, so the collapsed toaster must ignore the pointer entirely. Re-enable
+     it on the toasts only once OUR store says the stack is open
+     (`.toast-stack-open`, from <Toaster>) so the fanned-out toasts stay
+     swipe-dismissable. */
+  [data-sonner-toaster][data-y-position="bottom"],
+  [data-sonner-toaster][data-y-position="bottom"] [data-sonner-toast] {
+    pointer-events: none !important;
+  }
+  [data-sonner-toaster][data-y-position="bottom"].toast-stack-open
+    [data-sonner-toast] {
+    pointer-events: auto !important;
+  }
+  /* The exception is the button, not the toast: an announcing toast that
+     offers an Undo has to be pressable while it is on screen, and its hold
+     is longer for that (<Toaster>) because the announce is the whole of
+     the window. It sits a full bar height above the band, so it takes no tap
+     the band was owed. Sonner's hover-expand is held off in <Toaster> so
+     the press does not fan the stack. */
+  [data-sonner-toaster][data-y-position="bottom"].toast-announcing
+    [data-sonner-toast][data-front="true"]
+    [data-button] {
+    pointer-events: auto !important;
+  }
+
+  /* COLLAPSED: the nav pill is the phantom front card (slot 0). Every
+     toast, the newest (Sonner's "front") included, is demoted to a
+     behind-style card at slot = toasts-before + 1: scaled down a step,
+     peeking a little higher, and blank (content hidden): exactly Sonner's
+     own stacked-card convention, just shifted up by one so the pill leads.
+     NB: don't set `height` here. Sonner sizes behind cards itself, and it
+     measures each toast with `height:auto` via getBoundingClientRect; an
+     !important height wins over that auto and collapses the measurement
+     into a feedback loop (every card shrinks to padding height). */
+  [data-sonner-toaster][data-y-position="bottom"]
+    [data-sonner-toast][data-expanded="false"]:not([data-removed="true"]) {
+    --slot: calc(var(--toasts-before) + 1);
+    /* `--pull-lift` is the pill's own lift under a swipe, written on this
+       list by useStackSwipe, so the peeking cards rise with it. */
+    --y: translateY(
+        calc(-1 * var(--notif-peek) * var(--slot) - var(--pull-lift, 0px))
+      )
+      scale(calc(1 - 0.05 * var(--slot))) !important;
+  }
+  /* While the finger pulls, the cards follow it the way the pill does, with
+     none of Sonner's 400ms between them. */
+  [data-sonner-toaster][data-y-position="bottom"][data-pulling]
+    [data-sonner-toast] {
+    transition: none !important;
+  }
+  [data-sonner-toaster][data-y-position="bottom"]
+    [data-sonner-toast][data-expanded="false"]:not([data-removed="true"]) > * {
+    opacity: 0 !important;
+  }
+
+  /* EXPANDED: lift the whole stack above the pill (newest just above it)
+     and keep Sonner's per-toast cumulative --offset for the spacing below.
+     The guard excludes only a NORMAL removal (`[data-removed][data-swipe-out=
+     "false"]`) so Sonner's fly-up auto-dismiss animation can take over, but it
+     deliberately KEEPS applying during a swipe-dismiss (`data-swipe-out="true"`,
+     which is also `data-removed`). Sonner's swipe-out keyframes slide the toast
+     off using `var(--y)` as their base; if our lift dropped here the toast would
+     snap down by --notif-base (≈ to the bottom, over the pill) the instant the
+     finger lifts, then slide off from there. Holding the lift makes it slide
+     straight off from wherever it actually sits in the fanned-out stack. */
+  [data-sonner-toaster][data-y-position="bottom"]
+    [data-sonner-toast][data-mounted="true"][data-expanded="true"]:not(
+      [data-removed="true"][data-swipe-out="false"]
+    ) {
+    --y: translateY(calc(var(--lift) * (var(--offset) + var(--notif-base)))) !important;
+  }
+
+  /* ANNOUNCE: a freshly-arrived toast pops in centred above the bar, a size
+     up on the pill (--notif-pop), and holds for ~1s (timing/class from
+     <Toaster>). The arriving toast is always Sonner's front (newest) one:
+     it keeps its content and bubbles in while the existing stacked cards
+     briefly hide. */
+  [data-sonner-toaster][data-y-position="bottom"].toast-announcing
+    [data-sonner-toast][data-front="true"]:not([data-removed="true"]) {
+    --y: translateY(calc(var(--lift) * var(--notif-base))) !important;
+    animation: notif-bubble-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  [data-sonner-toaster][data-y-position="bottom"].toast-announcing
+    [data-sonner-toast][data-front="true"]:not([data-removed="true"]) > * {
+    opacity: 1 !important;
+  }
+  [data-sonner-toaster][data-y-position="bottom"].toast-announcing
+    [data-sonner-toast][data-front="false"] {
+    opacity: 0 !important;
+  }
+
+  /* SLOT. The hold is over: the new toast shuffles down into the front of
+     the stack (a tuck with a little tilt-wobble + a slap-settle) while the
+     existing cards riffle back in, staggered behind it. Base positions are
+     the collapsed slots; the keyframes just animate the journey there, ending
+     exactly on those slots so nothing jumps when the class drops. */
+  [data-sonner-toaster][data-y-position="bottom"].toast-slotting
+    [data-sonner-toast][data-front="true"]:not([data-removed="true"]) {
+    animation: notif-slot-in 480ms cubic-bezier(0.45, 0, 0.2, 1) both;
+  }
+  [data-sonner-toaster][data-y-position="bottom"].toast-slotting
+    [data-sonner-toast][data-front="false"]:not([data-removed="true"]) {
+    animation: notif-shuffle-back 380ms ease both;
+    animation-delay: calc(var(--toasts-before) * 55ms);
+  }
+}
+
+/* Appear for an arriving mobile toast: it rises up into place and settles at
+   the announce size (--notif-pop). IMPORTANT: the scale never drops below 1
+   while a toast can mount. Sonner measures each toast's height with
+   getBoundingClientRect (which includes transforms) at mount, and a new toast
+   can mount while this animation is already running (rapid/queued toasts): a
+   sub-1 scale at that instant corrupts --front-toast-height/--offset and
+   breaks the collapsed heights and the expanded spacing. Each toast measures
+   ITSELF at its own frame 0, where the scale is exactly 1. */
+@keyframes notif-bubble-in {
+  0% {
+    transform: translateY(calc(var(--lift) * var(--notif-base) + 16px)) scale(1);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(calc(var(--lift) * var(--notif-base) - 3px))
+      scale(calc(var(--notif-pop) + 0.02));
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(calc(var(--lift) * var(--notif-base))) scale(var(--notif-pop));
+    opacity: 1;
+  }
+}
+
+/* Card-shuffle slot-in for the arriving toast: from the announce hold it
+   dives, shedding its extra size (through scale 1: the pill's exact size,
+   which is the "shrink to the nav, then tuck" read), tilts one way then the
+   other, overshoots slightly and settles square. End frame matches the
+   collapsed front slot (translateY(-peek) scale(0.95)) so there's no jump. */
+@keyframes notif-slot-in {
+  0% {
+    transform: translateY(calc(var(--lift) * var(--notif-base)))
+      scale(var(--notif-pop)) rotate(0deg);
+  }
+  45% {
+    transform: translateY(-34px) scale(1) rotate(-6deg);
+  }
+  75% {
+    transform: translateY(-11px) scale(0.94) rotate(4deg);
+  }
+  100% {
+    transform: translateY(calc(-1 * var(--notif-peek))) scale(0.95) rotate(0deg);
+  }
+}
+
+/* The tap that fans the stack. Fixed one z step under the bar's controls and
+   one over the toaster: the bar's buttons and the pill win their own taps,
+   and the band answers the gaps between them plus the strip below, which is
+   exactly the dead space. It only MOUNTS while toasts exist (ToastBand
+   returns null otherwise), so with nothing stacked every one of these taps
+   still reaches the page. */
+.toast-band {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(env(safe-area-inset-bottom, 0px) + var(--dl-bar-inset) + var(--dl-bar-h));
+  z-index: calc(var(--dl-bar-z) - 1);
+  background: transparent;
+  border: none;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  /* The gaps level with the pill start the toast stack's swipe as the pill
+     does (useStackSwipe), so a drag here is not the page's either. */
+  touch-action: none;
+}
+@media (min-width: 768px) {
+  .toast-band { display: none; }
+}
+
+/* The existing cards riffle back in behind the new one (opacity only, so each
+   card's collapsed slot transform is left untouched; staggered per slot). */
+@keyframes notif-shuffle-back {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* The gate is closed (<Toaster gateOpen={false}>: the bottom bar is off
+   screen on the phone): hide the whole stack so toasts don't float orphaned
+   over a screen with no pill to dock behind. `visibility` (not `display`)
+   keeps Sonner's height measurements intact so the stack reappears cleanly
+   when the gate reopens. The app holds back toasts raised meanwhile, so in
+   practice only toasts that were already showing are hidden here. */
+[data-sonner-toaster].toast-gate-closed {
+  visibility: hidden;
+}
+
+/* ---------- desktop: toasts tucked behind the window's edge (<Toaster>) ----------
+   The stack hangs off the window's right edge. The toaster is a box that ends
+   exactly at that edge and clips what passes it, so a toast shifted right
+   slides under the edge. A toast slides out from under it, holds in the corner
+   while `toast-announcing` is on, then tucks until only a `--tab` of its own
+   glass shows; older toasts are the tabs above it. Hovering a tab, or tabbing
+   into the stack, pulls the whole column out (a click's focus doesn't, or the
+   column stayed out after the pointer left). Sonner lays the stack out
+   expanded the whole time (`expand`), so the column is its fanned layout and
+   every state here is a sideways shift added to its `--y`.
+
+   The column stands on `--dl-toast-floor`. An app with a floating button in
+   the bottom-right corner sets it to a gap above that button's top edge, so
+   the two never share the corner: no toast, tab or pulled out column ever
+   covers the button or takes its press. With nothing in the corner the
+   column sits 20px above the window's bottom.
+
+   The box is wider than a toast by `--tuck-room`, which is where a pulled
+   out toast sits clear of the edge with room for its shadow. It takes no
+   pointer itself; the toasts do, so only a tab or a pulled out toast can
+   be hovered. Removal (a timeout, or Sonner closing one) slides the toast
+   back under the edge instead of Sonner's lift, which would drag a tab out
+   across the page as it faded. */
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck {
+  /* Twice the icon's centre (its glyph runs 13 to 33px in), so the tab
+     shows the icon centred where it already sits and nothing in the toast
+     moves. The icon's end margin, 12px here against Sonner's 4px, puts the
+     title at 48px, clear of the tab. */
+  --tab: 46px;
+  --toast-icon-margin-end: 12px;
+  /* A floating button's own inset from the window, so a toast held in the
+     corner ends on the same line as the button under it. */
+  --tuck-room: var(--dl-toast-room);
+  --tuck-in: translateX(calc(100% + var(--tuck-room) - var(--tab)));
+  --tuck-under: translateX(calc(100% + var(--tuck-room) + 2px));
+  --tuck-t: 260ms;
+  --toast-floor: var(--dl-toast-floor);
+  right: 0 !important;
+  bottom: 0 !important;
+  left: auto !important;
+  width: calc(var(--width) + 2 * var(--tuck-room)) !important;
+  height: 70vh;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* Sonner's 400ms plain `ease` made the pull-out feel sluggish; the app's own
+   curve over a shorter run settles as the pointer arrives. A tab is the
+   toast itself, glass and shadow alike, so nothing restyles as it slides. */
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck [data-sonner-toast] {
+  right: var(--tuck-room) !important;
+  bottom: var(--toast-floor) !important;
+  pointer-events: auto;
+  box-shadow: 0 8px 24px oklch(0 0 0 / 0.35);
+  /* On a computer a toast can sit over white content (a board frame, an
+     imported page, an email), where the bar's thin glass turned into a pale
+     wash and the words stopped reading (1.05:1). The glass is the same; what
+     is behind it is levelled before the glass goes on (--dl-toast-level).
+     The two filters leave a dark page (#1a1a1a) where it is and bring white
+     down to a mid grey (#666666). White words need no more than that to keep
+     4.5:1, so a bright thing under the toast still lights the glass up. The
+     phone's toast keeps the pill's glass as it is. */
+  backdrop-filter: var(--dl-toast-blur) var(--dl-toast-level);
+  transition: transform var(--tuck-t) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)), opacity 200ms var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    height var(--tuck-t) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+/* A bare `toast.message` wears the bottom bar's glass, like the kinds under
+   their tints. */
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck
+  [data-sonner-toast]:not(.toast-success, .toast-error, .toast-warning, .toast-info) {
+  background: var(--dl-toast-glass);
+  border: 1px solid var(--dl-toast-rim);
+  color: var(--dl-fg, #fff);
+}
+/* A pulled out toast stands `--tuck-room` clear of the edge, and the pointer
+   that pulled it out by its tab is still in that gap. This strip fills it,
+   so the stack does not tuck from under the pointer and flicker. Tucked, the
+   strip is past the edge and clipped away. Sonner draws its own ::before
+   while a toast is swiped or removed, so those states keep theirs. */
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck
+  [data-sonner-toast]:not([data-swiping="true"], [data-removed="true"])::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: calc(var(--tuck-room) + 2px);
+}
+/* The entrance: a new toast starts fully under the edge and slides straight
+   out, sideways only. It leaves out the column's `--offset` lift because a new
+   toast is always the front one, at offset 0, and Sonner hands it a stale -8px
+   for its first frame, which drifted the slide down. It is opaque from the
+   first frame, since the edge clipping it is what hides it; Sonner's fade in
+   would read as a ghost sliding in. */
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck
+  [data-sonner-toast]:not([data-mounted="true"]) {
+  --y: var(--tuck-under) !important;
+  opacity: 1 !important;
+}
+/* The tuck back waits a beat, so a pointer that brushes off the column
+   doesn't fold it. */
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck
+  [data-sonner-toast][data-mounted="true"]:not([data-removed="true"]) {
+  --y: translateY(calc(var(--lift) * var(--offset))) var(--tuck-in) !important;
+  transition-delay: 100ms, 0s, 0s;
+}
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck:is(:hover, :has(:focus-visible))
+  [data-sonner-toast][data-mounted="true"]:not([data-removed="true"]),
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck.toast-announcing
+  [data-sonner-toast][data-front="true"]:not([data-removed="true"]) {
+  --y: translateY(calc(var(--lift) * var(--offset))) !important;
+  transition-delay: 0s;
+}
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck
+  [data-sonner-toast][data-removed="true"][data-swipe-out="false"] {
+  --y: translateY(calc(var(--lift) * var(--offset))) var(--tuck-under) !important;
+}
