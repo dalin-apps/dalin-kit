@@ -609,6 +609,23 @@
   opacity: 0 !important;
 }
 
+/* CALM: a pinned toast released to its result under the same id (a send
+   that counted down, then "Sent"). The result is already in view, at the
+   floor the pinned toast held, so it announces without the pop: no bubble-in
+   and no size up, then the same dive. The <Toaster> puts `toast-calm` on the
+   list for the length of those phases. The announce's place is --notif-base,
+   which is the pinned toast's floor, so the card does not move as the pin
+   lets go. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-calm {
+  --notif-pop: 1;
+}
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing.toast-calm:where(:not(.toast-again))
+  [data-sonner-toast][data-front="true"]:not([data-removed="true"]),
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-announcing.toast-calm:where(.toast-again)
+  [data-sonner-toast][data-again]:not([data-removed="true"]) {
+  animation: none;
+}
+
 /* SLOT. The hold is over: the new toast shuffles down into the front of
    the stack (a tuck with a little tilt-wobble + a slap-settle) while the
    existing cards riffle back in, staggered behind it. Base positions are

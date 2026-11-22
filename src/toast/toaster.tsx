@@ -127,11 +127,15 @@ function desktopHold(arrived: ToastT[]): number {
 /** The mark on the one card an update announces again (toast.css). */
 const AGAIN_ATTR = "data-again";
 
-/** What the announce clock says: the phase, and whether it is about a marked card. */
-type Flight = { phase: Phase; again: boolean };
+/**
+ * What the announce clock says: the phase, whether it is about a marked
+ * card, and whether it is calm (a pinned toast released to its result, which
+ * is already in view and holds there with no pop).
+ */
+type Flight = { phase: Phase; again: boolean; calm: boolean };
 
 /** No toast in flight. One object, so setting it twice is not a second render. */
-const GROUNDED: Flight = { phase: null, again: false };
+const GROUNDED: Flight = { phase: null, again: false, calm: false };
 
 /**
  * The announce -> slot clock. It restarts whenever a new toast id appears,
@@ -139,7 +143,10 @@ const GROUNDED: Flight = { phase: null, again: false };
  * (toast-update.ts): a change of kind, or of words.
  *
  * A pinned toast's arrival does not start it: that toast holds above the
- * dock, or out from the desktop's edge, for as long as it is pinned.
+ * dock, or out from the desktop's edge, for as long as it is pinned. When it
+ * is released to its result under the same id, the announce is `calm`: the
+ * result holds where the pinned toast stood and then tucks, with no second
+ * pop (`toast-calm` in toast.css).
  *
  * It runs only while `active`. The choreography is how a toast gets in
  * behind the pill, so on the phone it runs while the stack is tucked: with
@@ -187,6 +194,7 @@ function useAnnouncePhase(
     const faces = new Map<string, ToastFace>();
     const arrived: ToastT[] = [];
     const changed: ToastT[] = [];
+    const released = new Set<string>();
     for (const t of toasts) {
       const id = String(t.id);
       const now = faceOf(t, bareKind);
@@ -197,7 +205,10 @@ function useAnnouncePhase(
       // a hold the pinned toast does not need.
       if (!was) {
         if (!now.pinned) arrived.push(t);
-      } else if (announcesUpdate(was, now)) changed.push(t);
+      } else if (announcesUpdate(was, now)) {
+        changed.push(t);
+        if (was.pinned && !now.pinned) released.add(id);
+      }
     }
     seen.current = faces;
     if (!active) return;
@@ -214,15 +225,17 @@ function useAnnouncePhase(
     marked.current = card;
     card?.setAttribute(AGAIN_ATTR, "");
     const again = card !== null;
+    // A pin that let go: its result stands where the pinned toast stood.
+    const calm = updated !== undefined && released.has(String(updated.id));
     // Before the phase class lands, so where the toast announces is measured
     // in the same commit that starts it.
     onAnnounce();
     // The hold is measured by what arrived or changed, not by what is
     // already stacked.
     const hold = holdFor(arrived.length > 0 ? arrived : changed);
-    setFlight({ phase: "announce", again });
+    setFlight({ phase: "announce", again, calm });
     timers.current = [
-      setTimeout(() => setFlight({ phase: "slotting", again }), hold),
+      setTimeout(() => setFlight({ phase: "slotting", again, calm }), hold),
       setTimeout(() => {
         setFlight(GROUNDED);
         marked.current?.removeAttribute(AGAIN_ATTR);
@@ -559,7 +572,7 @@ export function Toaster({
     return () => setNamedToastCover(false);
   }, [coverUp]);
   const find = useToastTags(root, toasts);
-  const { phase, again } = useAnnouncePhase(
+  const { phase, again, calm } = useAnnouncePhase(
     toasts,
     // The desktop column announces always. The phone announces only while
     // its stack is tucked: a toast that arrives in a fanned stack joins it.
@@ -634,6 +647,8 @@ export function Toaster({
       // The announce is about a toast updated in place that is not the front
       // card: the stylesheet follows the card marked `data-again` instead.
       choreographing && again && "toast-again",
+      // The announce is a pinned toast's result: it holds with no pop.
+      choreographing && calm && "toast-calm",
       stackOpen && "toast-stack-open",
       // The dock is not the pill: the toaster stands on the dock's line, and
       // on the bottom edge where there is no room above it.
