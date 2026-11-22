@@ -1,9 +1,10 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Toaster as SonnerToaster, useSonner } from "sonner";
 import { setToastCount, setToastsExpanded, useToastsExpanded, } from "./toast-stack.js";
 import { measureToastCover, refreshToastDock, useToastDockState, } from "./toast-dock.js";
+import { holdTabStops } from "./tab-stops.js";
 import { useToastTags } from "./toast-tags.js";
 import { ToastSpinner } from "./toast-spinner.js";
 import { PINNED_CLASS, PROGRESS_CLASS, announcesUpdate, faceOf } from "./toast-update.js";
@@ -304,6 +305,29 @@ function useNoHoverExpand(root, docked) {
     }, [root, docked]);
 }
 /**
+ * While the phone's stack is tucked, its toasts and their buttons leave the
+ * tab order, and focus left on one goes, as it would from any control that is
+ * hidden. A card behind the pill is out of sight, and a button nobody can see
+ * should not take Tab. The band's "Show notifications" is the way in, for a
+ * keyboard as for a finger. A pinned toast is in view, so it keeps its stops.
+ *
+ * Only the tab order: the region stays in the accessibility tree, since
+ * Sonner's live section is inside it, and a toast that arrives tucked is
+ * still announced. `inert` took the live section out with the buttons.
+ */
+function useTuckedTabStops(root, hidden) {
+    useLayoutEffect(() => {
+        const el = root.current;
+        if (!el || !hidden)
+            return;
+        const release = holdTabStops(el, `[data-sonner-toast].${PINNED_CLASS}`);
+        const at = document.activeElement;
+        if (at instanceof HTMLElement && el.contains(at) && at.tabIndex < 0)
+            at.blur();
+        return release;
+    }, [root, hidden]);
+}
+/**
  * The family's toaster. Mount it once at the layout root and never unmount
  * it; raise toasts through Sonner's `toast` as usual.
  *
@@ -401,6 +425,11 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
     // the CSS can keep the collapsed stack pointer-inert (killing the
     // hover-expand flicker) while letting the expanded toasts stay interactive.
     const stackOpen = isMobile && expanded && !choreographing && !covered;
+    // Tucked behind the pill (or under a line), a phone toast is out of sight,
+    // so its buttons leave the tab order too. Not during the announce, when the
+    // arriving toast and its button are on screen. The desktop's tucked tabs
+    // stay reachable: tabbing into them is how the column pulls out.
+    useTuckedTabStops(root, isMobile && !stackOpen && !(choreographing && phase === "announce"));
     const className = [
         // Gate closed: hide the whole stack (covers toasts that were already
         // showing when the bar left the screen).

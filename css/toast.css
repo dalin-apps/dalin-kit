@@ -808,6 +808,27 @@
      does (useStackSwipe), so a drag here is not the page's either. */
   touch-action: none;
 }
+/* The band takes Tab (it is "Show notifications", the keyboard's way to a
+   tucked stack), and it is as wide as the screen, so its own outline would
+   be a rectangle across the whole bottom. The ring is drawn around the
+   pill's footprint instead, 3px clear of it: the stack behind the pill is
+   what has focus. --dl-focus-ring is the app's ring colour; the family has
+   not picked one, so it falls back to the text colour. */
+.toast-band:focus-visible {
+  outline: none;
+}
+.toast-band:focus-visible::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - var(--dl-bar-w) / 2 - 3px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--dl-bar-inset) - 3px);
+  width: calc(var(--dl-bar-w) + 6px);
+  height: calc(var(--dl-bar-h) + 6px);
+  box-sizing: border-box;
+  border: 2px solid var(--dl-focus-ring, var(--dl-fg, #fff));
+  border-radius: 999px;
+  pointer-events: none;
+}
 
 /* The existing cards riffle back in behind the new one (opacity only, so each
    card's collapsed slot transform is left untouched; staggered per slot). */

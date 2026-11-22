@@ -125,11 +125,36 @@ describe("the tap band", () => {
     expect(readToastsExpanded()).toBe(false);
   });
 
-  it("stays out of the tab order and silent to a screen reader", async () => {
+  it("is a named button a keyboard can reach, saying whether the stack is out", async () => {
     await render(createElement(Toaster, { key: "t" }), createElement(ToastBand, { key: "b" }));
     await raiseToast();
-    const band = document.querySelector(".toast-band");
-    expect(band?.getAttribute("tabindex")).toBe("-1");
-    expect(band?.getAttribute("aria-hidden")).toBe("true");
+    const band = document.querySelector<HTMLButtonElement>(".toast-band");
+    expect(band?.tagName).toBe("BUTTON");
+    expect(band?.getAttribute("aria-label")).toBe("Show notifications");
+    expect(band?.hasAttribute("aria-hidden")).toBe(false);
+    expect(band?.hasAttribute("tabindex")).toBe(false);
+    expect(band?.tabIndex).toBe(0);
+    expect(band?.getAttribute("aria-expanded")).toBe("false");
+    await act(async () => {
+      band?.click();
+    });
+    expect(band?.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("takes the app's own words for its name", async () => {
+    await render(
+      createElement(Toaster, { key: "t" }),
+      createElement(ToastBand, { key: "b", label: "Mostrar notificaciones" }),
+    );
+    await raiseToast();
+    expect(document.querySelector(".toast-band")?.getAttribute("aria-label")).toBe("Mostrar notificaciones");
+  });
+
+  it("leaves focus where it was on a tap", async () => {
+    await render(createElement(Toaster, { key: "t" }), createElement(ToastBand, { key: "b" }));
+    await raiseToast();
+    const down = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    document.querySelector(".toast-band")?.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
   });
 });

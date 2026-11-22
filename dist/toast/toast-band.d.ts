@@ -1,6 +1,12 @@
 import { type StackSwipeHost } from "./use-stack-swipe.js";
 /** The app's side of the band: its nav pill, its haptic tick, its motion switch. */
-export type ToastBandProps = StackSwipeHost;
+export type ToastBandProps = StackSwipeHost & {
+    /**
+     * The band's accessible name. Defaults to "Show notifications"; an app in
+     * another language passes its own words.
+     */
+    label?: string;
+};
 /**
  * The dead space around the phone's bottom bar, turned into the way the toast
  * stack fans out. It runs from the pill's top line to the bottom of the
@@ -22,18 +28,14 @@ export type ToastBandProps = StackSwipeHost;
  * Mount it wherever the bottom bar shows. The stack's count comes from the
  * shared store, so the band is right the instant it mounts.
  *
- * Out of the tab order on purpose: it's a full-viewport-width touch target,
- * so a sighted keyboard user tabbing a narrow window would land on it and
- * see the app's focus ring drawn as a rectangle across the whole screen
- * bottom, and the button mounts and unmounts with the toast stack, so it
- * would also shift the tab order mid-session. It's a touch-only duplicate of
- * a path Sonner already exposes to keyboard users on its own terms (the
- * toaster region is reachable through Sonner's own hotkey, whatever this
- * button's state), so removing it from Tab costs a keyboard user nothing.
- * `aria-hidden` pairs with `tabIndex={-1}` (never one without the other) so
- * it's also silent to a screen reader's swipe navigation, since it's a large
- * invisible rect whose only job is a touch gesture the toast stack's own
- * aria-live region doesn't need.
+ * It is a real button, named "Show notifications", with `aria-expanded`
+ * saying whether the stack is out. The tucked cards and their buttons are
+ * out of the tab order (toaster.tsx), so this is the way a keyboard or a
+ * screen reader reaches them: Tab lands here, Enter fans the stack, and the
+ * toasts are the next stops. Version 0 hid it from both (`aria-hidden`,
+ * `tabIndex={-1}`), which left a tucked Undo reachable by no key at all.
+ * The band is as wide as the screen, so its keyboard ring is drawn around
+ * the pill's footprint instead of its own box (toast.css).
  */
-export declare function ToastBand({ pill, onTick, reducedMotion }: ToastBandProps): import("react").JSX.Element | null;
+export declare function ToastBand({ pill, onTick, reducedMotion, label }: ToastBandProps): import("react").JSX.Element | null;
 //# sourceMappingURL=toast-band.d.ts.map
