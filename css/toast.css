@@ -5,7 +5,10 @@
    tinted in the kind's colour with white words, an Undo that is the toast's
    right end, a desktop stack that tucks behind the window's right edge until
    only a tab shows, and a phone pill that announces above the bottom bar and
-   then docks behind the nav pill.
+   then docks behind the nav pill. Version 0.1 adds to it without changing
+   how those look: a dock other than the pill, pinned toasts, a toast
+   announced again when it is updated in place, a progress kind, and a
+   default kind for a bare toast.
 
    How an app adopts it. Import this file once, on every route, after the
    app's own base sheet. Mount <Toaster> at the layout root and <ToastBand>
@@ -35,6 +38,12 @@
      --dl-toast-solid
          The solid fill a toast takes under its tint while the app has
          transparency turned off (<Toaster reducedTransparencySelector>).
+     --dl-phone-max
+         Where the phone layout starts, in px, in place of the <Toaster>'s
+         phoneMaxWidth prop.
+     --dl-focus-ring
+         The colour of the band's keyboard ring. The family has not picked
+         one, so it falls back to the text colour.
 
    What an app must not override. The kinds' tints and rims, the white words,
    the Undo segment, the shapes (Sonner's 8px card, the phone's pill), the
