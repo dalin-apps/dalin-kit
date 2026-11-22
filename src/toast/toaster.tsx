@@ -21,6 +21,7 @@ import {
 import { holdTabStops } from "./tab-stops.js";
 import { useToastTags } from "./toast-tags.js";
 import { ToastSpinner } from "./toast-spinner.js";
+import { MOTION_CLASS, scopeSonnerReducedMotion } from "./sonner-motion.js";
 import { PINNED_CLASS, PROGRESS_CLASS, announcesUpdate, faceOf, type ToastFace } from "./toast-update.js";
 import { useLiveCover } from "./use-live-cover.js";
 import { useNamedState } from "./use-named-state.js";
@@ -517,6 +518,16 @@ export type ToasterProps = {
    */
   reducedMotionSelector?: string;
   /**
+   * The selector that is true while this app's own switch says Full motion,
+   * such as `html[data-motion="full"]`, or `:root:not([data-reduced-motion])`
+   * for an app whose one attribute is the whole answer. While it matches,
+   * the system's reduced-motion setting is not followed: the toast keeps its
+   * travel, and Sonner's own rule for that setting stands aside
+   * (`toast-motion`, sonner-motion.ts). The app's reduce switch still wins
+   * where both match. Without it, the system's setting always reduces.
+   */
+  fullMotionSelector?: string;
+  /**
    * The selector that is true while this app has transparency turned off,
    * such as `html[data-glass="off"]`. While it matches, every toast is drawn
    * solid: `--dl-toast-solid` under the kind's tint, with no blur
@@ -576,9 +587,21 @@ export function Toaster({
   onScrimTuck,
   defaultKind,
   reducedMotionSelector,
+  fullMotionSelector,
   reducedTransparencySelector,
 }: ToasterProps) {
-  const still = useNamedState(reducedMotionSelector, "(prefers-reduced-motion: reduce)");
+  // Motion is reduced by the app's own switch, or by the system's setting
+  // unless the app's switch says Full: a choice made in the app is the more
+  // particular one, and it wins.
+  const reduced = useNamedState(reducedMotionSelector, undefined);
+  const system = useNamedState(undefined, "(prefers-reduced-motion: reduce)");
+  const full = useNamedState(fullMotionSelector, undefined) && !reduced;
+  const still = reduced || (system && !full);
+  // Sonner's own rule for the system's setting is scoped once, so the class
+  // below can lift it from this toaster's cards.
+  useEffect(() => {
+    if (fullMotionSelector) scopeSonnerReducedMotion();
+  }, [fullMotionSelector]);
   const solid = useNamedState(reducedTransparencySelector, undefined);
   // The width is shared, so the band and the app's own `usePhoneLayout`
   // switch at the same pixel as the toaster.
@@ -723,6 +746,9 @@ export function Toaster({
       // The app's own switches, named by selector, as classes the stylesheet
       // can key on.
       still && "toast-still",
+      // The app's Full motion choice: Sonner's rule for the system's
+      // reduced-motion setting does not take this toaster's cards.
+      full && MOTION_CLASS,
       solid && "toast-solid",
       appClassName,
     ]

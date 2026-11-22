@@ -7,6 +7,7 @@ import { measureToastCover, refreshToastDock, setNamedToastCover, useToastDockSt
 import { holdTabStops } from "./tab-stops.js";
 import { useToastTags } from "./toast-tags.js";
 import { ToastSpinner } from "./toast-spinner.js";
+import { MOTION_CLASS, scopeSonnerReducedMotion } from "./sonner-motion.js";
 import { PINNED_CLASS, PROGRESS_CLASS, announcesUpdate, faceOf } from "./toast-update.js";
 import { useLiveCover } from "./use-live-cover.js";
 import { useNamedState } from "./use-named-state.js";
@@ -454,8 +455,20 @@ const AGAIN_CARD = `[data-sonner-toast][${AGAIN_ATTR}]`;
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover, scrim = false, onScrimTuck, defaultKind, reducedMotionSelector, reducedTransparencySelector, }) {
-    const still = useNamedState(reducedMotionSelector, "(prefers-reduced-motion: reduce)");
+export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover, scrim = false, onScrimTuck, defaultKind, reducedMotionSelector, fullMotionSelector, reducedTransparencySelector, }) {
+    // Motion is reduced by the app's own switch, or by the system's setting
+    // unless the app's switch says Full: a choice made in the app is the more
+    // particular one, and it wins.
+    const reduced = useNamedState(reducedMotionSelector, undefined);
+    const system = useNamedState(undefined, "(prefers-reduced-motion: reduce)");
+    const full = useNamedState(fullMotionSelector, undefined) && !reduced;
+    const still = reduced || (system && !full);
+    // Sonner's own rule for the system's setting is scoped once, so the class
+    // below can lift it from this toaster's cards.
+    useEffect(() => {
+        if (fullMotionSelector)
+            scopeSonnerReducedMotion();
+    }, [fullMotionSelector]);
     const solid = useNamedState(reducedTransparencySelector, undefined);
     // The width is shared, so the band and the app's own `usePhoneLayout`
     // switch at the same pixel as the toaster.
@@ -588,6 +601,9 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         // The app's own switches, named by selector, as classes the stylesheet
         // can key on.
         still && "toast-still",
+        // The app's Full motion choice: Sonner's rule for the system's
+        // reduced-motion setting does not take this toaster's cards.
+        full && MOTION_CLASS,
         solid && "toast-solid",
         appClassName,
     ]

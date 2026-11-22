@@ -79,6 +79,16 @@ export type ToasterProps = {
      */
     reducedMotionSelector?: string;
     /**
+     * The selector that is true while this app's own switch says Full motion,
+     * such as `html[data-motion="full"]`, or `:root:not([data-reduced-motion])`
+     * for an app whose one attribute is the whole answer. While it matches,
+     * the system's reduced-motion setting is not followed: the toast keeps its
+     * travel, and Sonner's own rule for that setting stands aside
+     * (`toast-motion`, sonner-motion.ts). The app's reduce switch still wins
+     * where both match. Without it, the system's setting always reduces.
+     */
+    fullMotionSelector?: string;
+    /**
      * The selector that is true while this app has transparency turned off,
      * such as `html[data-glass="off"]`. While it matches, every toast is drawn
      * solid: `--dl-toast-solid` under the kind's tint, with no blur
@@ -128,5 +138,5 @@ export type ToasterProps = {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export declare function Toaster({ gateOpen, phoneMaxWidth, className: appClassName, cover, scrim, onScrimTuck, defaultKind, reducedMotionSelector, reducedTransparencySelector, }: ToasterProps): import("react").JSX.Element;
+export declare function Toaster({ gateOpen, phoneMaxWidth, className: appClassName, cover, scrim, onScrimTuck, defaultKind, reducedMotionSelector, fullMotionSelector, reducedTransparencySelector, }: ToasterProps): import("react").JSX.Element;
 //# sourceMappingURL=toaster.d.ts.map
