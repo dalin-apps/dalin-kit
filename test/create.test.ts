@@ -1,4 +1,6 @@
 /**
+ * @vitest-environment jsdom
+ *
  * The create button's stylesheet: the whole button, the glass alone for a
  * shape the app owns, and a keyboard ring no shadow can cover.
  */
@@ -99,8 +101,24 @@ describe("the keyboard ring", () => {
     expect(splitList(list)).toEqual([
       ".dl-create:focus-visible",
       ".dl-create-glass:focus-visible",
-      ":focus-visible > .dl-create-glass",
+      ":focus-visible > .dl-create-glass:where(:not(.dl-create-no-ring))",
     ]);
+  });
+
+  it("lets a glass layer stand down where its host button draws its own ring", () => {
+    // `dl-create-no-ring` on the <span>: the host's ring is then the only one.
+    const layer = splitList(list)[2]!;
+    expect(layer).toContain(":where(:not(.dl-create-no-ring))");
+    // The opt-out weighs nothing, so the rule wins and loses as it did.
+    expect(specificity(layer)).toEqual(specificity(":focus-visible > .dl-create-glass"));
+    // A glass that is itself the focused element always keeps its ring.
+    expect(splitList(list)[1]).toBe(".dl-create-glass:focus-visible");
+    const host = document.createElement("button");
+    host.innerHTML = '<span class="dl-create-glass"></span><span class="dl-create-glass dl-create-no-ring"></span>';
+    const [ringed, quiet] = [...host.querySelectorAll("span")];
+    const inside = layer.replace(":focus-visible", "button");
+    expect(ringed!.matches(inside)).toBe(true);
+    expect(quiet!.matches(inside)).toBe(false);
   });
 
   it("never removes an outline anywhere in the sheet", () => {

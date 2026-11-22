@@ -23,7 +23,9 @@
    in a cascade layer, so that shadow beats a ring an app draws as a shadow
    from inside one (Tailwind's ring utilities). So the ring ships here as an
    outline, which no shadow can cover. --dl-focus-ring is its colour; the
-   family has not picked one, so it falls back to the text colour.
+   family has not picked one, so it falls back to the text colour. A glass
+   <span> inside a button that draws its own ring takes `dl-create-no-ring`
+   as well, and draws none.
 
    What an app must not override. The height and the corners of `.dl-create`,
    and any colour or filter in the recipe. The glass belongs to the create
@@ -70,10 +72,13 @@
 }
 
 /* Keyboard focus: an outline, so the box-shadow above can't hide it. A glass
-   layer inside a focused button wears the ring for it. */
+   layer inside a focused button wears the ring for it, unless the button
+   draws a ring of its own: then the layer carries `dl-create-no-ring` and
+   stands down, so there is one ring and not two. The opt-out sits in
+   :where() and adds no weight. */
 .dl-create:focus-visible,
 .dl-create-glass:focus-visible,
-:focus-visible > .dl-create-glass {
+:focus-visible > .dl-create-glass:where(:not(.dl-create-no-ring)) {
   outline: 2px solid var(--dl-focus-ring, var(--dl-fg, #fff));
   outline-offset: 2px;
 }
