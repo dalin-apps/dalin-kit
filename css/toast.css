@@ -439,6 +439,14 @@
   background-size:
     30% 100%,
     100% 100%;
+  /* Where the segment rests when nothing sweeps it: mid bar. The sweep's
+     own frames place it while it runs. An app's blanket reduced-motion rule
+     (every element's animation cut to one run of next to no time) ends the
+     sweep at once, and without this the segment came to rest at the left
+     end, reading as work that had not begun. */
+  background-position:
+    50% 0,
+    0 0;
   animation: toast-bar-sweep 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)
@@ -1164,7 +1172,11 @@
    writes one of these classes on the list while the selector matches.
 
    REDUCED MOTION (`toast-still`). Also on while the system asks for reduced
-   motion. Sonner already stops every transition and animation on a toast
+   motion, unless the app's switch says Full (fullMotionSelector). An app
+   with a blanket rule of its own for reduced motion must still name its
+   switch to the <Toaster>: the rules below outweigh that blanket rule, but
+   they only apply while the class is on. Sonner already stops every
+   transition and animation on a toast
    under the system's setting; the first rule does the same under the app's
    own switch. The phases still happen, since where a toast sits is the
    information: it announces, then it is tucked. The travel between the two
@@ -1183,8 +1195,12 @@
     50% 0,
     0 0;
 }
-[data-sonner-toaster].toast-still .toast-spinner {
-  animation-duration: 2.4s;
+/* The whole shorthand, with !important, from a selector heavier than an
+   app's blanket rule (`html[data-motion="reduce"] *`, three of the four apps
+   write one): that rule sets the duration to next to nothing and the count
+   to one, both !important, which stopped the spinner dead after one turn. */
+[data-sonner-toaster].toast-still [data-sonner-toast] .toast-spinner {
+  animation: toast-spin 2.4s linear infinite !important;
 }
 [data-sonner-toaster][data-y-position="bottom"].toast-still.toast-tuck [data-sonner-toast] {
   transition: opacity 200ms var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)) !important;

@@ -149,7 +149,43 @@ describe("toast.css, reduced motion", () => {
   });
 
   it("slows the spinner instead of stopping the only sign the work is alive", () => {
-    expect(ruleFor(css, "[data-sonner-toaster].toast-still .toast-spinner")).toContain("animation-duration: 2.4s");
+    expect(ruleFor(css, SPINNER)).toContain("animation: toast-spin 2.4s linear infinite !important");
+  });
+
+  // Every app also has one blanket rule for reduced motion: each element and
+  // pseudo-element gets `animation-duration` near 0 and one iteration, with
+  // !important. These are the selectors the four apps write it under.
+  const BLANKETS = [
+    'html[data-motion="reduced"] *',
+    'html[data-motion="reduced"] *::before',
+    'html:not([data-motion="full"]) *::after',
+    ":root[data-reduced-motion] *",
+    ":root[data-reduced-motion] *::before",
+    'html[data-motion="reduce"] *:not([data-countdown])',
+    'html[data-motion="reduce"] *::before',
+  ];
+  const SPINNER = "[data-sonner-toaster].toast-still [data-sonner-toast] .toast-spinner";
+  const SWEEP = `[data-sonner-toaster][data-y-position="bottom"].toast-still [data-sonner-toast].toast-progress:not([data-swiping="true"], [data-removed="true"])::before`;
+
+  it.each(BLANKETS)("keeps the spinner turning under an app's blanket rule: %s", (blanket) => {
+    // The whole shorthand, with !important, from a heavier selector: the
+    // blanket's duration and its single iteration both lose to it.
+    expect(ruleFor(css, SPINNER)).toMatch(/animation: toast-spin 2\.4s linear infinite !important/);
+    expect(outweighs(SPINNER, blanket)).toBe(true);
+  });
+
+  it.each(BLANKETS)("holds the progress segment still under an app's blanket rule: %s", (blanket) => {
+    expect(ruleFor(css, SWEEP)).toContain("animation: none !important");
+    expect(outweighs(SWEEP, blanket)).toBe(true);
+  });
+
+  it("rests the progress segment mid bar, so a sweep an app's rule cut short does not end at the left", () => {
+    // With no `toast-still` (the app passed no selector) a blanket rule ends
+    // the sweep at once, and the bar shows its resting place.
+    const PHONE = '[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)';
+    const resting = ruleFor(css, `${PHONE} [data-sonner-toast].toast-progress:not([data-swiping="true"], [data-removed="true"])::before`);
+    expect(resting.replace(/\s+/g, " ")).toContain("background-position: 50% 0, 0 0");
+    expect(resting).toContain("animation: toast-bar-sweep 1.5s");
   });
 
   it("keeps the desktop tuck's fade and drops its slide", () => {
