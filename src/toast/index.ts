@@ -17,6 +17,18 @@ export {
   useToastsExpanded,
 } from "./toast-stack.js";
 export {
+  dockLine,
+  readToastDock,
+  refreshToastDock,
+  registerToastDock,
+  useToastDock,
+  useToastDockKind,
+  useToastDockState,
+  type ToastDock,
+  type ToastDockKind,
+  type ToastDockOptions,
+} from "./toast-dock.js";
+export {
   PHONE_MAX_VAR,
   PHONE_MAX_WIDTH_PX,
   readPhoneMaxWidth,

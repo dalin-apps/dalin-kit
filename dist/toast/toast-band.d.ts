@@ -10,7 +10,9 @@ export type ToastBandProps = StackSwipeHost;
  * while toasts exist and the phone layout is on (the width the `<Toaster>`
  * reads): with the stack empty this space stays transparent to the pointer
  * and the page under it keeps its scroll. One tap toggles the fan, and a tap
- * that changes what you see ticks (`onTick`).
+ * that changes what you see ticks (`onTick`). It also stands down while the
+ * dock is not the pill (toast-dock.ts): over a parked chip or under a sheet
+ * it would lie across that surface.
  *
  * The gaps level with the pill also take the swipe the pill does
  * (use-stack-swipe.ts): up past the pill fans the stack out, down tucks it.

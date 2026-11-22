@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { RefObject } from "react";
+import type { CSSProperties, RefObject } from "react";
 import { Toaster as SonnerToaster, useSonner } from "sonner";
 import type { ToastT } from "sonner";
 import {
@@ -9,6 +9,7 @@ import {
   setToastsExpanded,
   useToastsExpanded,
 } from "./toast-stack.js";
+import { refreshToastDock, useToastDockState, type ToastDock } from "./toast-dock.js";
 import { setPhoneMaxWidth, usePhoneLayout } from "./use-phone-layout.js";
 
 // How long a freshly-arrived mobile toast stays popped above the card
@@ -81,6 +82,7 @@ function desktopHold(arrived: ToastT[]): number {
 function useAnnouncePhase(
   toasts: ToastT[],
   holdFor: (arrived: ToastT[]) => number,
+  onAnnounce: () => void,
 ): Phase {
   const [phase, setPhase] = useState<Phase>(null);
   const seenIds = useRef<Set<string>>(new Set());
@@ -91,6 +93,9 @@ function useAnnouncePhase(
     seenIds.current = new Set(toasts.map((t) => String(t.id)));
     if (arrived.length === 0) return;
     timers.current.forEach(clearTimeout);
+    // Before the phase class lands, so where the toast announces is measured
+    // in the same commit that starts it.
+    onAnnounce();
     // The hold is measured by what arrived, not by what is already stacked.
     const hold = holdFor(arrived);
     setPhase("announce");
@@ -98,10 +103,25 @@ function useAnnouncePhase(
       setTimeout(() => setPhase("slotting"), hold),
       setTimeout(() => setPhase(null), hold + SLOT_MS),
     ];
-  }, [toasts, holdFor]);
+  }, [toasts, holdFor, onAnnounce]);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
   return phase;
+}
+
+/**
+ * The dock the phone's toaster draws: the live one (toast-dock.ts), held for
+ * the rest of an announce it began under. A sheet that closes while its toast
+ * is still above it would otherwise drop the toast to the pill mid-flight; the
+ * toast finishes over the line it started on, and the stack is behind the
+ * pill when the phases end.
+ */
+function useHeldDock(phase: Phase, phone: boolean): ToastDock | null {
+  const live = useToastDockState();
+  const held = useRef<ToastDock | null>(null);
+  if (live) held.current = live;
+  else if (phase === null) held.current = null;
+  return phone ? (live ?? held.current) : null;
 }
 
 /**
@@ -262,6 +282,11 @@ export type ToasterProps = {
  * the CSS: `toast-announcing` (pop + hold) then `toast-slotting` (the
  * card-shuffle into the stack).
  *
+ * The pill is the dock unless a surface says otherwise (`useToastDock`): over
+ * a parked chip, a sheet or a dialog the toast announces above that surface's
+ * line and then leaves, and the stack waits out of sight until the pill is
+ * the dock again (`toast-over` in toast.css).
+ *
  * On desktop the stack hangs off the window's right edge, standing on
  * `--dl-toast-floor` so it never shares the corner with a floating button. A
  * toast slides out from under that edge, holds in the corner, then slides
@@ -282,7 +307,8 @@ export function Toaster({ gateOpen = true, phoneMaxWidth }: ToasterProps) {
   const tucked = !isMobile;
   const expanded = useToastsExpanded();
   const { toasts } = useSonner();
-  const phase = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold);
+  const phase = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold, refreshToastDock);
+  const dock = useHeldDock(phase, isMobile);
 
   // Mirror the live toast count into the shared store. This Toaster never
   // unmounts (it's at the layout root), so the count is always authoritative.
@@ -306,6 +332,13 @@ export function Toaster({ gateOpen = true, phoneMaxWidth }: ToasterProps) {
     if (!gateOpen && expanded) setToastsExpanded(false);
   }, [gateOpen, expanded]);
 
+  // A sheet or dialog over the bar tucks a fanned stack: the band that would
+  // tuck it is under the cover.
+  const covered = dock?.kind === "cover";
+  useEffect(() => {
+    if (covered && expanded) setToastsExpanded(false);
+  }, [covered, expanded]);
+
   const root = useRef<HTMLDivElement>(null);
   useTimerRelease(root, toasts.length === 0);
   useNoHoverExpand(root, isMobile);
@@ -315,7 +348,7 @@ export function Toaster({ gateOpen = true, phoneMaxWidth }: ToasterProps) {
   // Sonner's own hover-expand. `toast-stack-open` mirrors this to the DOM so
   // the CSS can keep the collapsed stack pointer-inert (killing the
   // hover-expand flicker) while letting the expanded toasts stay interactive.
-  const stackOpen = isMobile && expanded && !choreographing;
+  const stackOpen = isMobile && expanded && !choreographing && !covered;
   const className =
     [
       // Gate closed: hide the whole stack (covers toasts that were already
@@ -327,6 +360,10 @@ export function Toaster({ gateOpen = true, phoneMaxWidth }: ToasterProps) {
       choreographing && phase === "announce" && "toast-announcing",
       choreographing && phase === "slotting" && "toast-slotting",
       stackOpen && "toast-stack-open",
+      // The dock is not the pill: the toaster stands on the dock's line, and
+      // on the bottom edge where there is no room above it.
+      dock && "toast-over",
+      dock && dock.line === 0 && "toast-over-edge",
     ]
       .filter(Boolean)
       .join(" ") || undefined;
@@ -340,6 +377,7 @@ export function Toaster({ gateOpen = true, phoneMaxWidth }: ToasterProps) {
         position="bottom-right"
         gap={8}
         className={className}
+        style={dock ? ({ "--dl-dock-line": `${dock.line}px` } as CSSProperties) : undefined}
         expand={stackOpen || tucked}
         visibleToasts={tucked ? DESKTOP_VISIBLE : undefined}
         swipeDirections={isMobile ? [...PHONE_SWIPE_DIRECTIONS] : undefined}

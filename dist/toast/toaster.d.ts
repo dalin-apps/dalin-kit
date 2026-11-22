@@ -33,6 +33,11 @@ export type ToasterProps = {
  * the CSS: `toast-announcing` (pop + hold) then `toast-slotting` (the
  * card-shuffle into the stack).
  *
+ * The pill is the dock unless a surface says otherwise (`useToastDock`): over
+ * a parked chip, a sheet or a dialog the toast announces above that surface's
+ * line and then leaves, and the stack waits out of sight until the pill is
+ * the dock again (`toast-over` in toast.css).
+ *
  * On desktop the stack hangs off the window's right edge, standing on
  * `--dl-toast-floor` so it never shares the corner with a floating button. A
  * toast slides out from under that edge, holds in the corner, then slides

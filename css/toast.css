@@ -21,6 +21,9 @@
          How far the bar sits above the bottom safe area.
      --dl-bar-z
          The bar's z-index. The band sits one under it, the toaster two.
+     --dl-toast-over-z
+         The toaster's z-index while the dock is not the pill (useToastDock):
+         over the app's sheets and dialogs, under its menus.
      --dl-toast-floor
          How far above the window's bottom the desktop column stands. An app
          with a floating button in that corner raises it past the button.
@@ -57,6 +60,7 @@
   --dl-bar-h: 58px;
   --dl-bar-inset: 16px;
   --dl-bar-z: 30;
+  --dl-toast-over-z: 60;
 }
 
 /* ============================================================
@@ -430,6 +434,68 @@
   animation-delay: calc(var(--toasts-before) * 55ms);
 }
 
+/* OVER A LINE: the dock is not the pill. Something else owns the bottom of
+   the screen (a parked chip) or hides the bar (a sheet, a dialog), and the
+   surface said so with useToastDock. The <Toaster> puts `toast-over` on the
+   list and the line in --dl-dock-line, px from the bottom of the viewport.
+   The toast announces in the strip above that line, never over what is being
+   read, then dives down behind it, the same tuck it does behind the pill.
+   With no pill to wait behind, the cards then wait under the line, out of
+   sight, until the pill is the dock again. Where the strip is too short (a
+   sheet that fills the screen) the line is 0 and `toast-over-edge` holds the
+   toast where the pill would be, then dives off the bottom of the screen.
+   --dl-toast-over-z (60) clears a sheet and its scrim; an app whose sheets
+   sit higher raises it.
+
+   The clip that paints "behind" must be `overflow` and never `clip-path`.
+   clip-path makes the element a backdrop root, which leaves the toast's
+   backdrop-filter nothing to sample: it keeps its tint and loses its frost.
+   The box is 28px wider than the pill on each side, because the announce
+   scales to 1.1 about its centre and the spill would otherwise be cut flat
+   where the pill is roundest. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over {
+  z-index: var(--dl-toast-over-z) !important;
+  bottom: var(--dl-dock-line, 0px) !important;
+  left: calc(50% - var(--dl-bar-w) / 2 - 28px) !important;
+  right: auto !important;
+  width: calc(var(--dl-bar-w) + 56px) !important;
+  height: 50dvh;
+  overflow: hidden;
+  --notif-base: 12px;
+}
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-over-edge {
+  --notif-base: calc(env(safe-area-inset-bottom, 0px) + var(--dl-bar-inset));
+}
+/* The toast keeps the pill's width inside that wider box. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over [data-sonner-toast] {
+  width: var(--dl-bar-w) !important;
+  left: 28px !important;
+  right: auto !important;
+}
+/* The waiting cards sit under the line, where the dive ends, so nothing
+   peeks over a surface that is not the pill. The announcing toast is the one
+   card left out. A stack fanned out over a line still shows, from the line
+   up: its cards are `data-expanded` and take the fan's own rule. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over:not(.toast-announcing)
+  [data-sonner-toast][data-expanded="false"]:not([data-removed="true"]),
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-announcing
+  [data-sonner-toast][data-expanded="false"][data-front="false"]:not([data-removed="true"]) {
+  --y: translateY(calc(100% + 20px)) scale(0.95) !important;
+}
+/* The exit: no fade. It runs 700ms against the pill's 480ms because it
+   carries the whole card past the line instead of stopping on a slot that
+   still peeks. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-slotting
+  [data-sonner-toast][data-front="true"]:not([data-removed="true"]) {
+  animation: notif-slot-under 700ms cubic-bezier(0.45, 0, 0.2, 1) both;
+}
+/* The older cards do not riffle back into view over the line. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-slotting
+  [data-sonner-toast][data-front="false"] {
+  opacity: 0 !important;
+  animation: none !important;
+}
+
 /* Appear for an arriving mobile toast: it rises up into place and settles at
    the announce size (--notif-pop). IMPORTANT: the scale never drops below 1
    while a toast can mount. Sonner measures each toast's height with
@@ -472,6 +538,28 @@
   }
   100% {
     transform: translateY(calc(-1 * var(--notif-peek))) scale(0.95) rotate(0deg);
+  }
+}
+
+/* The dive behind a line (OVER A LINE above): notif-slot-in's beats at the
+   same fractions of the journey, so the two tucks read as one gesture. Only
+   the distance differs. It is the toast's OWN height (translateY resolves a
+   percentage against it), so the whole card is carried past the line
+   whatever its padding comes to. 67.9% + 9.7px is the point 0.679 of the way
+   from -12px to 100% + 20px. */
+@keyframes notif-slot-under {
+  0% {
+    transform: translateY(calc(var(--lift) * var(--notif-base))) scale(var(--notif-pop))
+      rotate(0deg);
+  }
+  45% {
+    transform: translateY(calc(67.9% + 9.7px)) scale(0.97) rotate(-6deg);
+  }
+  75% {
+    transform: translateY(calc(108.9% + 22.8px)) scale(0.95) rotate(4deg);
+  }
+  100% {
+    transform: translateY(calc(100% + 20px)) scale(0.95) rotate(0deg);
   }
 }
 
