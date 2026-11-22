@@ -51,13 +51,16 @@ const DESKTOP_DURATION_MS = 10000;
 const DESKTOP_VISIBLE = 5;
 
 /**
- * On the phone a fanned toast leaves whichever way it is pushed. Sonner
- * derives its swipe directions from `position`, and
- * "bottom-right" yields down and right alone. That reasons about a corner;
- * the phone's toast is centred over the pill with room on every side. The
- * desktop column does hang off a corner, so it keeps Sonner's own two.
+ * A toast leaves whichever way it is pushed. Sonner derives its swipe
+ * directions from `position`, and "bottom-right" yields down and right
+ * alone: a push the other way is damped to a fraction of the pointer and
+ * never reaches the 45px it takes to dismiss. That reasons about a corner.
+ * The phone's toast is centred over the pill with room on every side, and a
+ * desktop toast pulled out from the edge has the whole window to its left
+ * and above it. Drive's and calendar's own toasters passed all four on
+ * every layout; version 0.1 kept Sonner's two on the desktop.
  */
-const PHONE_SWIPE_DIRECTIONS = ["top", "right", "bottom", "left"] as const;
+const SWIPE_DIRECTIONS = ["top", "right", "bottom", "left"] as const;
 
 /** The tint class for each toast kind (toast.css). `loading` is the progress
  *  kind: `toast.loading()` and a promise toast while it waits. A bare
@@ -592,6 +595,8 @@ export function Toaster({
     find,
     defaultKind,
   );
+  // One array for the life of the toaster: Sonner reads it on every move.
+  const swipeDirections = useMemo(() => [...SWIPE_DIRECTIONS], []);
   // One object for as long as the default kind stands, so Sonner's cards
   // are not handed new class names on every render.
   const classNames = useMemo(
@@ -688,7 +693,7 @@ export function Toaster({
         style={dock ? ({ "--dl-dock-line": `${dock.line}px` } as CSSProperties) : undefined}
         expand={stackOpen || tucked}
         visibleToasts={tucked ? DESKTOP_VISIBLE : undefined}
-        swipeDirections={isMobile ? [...PHONE_SWIPE_DIRECTIONS] : undefined}
+        swipeDirections={swipeDirections}
         icons={TOAST_ICONS}
         toastOptions={{
           duration: isMobile ? MOBILE_DURATION_MS : DESKTOP_DURATION_MS,
