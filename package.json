@@ -1,7 +1,7 @@
 {
   "name": "@dalin/kit",
   "version": "0.1.0",
-  "description": "The shared design base of the dalin apps: tokens, the toast, and the create button.",
+  "description": "The shared design base of the dalin apps: tokens, the toast, the create button, and the helpers each app had copied.",
   "type": "module",
   "license": "MIT",
   "author": "Samuel Gomez",
@@ -22,9 +22,14 @@
       "types": "./dist/toast/index.d.ts",
       "import": "./dist/toast/index.js"
     },
+    "./helpers": {
+      "types": "./dist/helpers/index.d.ts",
+      "import": "./dist/helpers/index.js"
+    },
     "./tokens.css": "./css/tokens.css",
     "./toast.css": "./css/toast.css",
-    "./create.css": "./css/create.css"
+    "./create.css": "./css/create.css",
+    "./motion.css": "./css/motion.css"
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",

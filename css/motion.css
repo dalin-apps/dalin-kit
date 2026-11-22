@@ -1,0 +1,44 @@
+/* @dalin/kit motion.css: the close fade for hand-built menus and dialogs.
+
+   What it is. One rule and its keyframes. A menu or dialog an app builds by
+   hand unmounts the moment it closes, so `watchLeaving` (from @dalin/kit)
+   leaves an inert copy where it stood, marked `data-dl-leaving`, and this
+   sheet fades the copy out over the family's close, 110ms (--dl-t-close in
+   tokens.css). The copy only loses its opacity, so it holds the place and
+   the transform the overlay had, and nothing inside it moves: a child's own
+   entrance would otherwise replay in the copy.
+
+   How an app adopts it. Import this file once, on every route, and call
+   `watchLeaving({ selectors })` with the overlays that should fade, from an
+   effect at the app's root. Delete the app's own [data-leaving] rule.
+
+   What stays the app's. Nothing started from the keyboard animates, and the
+   overlays that ease IN are the app's own classes, so the rule that lands
+   them at once is the app's to write, against the attribute
+   `watchInputModality` keeps on <html>:
+
+     html[data-input="keyboard"] :is(.menu, .dialog) {
+       animation-duration: 0s !important;
+       transition-duration: 0s !important;
+     }
+
+   An overlay that must fade its parts instead of itself (one whose surface
+   is a pseudo-element with its own blur) overrides the first rule below for
+   its own class. */
+[data-dl-leaving] {
+  animation: dl-leave var(--dl-t-close, 110ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)) forwards !important;
+  pointer-events: none !important;
+}
+[data-dl-leaving]::before,
+[data-dl-leaving]::after,
+[data-dl-leaving] *,
+[data-dl-leaving] *::before,
+[data-dl-leaving] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+@keyframes dl-leave {
+  to {
+    opacity: 0;
+  }
+}
