@@ -11,6 +11,7 @@ export { toastLine } from "./toast-line.js";
 export { announcesUpdate, faceOf, textOf, type ToastFace } from "./toast-update.js";
 export {
   DEFAULT_PILL_SELECTOR,
+  stackTick,
   useStackSwipe,
   type StackSwipe,
   type StackSwipeHost,

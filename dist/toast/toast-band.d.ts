@@ -16,7 +16,8 @@ export type ToastBandProps = StackSwipeHost & {
  * while toasts exist and the phone layout is on (the width the `<Toaster>`
  * reads): with the stack empty this space stays transparent to the pointer
  * and the page under it keeps its scroll. One tap toggles the fan, and a tap
- * that changes what you see ticks (`onTick`). It also stands down while the
+ * that changes what you see ticks (`onTick`, or `onFan` and `onTuck` apart).
+ * It also stands down while the
  * dock is not the pill (toast-dock.ts): over a parked chip or under a sheet
  * it would lie across that surface.
  *
@@ -37,5 +38,5 @@ export type ToastBandProps = StackSwipeHost & {
  * The band is as wide as the screen, so its keyboard ring is drawn around
  * the pill's footprint instead of its own box (toast.css).
  */
-export declare function ToastBand({ pill, onTick, reducedMotion, label }: ToastBandProps): import("react").JSX.Element | null;
+export declare function ToastBand({ label, ...host }: ToastBandProps): import("react").JSX.Element | null;
 //# sourceMappingURL=toast-band.d.ts.map

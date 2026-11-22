@@ -3,7 +3,7 @@ import { jsx as _jsx } from "react/jsx-runtime";
 import { useToastDockState } from "./toast-dock.js";
 import { toggleToastsExpanded, useToastCount, useToastsExpanded } from "./toast-stack.js";
 import { usePhoneLayout } from "./use-phone-layout.js";
-import { useStackSwipe } from "./use-stack-swipe.js";
+import { stackTick, useStackSwipe } from "./use-stack-swipe.js";
 /**
  * The dead space around the phone's bottom bar, turned into the way the toast
  * stack fans out. It runs from the pill's top line to the bottom of the
@@ -13,7 +13,8 @@ import { useStackSwipe } from "./use-stack-swipe.js";
  * while toasts exist and the phone layout is on (the width the `<Toaster>`
  * reads): with the stack empty this space stays transparent to the pointer
  * and the page under it keeps its scroll. One tap toggles the fan, and a tap
- * that changes what you see ticks (`onTick`). It also stands down while the
+ * that changes what you see ticks (`onTick`, or `onFan` and `onTuck` apart).
+ * It also stands down while the
  * dock is not the pill (toast-dock.ts): over a parked chip or under a sheet
  * it would lie across that surface.
  *
@@ -34,12 +35,12 @@ import { useStackSwipe } from "./use-stack-swipe.js";
  * The band is as wide as the screen, so its keyboard ring is drawn around
  * the pill's footprint instead of its own box (toast.css).
  */
-export function ToastBand({ pill, onTick, reducedMotion, label = "Show notifications" }) {
+export function ToastBand({ label = "Show notifications", ...host }) {
     const count = useToastCount();
     const expanded = useToastsExpanded();
     const phone = usePhoneLayout();
     const dock = useToastDockState();
-    const swipe = useStackSwipe({ zone: "band", pill, onTick, reducedMotion });
+    const swipe = useStackSwipe({ zone: "band", ...host });
     if (count === 0 || !phone || dock !== null)
         return null;
     return (_jsx("button", { type: "button", className: "toast-band", "aria-label": label, "aria-expanded": expanded, ...swipe, 
@@ -47,7 +48,8 @@ export function ToastBand({ pill, onTick, reducedMotion, label = "Show notificat
         // focus the button on mousedown, pulling focus (and a phone's keyboard)
         // out of whatever the reader was typing in. Tab still reaches it.
         onMouseDown: (e) => e.preventDefault(), onClick: () => {
-            onTick?.();
+            // The tick for where the stack is going: out if it is tucked now.
+            stackTick(host, !expanded);
             toggleToastsExpanded();
         } }));
 }

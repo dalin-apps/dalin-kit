@@ -30,6 +30,13 @@
  * and `data-pull="swell"` for 460ms once the stack moves, with `--pull` (0 to
  * 1), `--pull-x` (the finger's place along the pill) and `--pull-lift` (px).
  *
+ * Three things an app may add (StackSwipeHost). `liftTarget` names a second
+ * element that gets `--pull-lift` too, for a piece beside the pill that rises
+ * with it. `onFan` and `onTuck` are the two ticks apart, for an app whose
+ * haptics differ by direction. And `pullOn` says when the matched pill draws
+ * the pull at all: where another bar can stand in the pill's place and draws
+ * none, the hook writes nothing and the peeking cards stay down with it.
+ *
  * @see `stack-swipe.ts`, what a drag means
  * @see `toast-band.tsx`, the gaps beside the pill
  */
@@ -45,24 +52,36 @@ function toaster() {
     return document.querySelector(TOASTER_SELECTOR);
 }
 /** Hands the pill and the peeking cards to the finger: no transitions. */
-function begin(pill) {
-    pill.dataset.pull = "on";
+function begin(press) {
+    if (!press.draws)
+        return;
+    press.pill.dataset.pull = "on";
     toaster()?.setAttribute("data-pulling", "");
 }
 function paint(press, progress, lift, x) {
+    // A pill that draws no pull does not lift, so the cards behind it don't
+    // either: they would rise from behind a bar that stayed where it was.
+    if (!press.draws)
+        return;
     const along = Math.min(Math.max(x - press.pillLeft, 0), press.pill.offsetWidth);
     const style = press.pill.style;
+    const px = `${lift.toFixed(2)}px`;
     style.setProperty("--pull", progress.toFixed(3));
     style.setProperty("--pull-x", `${Math.round(along)}px`);
-    style.setProperty("--pull-lift", `${lift.toFixed(2)}px`);
-    toaster()?.style.setProperty("--pull-lift", `${lift.toFixed(2)}px`);
+    style.setProperty("--pull-lift", px);
+    press.also?.style.setProperty("--pull-lift", px);
+    toaster()?.style.setProperty("--pull-lift", px);
 }
 /** Lets the pill and the cards ease back to rest. */
-function release(pill) {
+function release(press) {
+    if (!press.draws)
+        return;
+    const { pill } = press;
     if (pill.dataset.pull === "on")
         delete pill.dataset.pull;
     pill.style.removeProperty("--pull");
     pill.style.removeProperty("--pull-lift");
+    press.also?.style.removeProperty("--pull-lift");
     const list = toaster();
     list?.removeAttribute("data-pulling");
     list?.style.removeProperty("--pull-lift");
@@ -72,15 +91,23 @@ function release(pill) {
  * cards travel. Under reduced motion the light simply goes, since the
  * stylesheet already cuts the swell to nothing.
  */
-function swell(pill, reduced) {
-    release(pill);
-    if (reduced)
+function swell(press, reduced) {
+    release(press);
+    if (reduced || !press.draws)
         return;
+    const { pill } = press;
     pill.dataset.pull = "swell";
     window.setTimeout(() => {
         if (pill.dataset.pull === "swell")
             delete pill.dataset.pull;
     }, SWELL_MS);
+}
+/**
+ * The app's tick for the stack moving: its own tick for that direction when
+ * it has one, else the one tick for both.
+ */
+export function stackTick(host, open) {
+    (open ? (host.onFan ?? host.onTick) : (host.onTuck ?? host.onTick))?.();
 }
 /**
  * Claims the press once it has travelled far enough to mean something, and
@@ -99,7 +126,7 @@ function claim(current, event) {
             /* the pointer is already gone */
         }
     }
-    begin(current.pill);
+    begin(current);
     return true;
 }
 function systemReducesMotion() {
@@ -108,8 +135,8 @@ function systemReducesMotion() {
 /** The stack moves: buzz, swell the lens, and fan or tuck. */
 function settle(current, open, host) {
     current.done = true;
-    host.onTick?.();
-    swell(current.pill, (host.reducedMotion ?? systemReducesMotion)());
+    stackTick(host, open);
+    swell(current, (host.reducedMotion ?? systemReducesMotion)());
     setToastsExpanded(open);
 }
 /** Follows a claimed press to the pointer's current position. */
@@ -129,21 +156,21 @@ function follow(current, x, y, host) {
         settle(current, true, host);
 }
 /** Reads a drag on the pill or the gaps beside it as the toast stack's swipe. */
-export function useStackSwipe({ zone, pill, onTick, reducedMotion }) {
+export function useStackSwipe({ zone, pill, onTick, onFan, onTuck, liftTarget, pullOn, reducedMotion, }) {
     const press = useRef(null);
     const guardUntil = useRef(0);
     // The app's side, read at the moment a press needs it, so a new callback
     // identity never rebuilds the handlers.
-    const host = useRef({ pill, onTick, reducedMotion });
+    const host = useRef({ pill, onTick, onFan, onTuck, liftTarget, pullOn, reducedMotion });
     useEffect(() => {
-        host.current = { pill, onTick, reducedMotion };
-    }, [pill, onTick, reducedMotion]);
+        host.current = { pill, onTick, onFan, onTuck, liftTarget, pullOn, reducedMotion };
+    }, [pill, onTick, onFan, onTuck, liftTarget, pullOn, reducedMotion]);
     // Cleared on unmount, so a bar that leaves mid-pull (a page opened from a
     // toast's action) doesn't leave Sonner's list with its transitions off.
     useEffect(() => () => {
         const current = press.current;
         if (current && current.direction !== 0 && !current.done)
-            release(current.pill);
+            release(current);
     }, []);
     const onPointerDown = useCallback((event) => {
         // A new press owns whatever click comes after it, so the guard left by
@@ -167,6 +194,8 @@ export function useStackSwipe({ zone, pill, onTick, reducedMotion }) {
             open: readToastsExpanded(),
             pill,
             pillLeft: box.left,
+            draws: host.current.pullOn === undefined || pill.matches(host.current.pullOn),
+            also: host.current.liftTarget ? document.querySelector(host.current.liftTarget) : null,
             direction: 0,
             done: false,
         };
@@ -188,7 +217,7 @@ export function useStackSwipe({ zone, pill, onTick, reducedMotion }) {
             return;
         guardUntil.current = performance.now() + SWIPE_CLICK_GUARD_MS;
         if (!current.done)
-            release(current.pill);
+            release(current);
     }, []);
     const onClickCapture = useCallback((event) => {
         if (performance.now() >= guardUntil.current)

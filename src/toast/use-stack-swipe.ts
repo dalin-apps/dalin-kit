@@ -31,6 +31,13 @@
  * and `data-pull="swell"` for 460ms once the stack moves, with `--pull` (0 to
  * 1), `--pull-x` (the finger's place along the pill) and `--pull-lift` (px).
  *
+ * Three things an app may add (StackSwipeHost). `liftTarget` names a second
+ * element that gets `--pull-lift` too, for a piece beside the pill that rises
+ * with it. `onFan` and `onTuck` are the two ticks apart, for an app whose
+ * haptics differ by direction. And `pullOn` says when the matched pill draws
+ * the pull at all: where another bar can stand in the pill's place and draws
+ * none, the hook writes nothing and the peeking cards stay down with it.
+ *
  * @see `stack-swipe.ts`, what a drag means
  * @see `toast-band.tsx`, the gaps beside the pill
  */
@@ -70,6 +77,10 @@ type Press = SwipeStart & {
   pointerType: string;
   pill: HTMLElement;
   pillLeft: number;
+  /** Whether this pill draws the pull (`pullOn`). False: nothing is painted. */
+  draws: boolean;
+  /** The app's second element for `--pull-lift` (`liftTarget`), if it is on the page. */
+  also: HTMLElement | null;
   direction: -1 | 0 | 1;
   /** The stack has moved, so the rest of this press only waits for the lift. */
   done: boolean;
@@ -84,6 +95,29 @@ export type StackSwipeHost = {
    * app's own haptic tick. Nothing is played when it is left out.
    */
   onTick?: () => void;
+  /**
+   * The tick for the stack fanning out alone, in place of `onTick`. For an
+   * app whose haptics differ by direction: something arriving, something
+   * leaving.
+   */
+  onFan?: () => void;
+  /** The tick for the stack tucking away alone, in place of `onTick`. */
+  onTuck?: () => void;
+  /**
+   * A selector for a second element that gets `--pull-lift` as the pill
+   * does, and loses it with the pill: a piece of the bar beside the pill that
+   * should rise with it under a pull.
+   */
+  liftTarget?: string;
+  /**
+   * A selector the matched pill must also match to draw the pull. For a bar
+   * whose middle piece is not always the pill (a selection bar that swaps in
+   * and draws no lens): while the piece does not match, the swipe still fans
+   * and tucks the stack, but nothing is written on the piece and the peeking
+   * cards do not lift, since there is no lift for them to follow. Left out,
+   * the pill always draws.
+   */
+  pullOn?: string;
   /**
    * Whether motion is reduced right now. Defaults to the system's setting; an
    * app with its own motion switch passes its reader, so that switch wins.
@@ -118,26 +152,38 @@ function toaster(): HTMLElement | null {
   return document.querySelector<HTMLElement>(TOASTER_SELECTOR);
 }
 
+/** What a pull writes on, fixed for the length of a press. */
+type Painted = Pick<Press, "pill" | "draws" | "also">;
+
 /** Hands the pill and the peeking cards to the finger: no transitions. */
-function begin(pill: HTMLElement) {
-  pill.dataset.pull = "on";
+function begin(press: Painted) {
+  if (!press.draws) return;
+  press.pill.dataset.pull = "on";
   toaster()?.setAttribute("data-pulling", "");
 }
 
 function paint(press: Press, progress: number, lift: number, x: number) {
+  // A pill that draws no pull does not lift, so the cards behind it don't
+  // either: they would rise from behind a bar that stayed where it was.
+  if (!press.draws) return;
   const along = Math.min(Math.max(x - press.pillLeft, 0), press.pill.offsetWidth);
   const style = press.pill.style;
+  const px = `${lift.toFixed(2)}px`;
   style.setProperty("--pull", progress.toFixed(3));
   style.setProperty("--pull-x", `${Math.round(along)}px`);
-  style.setProperty("--pull-lift", `${lift.toFixed(2)}px`);
-  toaster()?.style.setProperty("--pull-lift", `${lift.toFixed(2)}px`);
+  style.setProperty("--pull-lift", px);
+  press.also?.style.setProperty("--pull-lift", px);
+  toaster()?.style.setProperty("--pull-lift", px);
 }
 
 /** Lets the pill and the cards ease back to rest. */
-function release(pill: HTMLElement) {
+function release(press: Painted) {
+  if (!press.draws) return;
+  const { pill } = press;
   if (pill.dataset.pull === "on") delete pill.dataset.pull;
   pill.style.removeProperty("--pull");
   pill.style.removeProperty("--pull-lift");
+  press.also?.style.removeProperty("--pull-lift");
   const list = toaster();
   list?.removeAttribute("data-pulling");
   list?.style.removeProperty("--pull-lift");
@@ -148,13 +194,22 @@ function release(pill: HTMLElement) {
  * cards travel. Under reduced motion the light simply goes, since the
  * stylesheet already cuts the swell to nothing.
  */
-function swell(pill: HTMLElement, reduced: boolean) {
-  release(pill);
-  if (reduced) return;
+function swell(press: Painted, reduced: boolean) {
+  release(press);
+  if (reduced || !press.draws) return;
+  const { pill } = press;
   pill.dataset.pull = "swell";
   window.setTimeout(() => {
     if (pill.dataset.pull === "swell") delete pill.dataset.pull;
   }, SWELL_MS);
+}
+
+/**
+ * The app's tick for the stack moving: its own tick for that direction when
+ * it has one, else the one tick for both.
+ */
+export function stackTick(host: StackSwipeHost, open: boolean): void {
+  (open ? (host.onFan ?? host.onTick) : (host.onTuck ?? host.onTick))?.();
 }
 
 /**
@@ -172,7 +227,7 @@ function claim(current: Press, event: ReactPointerEvent<HTMLElement>): boolean {
       /* the pointer is already gone */
     }
   }
-  begin(current.pill);
+  begin(current);
   return true;
 }
 
@@ -183,8 +238,8 @@ function systemReducesMotion(): boolean {
 /** The stack moves: buzz, swell the lens, and fan or tuck. */
 function settle(current: Press, open: boolean, host: StackSwipeHost) {
   current.done = true;
-  host.onTick?.();
-  swell(current.pill, (host.reducedMotion ?? systemReducesMotion)());
+  stackTick(host, open);
+  swell(current, (host.reducedMotion ?? systemReducesMotion)());
   setToastsExpanded(open);
 }
 
@@ -201,22 +256,31 @@ function follow(current: Press, x: number, y: number, host: StackSwipeHost) {
 }
 
 /** Reads a drag on the pill or the gaps beside it as the toast stack's swipe. */
-export function useStackSwipe({ zone, pill, onTick, reducedMotion }: StackSwipeOptions): StackSwipe {
+export function useStackSwipe({
+  zone,
+  pill,
+  onTick,
+  onFan,
+  onTuck,
+  liftTarget,
+  pullOn,
+  reducedMotion,
+}: StackSwipeOptions): StackSwipe {
   const press = useRef<Press | null>(null);
   const guardUntil = useRef(0);
   // The app's side, read at the moment a press needs it, so a new callback
   // identity never rebuilds the handlers.
-  const host = useRef<StackSwipeHost>({ pill, onTick, reducedMotion });
+  const host = useRef<StackSwipeHost>({ pill, onTick, onFan, onTuck, liftTarget, pullOn, reducedMotion });
   useEffect(() => {
-    host.current = { pill, onTick, reducedMotion };
-  }, [pill, onTick, reducedMotion]);
+    host.current = { pill, onTick, onFan, onTuck, liftTarget, pullOn, reducedMotion };
+  }, [pill, onTick, onFan, onTuck, liftTarget, pullOn, reducedMotion]);
 
   // Cleared on unmount, so a bar that leaves mid-pull (a page opened from a
   // toast's action) doesn't leave Sonner's list with its transitions off.
   useEffect(
     () => () => {
       const current = press.current;
-      if (current && current.direction !== 0 && !current.done) release(current.pill);
+      if (current && current.direction !== 0 && !current.done) release(current);
     },
     [],
   );
@@ -241,6 +305,8 @@ export function useStackSwipe({ zone, pill, onTick, reducedMotion }: StackSwipeO
         open: readToastsExpanded(),
         pill,
         pillLeft: box.left,
+        draws: host.current.pullOn === undefined || pill.matches(host.current.pullOn),
+        also: host.current.liftTarget ? document.querySelector<HTMLElement>(host.current.liftTarget) : null,
         direction: 0,
         done: false,
       };
@@ -261,7 +327,7 @@ export function useStackSwipe({ zone, pill, onTick, reducedMotion }: StackSwipeO
     press.current = null;
     if (current.direction === 0) return;
     guardUntil.current = performance.now() + SWIPE_CLICK_GUARD_MS;
-    if (!current.done) release(current.pill);
+    if (!current.done) release(current);
   }, []);
 
   const onClickCapture = useCallback((event: ReactMouseEvent<HTMLElement>) => {
