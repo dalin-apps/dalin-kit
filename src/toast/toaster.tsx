@@ -73,6 +73,19 @@ const TOAST_CLASS_NAMES = {
 export type ToastDefaultKind = "info" | "success" | "warning" | "error";
 
 /**
+ * The classes a bare toast wears under a default kind. They are the bare
+ * kind's own names, never the typed kind's (`toast-info`): Sonner 2.0.7,
+ * which the four apps lock, puts `classNames.default` on every toast, typed
+ * ones too, where 2.0.8 keeps it for a toast with no type. A typed kind's
+ * class there tinted every toast in the default kind's colour. toast.css
+ * reads these two only on a card with no `data-type`, so on either Sonner
+ * they mean something on a bare toast alone.
+ */
+function bareClass(kind: ToastDefaultKind): string {
+  return `toast-bare toast-bare-${kind}`;
+}
+
+/**
  * The class of the progress kind, for a plain toast that carries it itself
  * (with `<ToastSpinner>` as its icon). `toast.loading()` needs neither.
  */
@@ -478,7 +491,7 @@ export function Toaster({
     setMeasured(cover && isMobile ? measureToastCover(cover) : null);
   }, [cover, isMobile]);
   const root = useRef<HTMLDivElement>(null);
-  const find = useToastTags(root);
+  const find = useToastTags(root, toasts);
   const { phase, again } = useAnnouncePhase(
     toasts,
     tucked ? desktopHold : mobileHold,
@@ -489,7 +502,7 @@ export function Toaster({
   // One object for as long as the default kind stands, so Sonner's cards
   // are not handed new class names on every render.
   const classNames = useMemo(
-    () => (defaultKind ? { ...TOAST_CLASS_NAMES, default: `toast-bare ${TOAST_CLASS_NAMES[defaultKind]}` } : TOAST_CLASS_NAMES),
+    () => (defaultKind ? { ...TOAST_CLASS_NAMES, default: bareClass(defaultKind) } : TOAST_CLASS_NAMES),
     [defaultKind],
   );
   const dock = useHeldDock(phase, isMobile, measured);

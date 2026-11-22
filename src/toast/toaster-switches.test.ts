@@ -8,7 +8,7 @@ import { createElement, act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
-import { outweighs, readCss, ruleFor, rulesWith } from "../../test/css.js";
+import { outweighs, readCss, ruleFor, ruleNaming, rulesWith } from "../../test/css.js";
 import { Toaster, type ToasterProps } from "./toaster.js";
 
 let host: HTMLElement;
@@ -171,7 +171,7 @@ describe("toast.css, no transparency", () => {
 
   it("layers every kind's tint over the glass variable, so each goes solid with it", () => {
     for (const kind of ["success", "error", "warning", "info", "progress"]) {
-      expect(ruleFor(css, `.toast-${kind}`), kind).toContain("var(--dl-toast-glass) !important");
+      expect(ruleNaming(css, `.toast-${kind}`), kind).toContain("var(--dl-toast-glass) !important");
     }
   });
 

@@ -239,6 +239,29 @@ describe("the toaster and an update in place", () => {
     expect(has("toast-slotting")).toBe(true);
   });
 
+  it("still finds the card after every toast was dismissed at once", async () => {
+    // Sonner 2.0.7 keeps listing a toast as live after `toast.dismiss()` with
+    // no id, so the cards are paired with the ids as each arrives instead.
+    await raise(() => toast.info("One"));
+    await raise(() => toast.info("Two"));
+    await act(async () => {
+      toast.dismiss();
+    });
+    // A frame for Sonner to mark the cards, then their 200ms on the way out.
+    for (let step = 0; step < 3; step++) {
+      await act(async () => {
+        vi.advanceTimersByTime(300);
+      });
+    }
+    expect(cards()).toHaveLength(0);
+    await raise(() => toast.loading("Uploading", { id: "after-dismiss-all" }));
+    await raise(() => toast.info("Link copied"));
+    await settle();
+    await raise(() => toast.success("Uploaded", { id: "after-dismiss-all" }));
+    expect(has("toast-again")).toBe(true);
+    expect(marked()).toEqual([titled("Uploaded")]);
+  });
+
   it("does the same on the phone", async () => {
     phone = true;
     await act(async () => {

@@ -10,7 +10,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
-import { readCss, ruleFor, rulesWith, ruleWith } from "../../test/css.js";
+import { readCss, ruleFor, ruleNaming, rulesWith, ruleWith } from "../../test/css.js";
 import { PROGRESS_DONE_TOAST, ToastSpinner } from "./toast-spinner.js";
 import { PROGRESS_TOAST, Toaster, type ToasterProps } from "./toaster.js";
 
@@ -136,18 +136,20 @@ describe("the default kind", () => {
     expect(card()?.querySelector("[data-icon]")).toBeNull();
   });
 
-  it("gives a bare toast the named kind's class, marked bare for the drawn icon", async () => {
+  // What the classes come to on a typed toast differs by Sonner, and is
+  // tested on both in default-kind.test.ts and default-kind-next.test.ts.
+  it("gives a bare toast the bare kind's own classes, never the typed kind's", async () => {
     await mount({ defaultKind: "info" });
     await raise(() => toast("Copied"));
-    expect(card()?.classList.contains("toast-info")).toBe(true);
     expect(card()?.classList.contains("toast-bare")).toBe(true);
+    expect(card()?.classList.contains("toast-bare-info")).toBe(true);
+    expect(card()?.classList.contains("toast-info")).toBe(false);
   });
 
-  it("leaves a typed toast as it was", async () => {
+  it("leaves a typed toast its own class, and never the default kind's", async () => {
     await mount({ defaultKind: "info" });
     await raise(() => toast.error("No connection"));
     expect(card()?.classList.contains("toast-error")).toBe(true);
-    expect(card()?.classList.contains("toast-bare")).toBe(false);
     expect(card()?.classList.contains("toast-info")).toBe(false);
   });
 
@@ -164,7 +166,8 @@ describe("the default kind", () => {
     expect(list()?.classList.contains("toast-announcing")).toBe(true);
   });
 
-  const BARE = "[data-sonner-toast].toast-bare:not(:has(> [data-icon])) > [data-content]";
+  const NO_TYPE = ':where(:not([data-type]), [data-type="default"])';
+  const BARE = `[data-sonner-toast].toast-bare${NO_TYPE}:not(:has(> [data-icon])) > [data-content]`;
 
   it("makes the room a kind's icon takes: the 16px box, Sonner's two margins and the gap", () => {
     const body = rulesWith(css, BARE).find(([selector]) => selector === BARE)![1];
@@ -190,8 +193,8 @@ describe("the default kind", () => {
   ])("has a glyph for %s in the colour that kind's icon already wears", (kind, colour) => {
     // The same literal the typed kind's [data-icon] carries.
     expect(ruleWith(css, `.toast-${kind} [data-icon]`)).toContain(`color: ${colour}`);
-    expect(ruleWith(css, `.toast-bare.toast-${kind} > [data-content]::before`)).toContain(`color: ${colour}`);
-    const mask = rulesWith(css, `.toast-bare.toast-${kind}`).find(([selector]) => selector === `.toast-bare.toast-${kind}`)![1];
+    expect(ruleWith(css, `.toast-bare.toast-bare-${kind}${NO_TYPE} > [data-content]::before`)).toContain(`color: ${colour}`);
+    const mask = ruleFor(css, `.toast-bare.toast-bare-${kind}${NO_TYPE}`);
     const uri = /url\("data:image\/svg\+xml,([^"]+)"\)/.exec(mask)?.[1] ?? "";
     const svg = decodeURIComponent(uri);
     expect(svg.startsWith("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ")).toBe(true);
@@ -204,11 +207,11 @@ describe("the default kind", () => {
   it("uses the capsule's 20px padding on the phone, and draws nothing beside a button", () => {
     const phone = rulesWith(css, `${PHONE} ${BARE}::before`)[0]![1];
     expect(phone).toContain("left: calc(20px + var(--toast-icon-margin-start) + var(--toast-svg-margin-start))");
-    expect(ruleWith(css, `${PHONE} [data-sonner-toast].toast-bare:has([data-button]) > [data-content]::before`)).toContain(
+    expect(ruleWith(css, `${PHONE} [data-sonner-toast].toast-bare${NO_TYPE}:has([data-button]) > [data-content]::before`)).toContain(
       "display: none",
     );
     expect(
-      rulesWith(css, `${PHONE} [data-sonner-toast].toast-bare:has([data-button]) > [data-content]`).find(
+      rulesWith(css, `${PHONE} [data-sonner-toast].toast-bare${NO_TYPE}:has([data-button]) > [data-content]`).find(
         ([selector]) => !selector.endsWith("::before"),
       )![1],
     ).toContain("margin-left: 0");

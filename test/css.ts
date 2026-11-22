@@ -35,6 +35,13 @@ export function ruleFor(css: string, selector: string): string {
   return found[0]![1];
 }
 
+/** The body of the one rule whose selector list names `selector` among others. Throws on none or several. */
+export function ruleNaming(css: string, selector: string): string {
+  const found = rulesWith(css, selector).filter(([list]) => splitList(list).includes(selector));
+  if (found.length !== 1) throw new Error(`${found.length} rules name ${selector}`);
+  return found[0]![1];
+}
+
 /** Splits on commas that are not inside brackets. */
 export function splitList(list: string): string[] {
   const parts: string[] = [];
