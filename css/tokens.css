@@ -1,8 +1,9 @@
 /* @dalin/kit tokens.css: the values the four dalin apps share.
 
    What it is. Custom properties, named --dl-*, for what the owner has decided
-   so far: the typeface, the desktop sidebar's fill, the text colours, the
-   corners, the motion timings and the meaning colours. A question that is
+   so far: the typeface, the desktop sidebar's fill, the text colours (the
+   accent as text among them), the corners, the motion timings and the
+   meaning colours. A question that is
    still open has no token here, so a missing value means "not decided", and
    the app keeps its own until it is.
 
@@ -38,6 +39,18 @@
   --dl-fg: #ffffff;
   --dl-fg-muted: #b8b8b8;
   --dl-fg-faint: #8f97a0;
+
+  /* The accent as small text: an account's name in a row, a link, a count on
+     an accent tint. The accent itself is a fill colour, and at its own
+     lightness (0.64 in mail, calendar and drive) it reads 3.5 to 4.4:1 as
+     14px text on a 14% tint of itself, under the 4.5:1 small text needs. So
+     this is the accent with its lightness raised to at least 0.78 and its
+     hue and chroma kept, which clears 4.5:1 on that tint over the panes
+     (#151515 to #1c1c1c) for all four apps. An accent already lighter
+     (notes' yellow, 0.85) passes through unchanged. Read it for text; keep
+     --dl-accent for fills, rings and tints. It needs relative colour syntax,
+     as create.css does. */
+  --dl-accent-text: oklch(from var(--dl-accent) max(l, 0.78) c h);
 
   /* Corners: controls and tooltips, cards and menus, dialogs and phone
      sheets. The create button has its own. */
