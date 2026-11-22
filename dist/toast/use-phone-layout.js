@@ -1,21 +1,78 @@
 "use client";
 import { useSyncExternalStore } from "react";
 /**
- * The widest viewport that gets the phone's toast: the pill docked behind the
- * bottom bar. `toast.css` switches layouts at the same width in its media
- * queries, so the two must change together.
+ * The widest viewport that gets the phone's toast by default: the pill docked
+ * behind the bottom bar. An app whose phone shell runs wider names its own
+ * width, with `<Toaster phoneMaxWidth>` or with `--dl-phone-max` on `:root`.
  */
 export const PHONE_MAX_WIDTH_PX = 767;
-const QUERY = `(max-width: ${PHONE_MAX_WIDTH_PX}px)`;
-function subscribe(cb) {
+/** The custom property an app may set on `:root` in place of the prop. */
+export const PHONE_MAX_VAR = "--dl-phone-max";
+/** The width `<Toaster phoneMaxWidth>` named, which wins over the stylesheet. */
+let fromProp = null;
+/** The width the app's stylesheet named, read once; undefined until read. */
+let fromSheet;
+const listeners = new Set();
+let unbind = null;
+function emit() {
+    for (const l of listeners)
+        l();
+}
+function readSheet() {
     if (typeof window === "undefined")
-        return () => { };
-    const mql = window.matchMedia(QUERY);
-    mql.addEventListener("change", cb);
-    return () => mql.removeEventListener("change", cb);
+        return null;
+    const raw = getComputedStyle(document.documentElement).getPropertyValue(PHONE_MAX_VAR);
+    const px = Number.parseFloat(raw);
+    return Number.isFinite(px) && px > 0 ? px : null;
+}
+/** The widest viewport that gets the phone layout right now, in px. */
+export function readPhoneMaxWidth() {
+    if (fromProp !== null)
+        return fromProp;
+    if (fromSheet === undefined)
+        fromSheet = readSheet();
+    return fromSheet ?? PHONE_MAX_WIDTH_PX;
+}
+function query() {
+    return `(max-width: ${readPhoneMaxWidth()}px)`;
+}
+/** Listens to the media query for the width in force, and only while read. */
+function bind() {
+    unbind?.();
+    unbind = null;
+    if (typeof window === "undefined" || listeners.size === 0)
+        return;
+    const list = window.matchMedia(query());
+    list.addEventListener("change", emit);
+    unbind = () => list.removeEventListener("change", emit);
+}
+/**
+ * Names the phone width for every reader: the `<Toaster>`, the `<ToastBand>`
+ * and `usePhoneLayout`. `<Toaster phoneMaxWidth>` calls it; `null` hands the
+ * choice back to `--dl-phone-max`, read again, and then to the default.
+ */
+export function setPhoneMaxWidth(px) {
+    const next = px !== null && Number.isFinite(px) && px > 0 ? px : null;
+    if (next === null)
+        fromSheet = undefined;
+    if (next === fromProp)
+        return;
+    fromProp = next;
+    bind();
+    emit();
+}
+function subscribe(cb) {
+    listeners.add(cb);
+    if (listeners.size === 1)
+        bind();
+    return () => {
+        listeners.delete(cb);
+        if (listeners.size === 0)
+            bind();
+    };
 }
 function readClient() {
-    return window.matchMedia(QUERY).matches;
+    return window.matchMedia(query()).matches;
 }
 function readServer() {
     return false;

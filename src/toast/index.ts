@@ -16,4 +16,10 @@ export {
   useToastCount,
   useToastsExpanded,
 } from "./toast-stack.js";
-export { PHONE_MAX_WIDTH_PX } from "./use-phone-layout.js";
+export {
+  PHONE_MAX_VAR,
+  PHONE_MAX_WIDTH_PX,
+  readPhoneMaxWidth,
+  setPhoneMaxWidth,
+  usePhoneLayout,
+} from "./use-phone-layout.js";

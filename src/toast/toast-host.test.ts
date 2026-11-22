@@ -72,6 +72,7 @@ describe("the toaster's gate", () => {
     await render(createElement(Toaster, { key: "t" }));
     await raiseToast();
     expect(list()?.classList.contains("toast-tuck")).toBe(true);
+    expect(list()?.classList.contains("toast-phone")).toBe(false);
     expect(list()?.classList.contains("toast-gate-closed")).toBe(false);
   });
 
@@ -95,6 +96,11 @@ describe("the toaster's gate", () => {
 });
 
 describe("the tap band", () => {
+  // The band is the phone's: it follows the width the toaster reads.
+  beforeEach(() => {
+    phone = true;
+  });
+
   it("renders only while a toast exists", async () => {
     await render(createElement(Toaster, { key: "t" }), createElement(ToastBand, { key: "b" }));
     expect(document.querySelector(".toast-band")).toBeNull();

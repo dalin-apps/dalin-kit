@@ -7,6 +7,13 @@ export type ToasterProps = {
      * raised meanwhile. Defaults to open.
      */
     gateOpen?: boolean;
+    /**
+     * The widest viewport, in px, that gets the phone layout: the pill docked
+     * behind the bottom bar. Defaults to 767, or to `--dl-phone-max` when the
+     * app sets that on `:root`. Calendar's phone shell runs to 899. The
+     * `<ToastBand>` follows the same width without being told.
+     */
+    phoneMaxWidth?: number;
 };
 /**
  * The family's toaster. Mount it once at the layout root and never unmount
@@ -34,5 +41,5 @@ export type ToasterProps = {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export declare function Toaster({ gateOpen }: ToasterProps): import("react").JSX.Element;
+export declare function Toaster({ gateOpen, phoneMaxWidth }: ToasterProps): import("react").JSX.Element;
 //# sourceMappingURL=toaster.d.ts.map

@@ -1,6 +1,7 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
 import { toggleToastsExpanded, useToastCount } from "./toast-stack.js";
+import { usePhoneLayout } from "./use-phone-layout.js";
 import { useStackSwipe } from "./use-stack-swipe.js";
 /**
  * The dead space around the phone's bottom bar, turned into the way the toast
@@ -8,9 +9,10 @@ import { useStackSwipe } from "./use-stack-swipe.js";
  * screen; the bar's own controls sit above it (the bar's z-index over the
  * band's, one under it) and keep their own taps, so the band only ever
  * answers the gaps between them and the strip below. It renders at all ONLY
- * while toasts exist: with the stack empty this space stays transparent to
- * the pointer and the page under it keeps its scroll. One tap toggles the
- * fan, and a tap that changes what you see ticks (`onTick`).
+ * while toasts exist and the phone layout is on (the width the `<Toaster>`
+ * reads): with the stack empty this space stays transparent to the pointer
+ * and the page under it keeps its scroll. One tap toggles the fan, and a tap
+ * that changes what you see ticks (`onTick`).
  *
  * The gaps level with the pill also take the swipe the pill does
  * (use-stack-swipe.ts): up past the pill fans the stack out, down tucks it.
@@ -35,8 +37,9 @@ import { useStackSwipe } from "./use-stack-swipe.js";
  */
 export function ToastBand({ pill, onTick, reducedMotion }) {
     const count = useToastCount();
+    const phone = usePhoneLayout();
     const swipe = useStackSwipe({ zone: "band", pill, onTick, reducedMotion });
-    if (count === 0)
+    if (count === 0 || !phone)
         return null;
     return (_jsx("button", { type: "button", className: "toast-band", tabIndex: -1, "aria-hidden": "true", ...swipe, 
         // Chrome focuses a <button> on mousedown regardless of tabIndex, which

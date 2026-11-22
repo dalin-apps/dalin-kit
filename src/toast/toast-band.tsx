@@ -1,6 +1,7 @@
 "use client";
 
 import { toggleToastsExpanded, useToastCount } from "./toast-stack.js";
+import { usePhoneLayout } from "./use-phone-layout.js";
 import { useStackSwipe, type StackSwipeHost } from "./use-stack-swipe.js";
 
 /** The app's side of the band: its nav pill, its haptic tick, its motion switch. */
@@ -12,9 +13,10 @@ export type ToastBandProps = StackSwipeHost;
  * screen; the bar's own controls sit above it (the bar's z-index over the
  * band's, one under it) and keep their own taps, so the band only ever
  * answers the gaps between them and the strip below. It renders at all ONLY
- * while toasts exist: with the stack empty this space stays transparent to
- * the pointer and the page under it keeps its scroll. One tap toggles the
- * fan, and a tap that changes what you see ticks (`onTick`).
+ * while toasts exist and the phone layout is on (the width the `<Toaster>`
+ * reads): with the stack empty this space stays transparent to the pointer
+ * and the page under it keeps its scroll. One tap toggles the fan, and a tap
+ * that changes what you see ticks (`onTick`).
  *
  * The gaps level with the pill also take the swipe the pill does
  * (use-stack-swipe.ts): up past the pill fans the stack out, down tucks it.
@@ -39,8 +41,9 @@ export type ToastBandProps = StackSwipeHost;
  */
 export function ToastBand({ pill, onTick, reducedMotion }: ToastBandProps) {
   const count = useToastCount();
+  const phone = usePhoneLayout();
   const swipe = useStackSwipe({ zone: "band", pill, onTick, reducedMotion });
-  if (count === 0) return null;
+  if (count === 0 || !phone) return null;
   return (
     <button
       type="button"

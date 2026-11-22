@@ -9,7 +9,7 @@ import {
   setToastsExpanded,
   useToastsExpanded,
 } from "./toast-stack.js";
-import { usePhoneLayout } from "./use-phone-layout.js";
+import { setPhoneMaxWidth, usePhoneLayout } from "./use-phone-layout.js";
 
 // How long a freshly-arrived mobile toast stays popped above the card
 // (bubble-in + hold) before it starts slotting into the stack.
@@ -235,6 +235,13 @@ export type ToasterProps = {
    * raised meanwhile. Defaults to open.
    */
   gateOpen?: boolean;
+  /**
+   * The widest viewport, in px, that gets the phone layout: the pill docked
+   * behind the bottom bar. Defaults to 767, or to `--dl-phone-max` when the
+   * app sets that on `:root`. Calendar's phone shell runs to 899. The
+   * `<ToastBand>` follows the same width without being told.
+   */
+  phoneMaxWidth?: number;
 };
 
 /**
@@ -263,7 +270,14 @@ export type ToasterProps = {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export function Toaster({ gateOpen = true }: ToasterProps) {
+export function Toaster({ gateOpen = true, phoneMaxWidth }: ToasterProps) {
+  // The width is shared, so the band and the app's own `usePhoneLayout`
+  // switch at the same pixel as the toaster.
+  useEffect(() => {
+    if (phoneMaxWidth === undefined) return;
+    setPhoneMaxWidth(phoneMaxWidth);
+    return () => setPhoneMaxWidth(null);
+  }, [phoneMaxWidth]);
   const isMobile = usePhoneLayout();
   const tucked = !isMobile;
   const expanded = useToastsExpanded();
@@ -307,7 +321,9 @@ export function Toaster({ gateOpen = true }: ToasterProps) {
       // Gate closed: hide the whole stack (covers toasts that were already
       // showing when the bar left the screen).
       !gateOpen && "toast-gate-closed",
-      tucked && "toast-tuck",
+      // The layout: the stylesheet has no width query of its own, so these
+      // two classes are the whole switch between phone and desktop.
+      isMobile ? "toast-phone" : "toast-tuck",
       choreographing && phase === "announce" && "toast-announcing",
       choreographing && phase === "slotting" && "toast-slotting",
       stackOpen && "toast-stack-open",
