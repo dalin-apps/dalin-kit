@@ -44,6 +44,9 @@
      --dl-focus-ring
          The colour of the band's keyboard ring. The family has not picked
          one, so it falls back to the text colour.
+     --dl-toast-scrim
+         The fill of the layer under a fanned phone stack, for an app that
+         asked for one (<Toaster scrim>). Clear unless set.
 
    What an app must not override. The kinds' tints and rims, the white words,
    the Undo segment, the shapes (Sonner's 8px card, the phone's pill), the
@@ -949,6 +952,24 @@
   inset: -3px;
   width: auto;
   height: auto;
+}
+
+/* The scrim (<Toaster scrim>): a layer over the whole screen while the
+   phone's stack is fanned out, so a tap anywhere off the toasts tucks them
+   away. One step under the toaster wherever the toaster is: three under the
+   bar, or one under --dl-toast-over-z while the dock is not the pill. The
+   band and the bar stay over it and keep their own taps. It is clear; an
+   app that wants the page dimmed under an open stack sets --dl-toast-scrim
+   (mail used oklch(0 0 0 / 0.28)). */
+.toast-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--dl-bar-z) - 3);
+  background: var(--dl-toast-scrim, transparent);
+  -webkit-tap-highlight-color: transparent;
+}
+.toast-scrim.toast-scrim-over {
+  z-index: calc(var(--dl-toast-over-z) - 1);
 }
 
 /* The existing cards riffle back in behind the new one (opacity only, so each

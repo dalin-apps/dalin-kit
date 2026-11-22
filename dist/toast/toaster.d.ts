@@ -52,6 +52,18 @@ export type ToasterProps = {
      */
     cover?: string;
     /**
+     * Whether a tap off a fanned phone stack tucks it. With it, the kit lays a
+     * layer over the page while the stack is fanned out, one step under the
+     * toasts (`.toast-scrim` in toast.css), and a tap on it tucks the stack.
+     * The layer is clear unless the app gives it a fill with
+     * `--dl-toast-scrim`. Off by default, when only the band and the pill's
+     * swipe tuck the stack. Set it where a dock other than the pill is used:
+     * the band there is a thin strip while the stack is out.
+     */
+    scrim?: boolean;
+    /** Called when a tap on the scrim tucks the stack, for the app's haptic tick. */
+    onScrimTuck?: () => void;
+    /**
      * The kind a bare `toast("...")` takes. Without it a bare toast wears the
      * plain glass with no icon, so its tucked desktop tab is a blank strip.
      * With it, every toast has a tint and an icon. Leave it out to keep the
@@ -116,5 +128,5 @@ export type ToasterProps = {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export declare function Toaster({ gateOpen, phoneMaxWidth, className: appClassName, cover, defaultKind, reducedMotionSelector, reducedTransparencySelector, }: ToasterProps): import("react").JSX.Element;
+export declare function Toaster({ gateOpen, phoneMaxWidth, className: appClassName, cover, scrim, onScrimTuck, defaultKind, reducedMotionSelector, reducedTransparencySelector, }: ToasterProps): import("react").JSX.Element;
 //# sourceMappingURL=toaster.d.ts.map

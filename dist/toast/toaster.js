@@ -1,5 +1,5 @@
 "use client";
-import { jsx as _jsx } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Toaster as SonnerToaster, useSonner } from "sonner";
 import { setToastCount, setToastPinned, setToastsExpanded, useToastsExpanded, } from "./toast-stack.js";
@@ -454,7 +454,7 @@ const AGAIN_CARD = `[data-sonner-toast][${AGAIN_ATTR}]`;
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover, defaultKind, reducedMotionSelector, reducedTransparencySelector, }) {
+export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover, scrim = false, onScrimTuck, defaultKind, reducedMotionSelector, reducedTransparencySelector, }) {
     const still = useNamedState(reducedMotionSelector, "(prefers-reduced-motion: reduce)");
     const solid = useNamedState(reducedTransparencySelector, undefined);
     // The width is shared, so the band and the app's own `usePhoneLayout`
@@ -595,9 +595,15 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         .join(" ") || undefined;
     // `display: contents` leaves no box, so the toaster keeps its own fixed
     // position and every selector that reaches it still does.
-    return (_jsx("div", { ref: root, style: { display: "contents" }, children: _jsx(SonnerToaster, { theme: "dark", position: "bottom-right", gap: plain ? undefined : 8, className: className, style: dock ? { "--dl-dock-line": `${dock.line}px` } : undefined, expand: stackOpen || tucked, visibleToasts: tucked ? DESKTOP_VISIBLE : undefined, swipeDirections: swipeDirections, icons: TOAST_ICONS, toastOptions: {
-                duration: docked ? MOBILE_DURATION_MS : tucked ? DESKTOP_DURATION_MS : undefined,
-                classNames,
-            } }) }));
+    return (_jsxs("div", { ref: root, style: { display: "contents" }, children: [scrim && stackOpen ? (
+            // A tap anywhere off the fanned stack tucks it. Not a button: the
+            // band is the named control for this, and it takes Tab.
+            _jsx("div", { "aria-hidden": "true", className: dock ? "toast-scrim toast-scrim-over" : "toast-scrim", onClick: () => {
+                    onScrimTuck?.();
+                    setToastsExpanded(false);
+                } })) : null, _jsx(SonnerToaster, { theme: "dark", position: "bottom-right", gap: plain ? undefined : 8, className: className, style: dock ? { "--dl-dock-line": `${dock.line}px` } : undefined, expand: stackOpen || tucked, visibleToasts: tucked ? DESKTOP_VISIBLE : undefined, swipeDirections: swipeDirections, icons: TOAST_ICONS, toastOptions: {
+                    duration: docked ? MOBILE_DURATION_MS : tucked ? DESKTOP_DURATION_MS : undefined,
+                    classNames,
+                } })] }));
 }
 //# sourceMappingURL=toaster.js.map
