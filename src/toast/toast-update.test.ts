@@ -9,7 +9,7 @@ import { createElement, act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast, type ToastT } from "sonner";
-import { readCss, rulesWith, specificity, splitList } from "../../test/css.js";
+import { outweighs, readCss, rulesWith, specificity, splitList } from "../../test/css.js";
 import { toastLine } from "./toast-line.js";
 import { PINNED_TOAST, Toaster } from "./toaster.js";
 import { announcesUpdate, faceOf, textOf } from "./toast-update.js";
@@ -260,6 +260,27 @@ describe("the toaster and an update in place", () => {
     await raise(() => toast.success("Uploaded", { id: "after-dismiss-all" }));
     expect(has("toast-again")).toBe(true);
     expect(marked()).toEqual([titled("Uploaded")]);
+  });
+
+  it("shows a toast announced again from beyond the column's five", async () => {
+    await raise(() => toast.loading("Uploading", { id: "far" }));
+    for (const name of ["one", "two", "three", "four", "five", "six"]) await raise(() => toast.info(name));
+    await settle();
+    // Sonner hides every card past `visibleToasts`: opacity 0, no pointer.
+    expect(titled("Uploading")?.getAttribute("data-visible")).toBe("false");
+    await raise(() => toast.error("Upload failed", { id: "far", action: { label: "Retry", onClick: () => {} } }));
+    const card = titled("Upload failed")!;
+    expect(has("toast-again")).toBe(true);
+    expect(card.hasAttribute("data-again")).toBe(true);
+    expect(card.getAttribute("data-visible")).toBe("false");
+    const css = readCss("toast");
+    const shown = rulesWith(css, '[data-again][data-visible="false"]');
+    // One rule brings it back into view on either layout, and one hands the
+    // desktop's card its pointer back, so the button on it can be pressed.
+    const seen = shown.filter(([selector]) => card.matches(selector));
+    expect(seen.map(([, body]) => body).join(" ")).toContain("opacity: 1 !important");
+    expect(seen.map(([, body]) => body).join(" ")).toContain("pointer-events: auto");
+    for (const [selector] of seen) expect(outweighs(selector, "[data-sonner-toast][data-visible=false]"), selector).toBe(true);
   });
 
   it("does the same on the phone", async () => {

@@ -899,6 +899,23 @@
   visibility: hidden;
 }
 
+/* A toast announced again from beyond the visible set. Sonner shows the
+   newest few cards (five in the desktop column, three behind the phone's
+   pill) and hides the rest: opacity 0, no pointer. A toast updated in place
+   can be one of the hidden ones, and its announce then slid an invisible
+   card out. The marked card is shown for as long as it carries the mark,
+   which is the announce and the tuck; on the desktop it takes the pointer
+   back too, so a Retry on it can be pressed. The phone's cards take theirs
+   from the rules above. Both layouts, so no `toast-phone` or `toast-tuck`
+   in the first selector. */
+[data-sonner-toaster][data-y-position="bottom"].toast-again [data-sonner-toast][data-again][data-visible="false"] {
+  opacity: 1 !important;
+}
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck.toast-again
+  [data-sonner-toast][data-again][data-visible="false"] {
+  pointer-events: auto;
+}
+
 /* ---------- desktop: toasts tucked behind the window's edge (<Toaster>) ----------
    The stack hangs off the window's right edge. The toaster is a box that ends
    exactly at that edge and clips what passes it, so a toast shifted right
