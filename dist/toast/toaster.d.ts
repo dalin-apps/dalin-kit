@@ -54,6 +54,21 @@ export type ToasterProps = {
      * plain glass.
      */
     defaultKind?: ToastDefaultKind;
+    /**
+     * The selector that is true while this app's own reduced-motion switch is
+     * on, such as `html[data-motion="reduce"]`. While it matches, or the system
+     * asks for reduced motion, the toast keeps its phases and loses the travel
+     * between them (`toast-still` in toast.css). Without it the system's
+     * setting alone decides, which Sonner already honours.
+     */
+    reducedMotionSelector?: string;
+    /**
+     * The selector that is true while this app has transparency turned off,
+     * such as `html[data-glass="off"]`. While it matches, every toast is drawn
+     * solid: `--dl-toast-solid` under the kind's tint, with no blur
+     * (`toast-solid` in toast.css). Without it the toast is always glass.
+     */
+    reducedTransparencySelector?: string;
 };
 /**
  * The family's toaster. Mount it once at the layout root and never unmount
@@ -90,5 +105,5 @@ export type ToasterProps = {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export declare function Toaster({ gateOpen, phoneMaxWidth, className: appClassName, cover, defaultKind, }: ToasterProps): import("react").JSX.Element;
+export declare function Toaster({ gateOpen, phoneMaxWidth, className: appClassName, cover, defaultKind, reducedMotionSelector, reducedTransparencySelector, }: ToasterProps): import("react").JSX.Element;
 //# sourceMappingURL=toaster.d.ts.map

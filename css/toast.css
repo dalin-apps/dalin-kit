@@ -32,12 +32,17 @@
      --dl-toast-level
          The filter that levels what is behind a desktop toast, so white
          words keep 4.5:1 over a white page. `contrast(1)` turns it off.
+     --dl-toast-solid
+         The solid fill a toast takes under its tint while the app has
+         transparency turned off (<Toaster reducedTransparencySelector>).
 
    What an app must not override. The kinds' tints and rims, the white words,
    the Undo segment, the shapes (Sonner's 8px card, the phone's pill), the
    timings, and any rule keyed on a .toast-* class or a [data-sonner-*]
    attribute. A toast is set in the app's own font: the toaster inherits it.
-   Reduced motion is the app's rule to apply, as for the rest of its screen.
+   Reduced motion and reduced transparency are the kit's rules too (the end
+   of this file): the app names its own switch for each as a selector on the
+   <Toaster>, and does not restate the rules.
 
    The phone layout starts at 767px wide and under by default. No rule here
    sits in a width media query: the <Toaster> reads the width and puts
@@ -53,6 +58,9 @@
   );
   --dl-toast-blur: blur(20px);
   --dl-toast-rim: oklch(1 0 0 / 0.13);
+  /* What the glass above comes to over the family's dark page (#1a1a1a),
+     for an app with transparency turned off (toast-solid, at the end). */
+  --dl-toast-solid: #282828;
   --dl-toast-level: contrast(0.709) brightness(0.468);
   --dl-toast-floor: 20px;
   --dl-toast-room: 24px;
@@ -978,4 +986,48 @@
   [data-sonner-toast].toast-pinned[data-mounted="true"]:not([data-removed="true"]) {
   --y: translateY(calc(var(--lift) * var(--offset))) !important;
   transition-delay: 0s;
+}
+
+/* ---------- the app's own switches (<Toaster>) ----------
+   Each app has its own switch for reduced motion and for transparency, on
+   its own attribute. It hands the <Toaster> the selector for each
+   (reducedMotionSelector, reducedTransparencySelector), and the <Toaster>
+   writes one of these classes on the list while the selector matches.
+
+   REDUCED MOTION (`toast-still`). Also on while the system asks for reduced
+   motion. Sonner already stops every transition and animation on a toast
+   under the system's setting; the first rule does the same under the app's
+   own switch. The phases still happen, since where a toast sits is the
+   information: it announces, then it is tucked. The travel between the two
+   doesn't. The progress card's segment stops mid bar, the spinner slows
+   rather than stopping dead, since it is the only sign the work is alive,
+   and the desktop's tuck keeps its fade and loses its slide. */
+[data-sonner-toaster].toast-still [data-sonner-toast],
+[data-sonner-toaster].toast-still [data-sonner-toast] > * {
+  transition: none !important;
+  animation: none !important;
+}
+[data-sonner-toaster][data-y-position="bottom"].toast-still
+  [data-sonner-toast].toast-progress:not([data-swiping="true"], [data-removed="true"])::before {
+  animation: none !important;
+  background-position:
+    50% 0,
+    0 0;
+}
+[data-sonner-toaster].toast-still .toast-spinner {
+  animation-duration: 2.4s;
+}
+[data-sonner-toaster][data-y-position="bottom"].toast-still.toast-tuck [data-sonner-toast] {
+  transition: opacity 200ms var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)) !important;
+}
+
+/* NO TRANSPARENCY (`toast-solid`). The glass is 30% of a grey and means
+   nothing without the blur behind it: the words would sit on whatever is
+   under the toast. So the glass variable becomes a solid fill, which every
+   kind's tint already layers over, and the blur goes. */
+[data-sonner-toaster].toast-solid {
+  --dl-toast-glass: var(--dl-toast-solid);
+}
+[data-sonner-toaster].toast-solid [data-sonner-toast] {
+  backdrop-filter: none !important;
 }

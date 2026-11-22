@@ -19,6 +19,7 @@ import { holdTabStops } from "./tab-stops.js";
 import { useToastTags } from "./toast-tags.js";
 import { ToastSpinner } from "./toast-spinner.js";
 import { PINNED_CLASS, PROGRESS_CLASS, announcesUpdate, faceOf, type ToastFace } from "./toast-update.js";
+import { useNamedState } from "./use-named-state.js";
 import { setPhoneMaxWidth, usePhoneLayout } from "./use-phone-layout.js";
 
 // How long a freshly-arrived mobile toast stays popped above the card
@@ -395,6 +396,21 @@ export type ToasterProps = {
    * plain glass.
    */
   defaultKind?: ToastDefaultKind;
+  /**
+   * The selector that is true while this app's own reduced-motion switch is
+   * on, such as `html[data-motion="reduce"]`. While it matches, or the system
+   * asks for reduced motion, the toast keeps its phases and loses the travel
+   * between them (`toast-still` in toast.css). Without it the system's
+   * setting alone decides, which Sonner already honours.
+   */
+  reducedMotionSelector?: string;
+  /**
+   * The selector that is true while this app has transparency turned off,
+   * such as `html[data-glass="off"]`. While it matches, every toast is drawn
+   * solid: `--dl-toast-solid` under the kind's tint, with no blur
+   * (`toast-solid` in toast.css). Without it the toast is always glass.
+   */
+  reducedTransparencySelector?: string;
 };
 
 /**
@@ -438,7 +454,11 @@ export function Toaster({
   className: appClassName,
   cover,
   defaultKind,
+  reducedMotionSelector,
+  reducedTransparencySelector,
 }: ToasterProps) {
+  const still = useNamedState(reducedMotionSelector, "(prefers-reduced-motion: reduce)");
+  const solid = useNamedState(reducedTransparencySelector, undefined);
   // The width is shared, so the band and the app's own `usePhoneLayout`
   // switch at the same pixel as the toaster.
   useEffect(() => {
@@ -535,6 +555,10 @@ export function Toaster({
       // on the bottom edge where there is no room above it.
       dock && "toast-over",
       dock && dock.line === 0 && "toast-over-edge",
+      // The app's own switches, named by selector, as classes the stylesheet
+      // can key on.
+      still && "toast-still",
+      solid && "toast-solid",
       appClassName,
     ]
       .filter(Boolean)

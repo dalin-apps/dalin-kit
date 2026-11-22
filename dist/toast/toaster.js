@@ -8,6 +8,7 @@ import { holdTabStops } from "./tab-stops.js";
 import { useToastTags } from "./toast-tags.js";
 import { ToastSpinner } from "./toast-spinner.js";
 import { PINNED_CLASS, PROGRESS_CLASS, announcesUpdate, faceOf } from "./toast-update.js";
+import { useNamedState } from "./use-named-state.js";
 import { setPhoneMaxWidth, usePhoneLayout } from "./use-phone-layout.js";
 // How long a freshly-arrived mobile toast stays popped above the card
 // (bubble-in + hold) before it starts slotting into the stack.
@@ -362,7 +363,9 @@ function useTuckedTabStops(root, hidden) {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover, defaultKind, }) {
+export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover, defaultKind, reducedMotionSelector, reducedTransparencySelector, }) {
+    const still = useNamedState(reducedMotionSelector, "(prefers-reduced-motion: reduce)");
+    const solid = useNamedState(reducedTransparencySelector, undefined);
     // The width is shared, so the band and the app's own `usePhoneLayout`
     // switch at the same pixel as the toaster.
     useEffect(() => {
@@ -447,6 +450,10 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         // on the bottom edge where there is no room above it.
         dock && "toast-over",
         dock && dock.line === 0 && "toast-over-edge",
+        // The app's own switches, named by selector, as classes the stylesheet
+        // can key on.
+        still && "toast-still",
+        solid && "toast-solid",
         appClassName,
     ]
         .filter(Boolean)

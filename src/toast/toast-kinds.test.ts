@@ -99,7 +99,7 @@ describe("the progress kind", () => {
   });
 
   it("spins a ring with one arc in the accent", () => {
-    const body = ruleWith(css, ".toast-spinner");
+    const body = ruleFor(css, ".toast-spinner");
     expect(body).toContain("border-top-color: var(--dl-accent");
     expect(body).toContain("animation: toast-spin 0.9s linear infinite");
     expect(css).toContain("@keyframes toast-spin");
