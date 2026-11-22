@@ -224,9 +224,12 @@
   /* The announce presentation: the same shape a size up. Uniform scale,
      so the pill's rounded ends never distort. */
   --notif-pop: 1.1;
-  /* Announce height above the stack base, and the lift that clears the
-     pill when the stack fans out. */
-  --notif-base: calc(var(--dl-bar-h) + 14px);
+  /* Where a toast stands clear of the dock: 14px over the pill. The announce
+     happens there, a fanned stack starts there, and a pinned toast holds
+     there. --notif-base is that height for the announce and the fan; it is
+     the floor, raised a card while a pinned toast holds the floor itself. */
+  --notif-floor: calc(var(--dl-bar-h) + 14px);
+  --notif-base: var(--notif-floor);
 }
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast] {
   width: 100% !important;
@@ -461,10 +464,10 @@
   width: calc(var(--dl-bar-w) + 56px) !important;
   height: 50dvh;
   overflow: hidden;
-  --notif-base: 12px;
+  --notif-floor: 12px;
 }
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-over-edge {
-  --notif-base: calc(env(safe-area-inset-bottom, 0px) + var(--dl-bar-inset));
+  --notif-floor: calc(env(safe-area-inset-bottom, 0px) + var(--dl-bar-inset));
 }
 /* The toast keeps the pill's width inside that wider box. */
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over [data-sonner-toast] {
@@ -474,12 +477,13 @@
 }
 /* The waiting cards sit under the line, where the dive ends, so nothing
    peeks over a surface that is not the pill. The announcing toast is the one
-   card left out. A stack fanned out over a line still shows, from the line
-   up: its cards are `data-expanded` and take the fan's own rule. */
+   card left out, and a pinned toast (PINNED below) holds above the line. A
+   stack fanned out over a line still shows, from the line up: its cards are
+   `data-expanded` and take the fan's own rule. */
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over:not(.toast-announcing)
-  [data-sonner-toast][data-expanded="false"]:not([data-removed="true"]),
+  [data-sonner-toast][data-expanded="false"]:not([data-removed="true"], .toast-pinned),
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone).toast-over.toast-announcing
-  [data-sonner-toast][data-expanded="false"][data-front="false"]:not([data-removed="true"]) {
+  [data-sonner-toast][data-expanded="false"][data-front="false"]:not([data-removed="true"], .toast-pinned) {
   --y: translateY(calc(100% + 20px)) scale(0.95) !important;
 }
 /* The exit: no fade. It runs 700ms against the pill's 480ms because it
@@ -494,6 +498,38 @@
   [data-sonner-toast][data-front="false"] {
   opacity: 0 !important;
   animation: none !important;
+}
+
+/* PINNED: a toast that stays in view until it settles (`toast-pinned`, the
+   class PINNED_TOAST names: a send counting down with Undo on its end). On
+   the phone it holds the floor above the dock, content showing and its
+   button pressable, for as long as it lives. It rises in from behind the
+   dock on Sonner's own transition and sits over anything diving past it.
+   Only while the stack is tucked: a fan-out lays it out with the rest. These
+   rules come after OVER A LINE and outweigh the collapsed slot, the announce
+   and the dive, so a pinned toast holds whatever the rest of the stack is
+   doing. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)
+  [data-sonner-toast].toast-pinned[data-mounted="true"][data-expanded="false"]:not([data-removed="true"]) {
+  --y: translateY(calc(-1 * var(--notif-floor))) !important;
+  opacity: 1 !important;
+  animation: none !important;
+  z-index: 60 !important;
+}
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)
+  [data-sonner-toast].toast-pinned[data-mounted="true"][data-expanded="false"]:not([data-removed="true"])
+  > * {
+  opacity: 1 !important;
+}
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast].toast-pinned [data-button] {
+  pointer-events: auto !important;
+}
+/* A toast that arrives meanwhile announces one card higher and dives past
+   the pinned one. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone):not(.toast-stack-open):has(
+    [data-sonner-toast].toast-pinned[data-front="false"]
+  ) {
+  --notif-base: calc(var(--notif-floor) + var(--dl-bar-h) + 10px);
 }
 
 /* Appear for an arriving mobile toast: it rises up into place and settles at
@@ -721,4 +757,12 @@
 [data-sonner-toaster][data-y-position="bottom"].toast-tuck
   [data-sonner-toast][data-removed="true"][data-swipe-out="false"] {
   --y: translateY(calc(var(--lift) * var(--offset))) var(--tuck-under) !important;
+}
+/* A pinned toast (`toast-pinned`) never tucks: it stays out from the
+   window's edge, at its place in the column, until it is dismissed. Its
+   button is the whole point of it, and a tab would hide that. */
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck
+  [data-sonner-toast].toast-pinned[data-mounted="true"]:not([data-removed="true"]) {
+  --y: translateY(calc(var(--lift) * var(--offset))) !important;
+  transition-delay: 0s;
 }

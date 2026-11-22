@@ -1,4 +1,4 @@
-export { Toaster } from "./toaster.js";
+export { PINNED_TOAST, Toaster } from "./toaster.js";
 export { ToastBand } from "./toast-band.js";
 export { toastLine } from "./toast-line.js";
 export { DEFAULT_PILL_SELECTOR, useStackSwipe, } from "./use-stack-swipe.js";

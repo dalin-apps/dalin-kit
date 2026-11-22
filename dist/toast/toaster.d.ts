@@ -1,3 +1,13 @@
+/**
+ * The class that pins a toast: `toast("Sending in 5s", { className: PINNED_TOAST })`.
+ * A pinned toast stays in view until it is dismissed or replaced: out from
+ * the desktop's edge instead of tucking to a tab, and above the phone's dock
+ * with its button pressable instead of diving behind the pill. For a toast
+ * whose button is the point of it, such as a send counting down with Undo.
+ * Give it `duration: Infinity` and dismiss it yourself, or update it in place
+ * without the class to let it go.
+ */
+export declare const PINNED_TOAST = "toast-pinned";
 export type ToasterProps = {
     /**
      * Whether toasts may show right now. On the phone the stack is anchored to
