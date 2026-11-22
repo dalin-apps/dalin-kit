@@ -114,7 +114,11 @@ function useAnnouncePhase(toasts, holdFor, onAnnounce, find, bareKind) {
     const seen = useRef(new Map());
     const marked = useRef(null);
     const timers = useRef([]);
-    useEffect(() => {
+    // A layout effect, so the first frame that shows an arriving toast is
+    // already the announce. As a passive effect it ran after that frame was
+    // painted, and a busy frame (the list re-rendering for the move that raised
+    // the toast) showed the toast sitting in its tucked slot first.
+    useLayoutEffect(() => {
         const faces = new Map();
         const arrived = [];
         const changed = [];
