@@ -175,6 +175,48 @@ describe("a phone page with a pill", () => {
   });
 });
 
+describe("a bar that mounts in the same commit the page needs it", () => {
+  /** Every class string the list has carried, read from its attribute's history. */
+  function watchClasses(): () => string[] {
+    const seen: string[] = [];
+    const observer = new MutationObserver((records) => {
+      for (const record of records) seen.push(record.oldValue ?? "");
+    });
+    observer.observe(list()!, { attributes: true, attributeFilter: ["class"], attributeOldValue: true });
+    return () => {
+      for (const record of observer.takeRecords()) seen.push(record.oldValue ?? "");
+      observer.disconnect();
+      return [...seen, list()?.className ?? ""];
+    };
+  }
+
+  it("never flips the waiting stack to plain as the gate opens (notes, closing a page)", async () => {
+    // A toast is up; a page opens, so the bar unmounts and the gate closes.
+    await render(toaster(), createElement(Bar, { key: "bar" }));
+    await raise();
+    await render(toaster({ gateOpen: false }));
+    expect(has("toast-phone")).toBe(true);
+    const classes = watchClasses();
+    // The page closes: the gate opens and the bar mounts in one commit, and
+    // the toaster renders before the bar has said its pill is there.
+    await render(toaster(), createElement(Bar, { key: "bar" }));
+    const history = classes();
+    expect(history.some((name) => name.includes("toast-plain"))).toBe(false);
+    expect(has("toast-phone")).toBe(true);
+  });
+
+  it("keeps the stack's thirty seconds through it: the cards are not handed Sonner's four", async () => {
+    await render(toaster(), createElement(Bar, { key: "bar" }));
+    await raise();
+    await render(toaster({ gateOpen: false }));
+    await render(toaster(), createElement(Bar, { key: "bar" }));
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(document.querySelector("[data-sonner-toast]")?.getAttribute("data-removed")).toBe("false");
+  });
+});
+
 describe("what is not a missing pill", () => {
   it("is a dock another surface registered: the toast stands on that line", async () => {
     await act(async () => {

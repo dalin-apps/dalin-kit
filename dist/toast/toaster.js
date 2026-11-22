@@ -490,7 +490,17 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
     // back.
     const pill = useToastPill();
     const registered = useToastDockState();
-    const plain = isMobile && !pill && registered === null && gateOpen;
+    const unpilled = isMobile && !pill && registered === null && gateOpen;
+    // The answer is taken one commit late. A bar that mounts in the same
+    // commit the page needs it (notes closing a page: the gate opens and the
+    // bar mounts together) is rendered after the toaster and counted in a
+    // layout effect, so for that one render there is no pill yet. Going plain
+    // on it would hand the waiting stack Sonner's four seconds and take them
+    // back a moment later. A page that really has no pill is still without
+    // one in the next commit.
+    const [settled, setSettled] = useState(false);
+    useEffect(() => setSettled(unpilled), [unpilled]);
+    const plain = unpilled && settled;
     const docked = isMobile && !plain;
     const expanded = useToastsExpanded();
     const { toasts } = useSonner();
