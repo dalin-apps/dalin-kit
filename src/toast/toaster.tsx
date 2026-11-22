@@ -6,6 +6,7 @@ import { Toaster as SonnerToaster, useSonner } from "sonner";
 import type { ToastT } from "sonner";
 import {
   setToastCount,
+  setToastPinned,
   setToastsExpanded,
   useToastsExpanded,
 } from "./toast-stack.js";
@@ -537,8 +538,10 @@ export type ToasterProps = {
  *
  * The pill is the dock unless a surface says otherwise (`useToastDock`): over
  * a parked chip, a sheet or a dialog the toast announces above that surface's
- * line and then leaves, and the stack waits out of sight until the pill is
- * the dock again (`toast-over` in toast.css).
+ * line and dives behind it (`toast-over` in toast.css). Under a cover the
+ * stack then waits out of sight until the pill is the dock again. Over a
+ * line that is not a cover, such as a parked chip, it peeks above the line
+ * and the band lies on the slivers (`toast-over-line`).
  *
  * A phone page with no bottom bar has no pill to dock behind. There the
  * toast is a plain one on the bottom edge (`toast-plain`): no announce, no
@@ -631,6 +634,10 @@ export function Toaster({
   useEffect(() => {
     setToastCount(toasts.length);
   }, [toasts.length]);
+  const anyPinned = toasts.some((t) => faceOf(t).pinned);
+  useEffect(() => {
+    setToastPinned(anyPinned);
+  }, [anyPinned]);
 
   // Reset the toggle once the stack empties so the next toast starts tucked
   // behind the card rather than already fanned out.
@@ -696,6 +703,9 @@ export function Toaster({
       // on the bottom edge where there is no room above it.
       dock && "toast-over",
       dock && dock.line === 0 && "toast-over-edge",
+      // A line that is not a cover, with room over it: the stack peeks above
+      // the line as it does above the pill, and the band lies on the slivers.
+      dock && dock.kind === "line" && dock.line > 0 && "toast-over-line",
       // The app's own switches, named by selector, as classes the stylesheet
       // can key on.
       still && "toast-still",

@@ -7,4 +7,6 @@ export declare function readToastCount(): number;
 export declare function useToastsExpanded(): boolean;
 export declare function setToastCount(value: number): void;
 export declare function useToastCount(): number;
+export declare function setToastPinned(value: boolean): void;
+export declare function useToastPinned(): boolean;
 //# sourceMappingURL=toast-stack.d.ts.map

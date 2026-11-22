@@ -99,8 +99,10 @@ export type ToasterProps = {
  *
  * The pill is the dock unless a surface says otherwise (`useToastDock`): over
  * a parked chip, a sheet or a dialog the toast announces above that surface's
- * line and then leaves, and the stack waits out of sight until the pill is
- * the dock again (`toast-over` in toast.css).
+ * line and dives behind it (`toast-over` in toast.css). Under a cover the
+ * stack then waits out of sight until the pill is the dock again. Over a
+ * line that is not a cover, such as a parked chip, it peeks above the line
+ * and the band lies on the slivers (`toast-over-line`).
  *
  * A phone page with no bottom bar has no pill to dock behind. There the
  * toast is a plain one on the bottom edge (`toast-plain`): no announce, no

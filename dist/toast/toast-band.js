@@ -1,9 +1,11 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
 import { useToastCovered, useToastDockState, useToastPillPresence } from "./toast-dock.js";
-import { toggleToastsExpanded, useToastCount, useToastsExpanded } from "./toast-stack.js";
+import { toggleToastsExpanded, useToastCount, useToastPinned, useToastsExpanded } from "./toast-stack.js";
 import { usePhoneLayout } from "./use-phone-layout.js";
 import { stackTick, useStackSwipe } from "./use-stack-swipe.js";
+/** How many cards Sonner shows behind the phone's dock: its own default. */
+const PHONE_VISIBLE = 3;
 /**
  * The dead space around the phone's bottom bar, turned into the way the toast
  * stack fans out. It runs from the pill's top line to the bottom of the
@@ -14,10 +16,11 @@ import { stackTick, useStackSwipe } from "./use-stack-swipe.js";
  * reads): with the stack empty this space stays transparent to the pointer
  * and the page under it keeps its scroll. One tap toggles the fan, and a tap
  * that changes what you see ticks (`onTick`, or `onFan` and `onTuck` apart).
- * It also stands down while the
- * dock is not the pill (toast-dock.ts): over a parked chip it would lie
- * across that surface. Under a cover (a sheet, a dialog, or whatever
- * `<Toaster cover>` names) it is inert and out of the tab order.
+ * While the dock is another surface's line (toast-dock.ts: a parked chip)
+ * the band would lie across that surface, so it moves onto the slivers that
+ * peek above the line (`toast-band-line` in toast.css), where a tap fans the
+ * stack as it does beside the bar. Under a cover (a sheet, a dialog, or
+ * whatever `<Toaster cover>` names) it is inert and out of the tab order.
  *
  * The gaps level with the pill also take the swipe the pill does
  * (use-stack-swipe.ts): up past the pill fans the stack out, down tucks it.
@@ -42,15 +45,23 @@ export function ToastBand({ label = "Show notifications", ...host }) {
     const phone = usePhoneLayout();
     const dock = useToastDockState();
     const covered = useToastCovered();
+    const pinned = useToastPinned();
     const swipe = useStackSwipe({ zone: "band", ...host });
     // The band is mounted beside the bar, so it says a pill is on the page.
     useToastPillPresence();
     if (count === 0 || !phone)
         return null;
-    // Over another surface's line the band would lie across that surface.
-    if (dock !== null && !covered)
+    // Over a line that is not a cover (a parked chip) the stack peeks above
+    // the line, and the band lies on those slivers in place of the bar's dead
+    // space, which the chip now owns. Not on the bottom edge, where no sliver
+    // shows, and not under a pinned toast, whose button sits right over them.
+    const onLine = dock !== null && !covered;
+    if (onLine && (dock.line === 0 || pinned))
         return null;
-    return (_jsx("button", { type: "button", className: "toast-band", "aria-label": label, "aria-expanded": expanded, 
+    const style = onLine
+        ? { "--dl-dock-line": `${dock.line}px`, "--toast-band-cards": Math.min(count, PHONE_VISIBLE) }
+        : undefined;
+    return (_jsx("button", { type: "button", className: onLine ? "toast-band toast-band-line" : "toast-band", style: style, "aria-label": label, "aria-expanded": expanded, 
         // Under a cover the band is out of reach of a finger and should be out
         // of reach of Tab too. It stays mounted, so focus and the swipe's state
         // have somewhere to be when the cover goes.

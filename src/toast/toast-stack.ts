@@ -5,10 +5,11 @@ import { useSyncExternalStore } from "react";
 /**
  * Tiny module-level store shared by the phone's toast stack, the tap band
  * (toast-band.tsx), the swipe on the nav pill (use-stack-swipe.ts) and the
- * always-mounted `<Toaster>`. Holds two facts:
+ * always-mounted `<Toaster>`. Holds three facts:
  *   - `expanded`: whether the stack is fanned out above the nav pill.
  *   - `count`: how many toasts are live, mirrored from the `<Toaster>` (it
  *     owns the authoritative `useSonner` subscription).
+ *   - `pinned`: whether one of them is pinned in view, mirrored the same way.
  *
  * On the phone a toast announces above the bottom bar's nav pill and then
  * slots in behind it, so the pill reads as the front card of the stack (see
@@ -78,4 +79,25 @@ function getCount(): number {
 
 export function useToastCount(): number {
   return useSyncExternalStore(subscribe, getCount, () => 0);
+}
+
+/**
+ * Whether a pinned toast is up, mirrored from the `<Toaster>` like the
+ * count. A pinned toast holds over the slivers above a line dock, so the
+ * band that would lie on them stands down for it (toast-band.tsx).
+ */
+let pinned = false;
+
+export function setToastPinned(value: boolean): void {
+  if (pinned === value) return;
+  pinned = value;
+  emit();
+}
+
+function getPinned(): boolean {
+  return pinned;
+}
+
+export function useToastPinned(): boolean {
+  return useSyncExternalStore(subscribe, getPinned, () => false);
 }

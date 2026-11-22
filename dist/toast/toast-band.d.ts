@@ -17,10 +17,11 @@ export type ToastBandProps = StackSwipeHost & {
  * reads): with the stack empty this space stays transparent to the pointer
  * and the page under it keeps its scroll. One tap toggles the fan, and a tap
  * that changes what you see ticks (`onTick`, or `onFan` and `onTuck` apart).
- * It also stands down while the
- * dock is not the pill (toast-dock.ts): over a parked chip it would lie
- * across that surface. Under a cover (a sheet, a dialog, or whatever
- * `<Toaster cover>` names) it is inert and out of the tab order.
+ * While the dock is another surface's line (toast-dock.ts: a parked chip)
+ * the band would lie across that surface, so it moves onto the slivers that
+ * peek above the line (`toast-band-line` in toast.css), where a tap fans the
+ * stack as it does beside the bar. Under a cover (a sheet, a dialog, or
+ * whatever `<Toaster cover>` names) it is inert and out of the tab order.
  *
  * The gaps level with the pill also take the swipe the pill does
  * (use-stack-swipe.ts): up past the pill fans the stack out, down tucks it.

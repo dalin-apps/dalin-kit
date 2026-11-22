@@ -233,13 +233,27 @@ describe("the toaster over a dock", () => {
 });
 
 describe("the tap band and the dock", () => {
-  it("stands down while the dock is not the pill", async () => {
+  // What the band does over a line with room above it is in line-dock.test.ts.
+  it("leaves the bar's dead space while the dock is another surface's line", async () => {
     await mount();
     await raiseToast();
-    expect(document.querySelector(".toast-band")).not.toBeNull();
+    const band = () => document.querySelector(".toast-band");
+    expect(band()?.classList.contains("toast-band-line")).toBe(false);
     let leave = () => {};
     await act(async () => {
       leave = registerToastDock(surface(650), { kind: "line" });
+    });
+    expect(band()?.classList.contains("toast-band-line")).toBe(true);
+    await act(async () => leave());
+    expect(band()?.classList.contains("toast-band-line")).toBe(false);
+  });
+
+  it("stands down over a line on the bottom edge, where nothing peeks", async () => {
+    await mount();
+    await raiseToast();
+    let leave = () => {};
+    await act(async () => {
+      leave = registerToastDock(null, { kind: "line", line: 0 });
     });
     expect(document.querySelector(".toast-band")).toBeNull();
     await act(async () => leave());
