@@ -447,13 +447,18 @@
   [data-icon] {
   display: none;
 }
-/* One line, and never a word of it outside the capsule: `[data-content]`
-   is the flex item holding the line, so a floor of zero is what lets the
-   ellipsis work. */
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast]:has([data-button]) [data-content] {
+/* One line, and never a word of it outside the capsule, with a button or
+   without one. The capsule is the pill's width and cannot grow, so a title
+   too long for it ends in an ellipsis instead of wrapping to a second line
+   and swelling the pill. Write each message to fit; this is the guard for a
+   narrower handset and for whatever gets written next. `[data-content]` is
+   the flex item holding the line, so a floor of zero is what lets it shrink
+   and the ellipsis work. A description would be a second line: the phone
+   has no room for one, so don't pass it. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast] [data-content] {
   min-width: 0;
 }
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast]:has([data-button]) [data-title] {
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast] [data-title] {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
