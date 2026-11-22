@@ -14,6 +14,7 @@ import {
   refreshToastDock,
   setNamedToastCover,
   useToastDockState,
+  useToastPill,
   type ToastDock,
 } from "./toast-dock.js";
 import { holdTabStops } from "./tab-stops.js";
@@ -539,6 +540,10 @@ export type ToasterProps = {
  * line and then leaves, and the stack waits out of sight until the pill is
  * the dock again (`toast-over` in toast.css).
  *
+ * A phone page with no bottom bar has no pill to dock behind. There the
+ * toast is a plain one on the bottom edge (`toast-plain`): no announce, no
+ * stack behind anything, Sonner's own four seconds.
+ *
  * On desktop the stack hangs off the window's right edge, standing on
  * `--dl-toast-floor` so it never shares the corner with a floating button. A
  * toast slides out from under that edge, holds in the corner, then slides
@@ -567,6 +572,18 @@ export function Toaster({
   }, [phoneMaxWidth]);
   const isMobile = usePhoneLayout();
   const tucked = !isMobile;
+  // The phone's toast docks: behind the nav pill, or on the line of whatever
+  // surface registered itself. A phone page with neither (no bottom bar is
+  // mounted, and nothing else has said where the floor is) has nothing to
+  // dock behind, so there the toast is `plain`: Sonner's own on the bottom
+  // edge, in the family's glass. A closed gate is not that case. The app
+  // has said its bar is off screen for now and the stack waits hidden, so
+  // it keeps the phone's layout, and its thirty seconds, until the bar is
+  // back.
+  const pill = useToastPill();
+  const registered = useToastDockState();
+  const plain = isMobile && !pill && registered === null && gateOpen;
+  const docked = isMobile && !plain;
   const expanded = useToastsExpanded();
   const { toasts } = useSonner();
   // Where a toast announces is measured as it arrives: the registered docks
@@ -574,12 +591,12 @@ export function Toaster({
   const [measured, setMeasured] = useState<ToastDock | null>(null);
   const onAnnounce = useCallback(() => {
     refreshToastDock();
-    setMeasured(cover && isMobile ? measureNamedCover(cover) : null);
-  }, [cover, isMobile]);
+    setMeasured(cover && docked ? measureNamedCover(cover) : null);
+  }, [cover, docked]);
   const root = useRef<HTMLDivElement>(null);
   // Between toasts the selector is watched too, so a cover that opens over a
   // fanned stack tucks it, and the band knows to stand down under it.
-  const coverUp = useLiveCover(cover, isMobile, root);
+  const coverUp = useLiveCover(cover, docked, root);
   useEffect(() => {
     setNamedToastCover(coverUp);
     return () => setNamedToastCover(false);
@@ -588,8 +605,9 @@ export function Toaster({
   const { phase, again, calm } = useAnnouncePhase(
     toasts,
     // The desktop column announces always. The phone announces only while
-    // its stack is tucked: a toast that arrives in a fanned stack joins it.
-    tucked || !expanded,
+    // its stack is docked and tucked: a toast that arrives in a fanned stack
+    // joins it, and a plain toast has nowhere to dive.
+    tucked || (docked && !expanded),
     tucked ? desktopHold : mobileHold,
     onAnnounce,
     find,
@@ -603,7 +621,7 @@ export function Toaster({
     () => (defaultKind ? { ...TOAST_CLASS_NAMES, default: bareClass(defaultKind) } : TOAST_CLASS_NAMES),
     [defaultKind],
   );
-  const dock = useHeldDock(phase, isMobile, measured);
+  const dock = useHeldDock(phase, docked, measured);
 
   // Mirror the live toast count into the shared store. This Toaster never
   // unmounts (it's at the layout root), so the count is always authoritative.
@@ -627,6 +645,11 @@ export function Toaster({
     if (!gateOpen && expanded) setToastsExpanded(false);
   }, [gateOpen, expanded]);
 
+  // Nothing fans on a page with no pill: there is no band to tuck it again.
+  useEffect(() => {
+    if (plain && expanded) setToastsExpanded(false);
+  }, [plain, expanded]);
+
   // A sheet or dialog over the bar tucks a fanned stack: the band that would
   // tuck it is under the cover. That is a dock registered as a cover, a cover
   // measured as a toast arrived, or one the `cover` selector names right now.
@@ -636,14 +659,14 @@ export function Toaster({
   }, [covered, expanded]);
 
   useTimerRelease(root, toasts.length === 0);
-  useNoHoverExpand(root, isMobile);
+  useNoHoverExpand(root, docked);
 
   const choreographing = phase !== null && toasts.length > 0;
   // The mobile stack is fanned out only when OUR store says so, never from
   // Sonner's own hover-expand. `toast-stack-open` mirrors this to the DOM so
   // the CSS can keep the collapsed stack pointer-inert (killing the
   // hover-expand flicker) while letting the expanded toasts stay interactive.
-  const stackOpen = isMobile && expanded && !covered;
+  const stackOpen = docked && expanded && !covered;
   // Tucked behind the pill (or under a line), a phone toast is out of sight,
   // so its buttons leave the tab order too. During the announce the one
   // toast on screen keeps its stops: the front card, or the marked one when
@@ -651,15 +674,16 @@ export function Toaster({
   // tabs stay reachable: tabbing into them is how the column pulls out.
   const announcing = choreographing && phase === "announce";
   const spared = announcing ? `${PINNED_CARD}, ${again ? AGAIN_CARD : FRONT_CARD}` : PINNED_CARD;
-  useTuckedTabStops(root, isMobile && !stackOpen, spared);
+  useTuckedTabStops(root, docked && !stackOpen, spared);
   const className =
     [
       // Gate closed: hide the whole stack (covers toasts that were already
       // showing when the bar left the screen).
       !gateOpen && "toast-gate-closed",
       // The layout: the stylesheet has no width query of its own, so these
-      // two classes are the whole switch between phone and desktop.
-      isMobile ? "toast-phone" : "toast-tuck",
+      // classes are the whole switch between the phone's dock, the desktop's
+      // column, and the plain toast of a phone page with no pill.
+      docked ? "toast-phone" : plain ? "toast-plain" : "toast-tuck",
       announcing && "toast-announcing",
       choreographing && phase === "slotting" && "toast-slotting",
       // The announce is about a toast updated in place that is not the front
@@ -688,7 +712,7 @@ export function Toaster({
       <SonnerToaster
         theme="dark"
         position="bottom-right"
-        gap={8}
+        gap={plain ? undefined : 8}
         className={className}
         style={dock ? ({ "--dl-dock-line": `${dock.line}px` } as CSSProperties) : undefined}
         expand={stackOpen || tucked}
@@ -696,7 +720,7 @@ export function Toaster({
         swipeDirections={swipeDirections}
         icons={TOAST_ICONS}
         toastOptions={{
-          duration: isMobile ? MOBILE_DURATION_MS : DESKTOP_DURATION_MS,
+          duration: docked ? MOBILE_DURATION_MS : tucked ? DESKTOP_DURATION_MS : undefined,
           classNames,
         }}
       />

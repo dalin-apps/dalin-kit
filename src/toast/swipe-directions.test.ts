@@ -14,6 +14,10 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { toast } from "sonner";
 import { setToastsExpanded } from "./toast-stack.js";
 import { Toaster } from "./toaster.js";
+import { withPill } from "../../test/pill.js";
+
+// These are the docked stack's tests, and a stack docks only beside a pill.
+withPill();
 
 let host: HTMLElement;
 let root: Root;

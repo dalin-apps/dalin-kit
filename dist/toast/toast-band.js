@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useToastCovered, useToastDockState } from "./toast-dock.js";
+import { useToastCovered, useToastDockState, useToastPillPresence } from "./toast-dock.js";
 import { toggleToastsExpanded, useToastCount, useToastsExpanded } from "./toast-stack.js";
 import { usePhoneLayout } from "./use-phone-layout.js";
 import { stackTick, useStackSwipe } from "./use-stack-swipe.js";
@@ -43,6 +43,8 @@ export function ToastBand({ label = "Show notifications", ...host }) {
     const dock = useToastDockState();
     const covered = useToastCovered();
     const swipe = useStackSwipe({ zone: "band", ...host });
+    // The band is mounted beside the bar, so it says a pill is on the page.
+    useToastPillPresence();
     if (count === 0 || !phone)
         return null;
     // Over another surface's line the band would lie across that surface.

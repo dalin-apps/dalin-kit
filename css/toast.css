@@ -916,6 +916,24 @@
   pointer-events: auto;
 }
 
+/* ---------- a phone page with no pill (<Toaster>) ----------
+   No bottom bar is mounted (a sign-in page, a guest page), so there is no
+   pill to dock behind, and the <Toaster> puts `toast-plain` on the list in
+   place of `toast-phone`. Nothing above applies: the toast is Sonner's own,
+   stacked on the bottom edge and gone in four seconds. These two rules give
+   it the family's material, the desktop card's: the bare toast wears the
+   bar's glass, and what is behind every toast is levelled before the glass
+   goes on, so white words hold over a white page. */
+[data-sonner-toaster][data-y-position="bottom"].toast-plain [data-sonner-toast] {
+  backdrop-filter: var(--dl-toast-blur) var(--dl-toast-level);
+}
+[data-sonner-toaster][data-y-position="bottom"].toast-plain
+  [data-sonner-toast]:not(.toast-success, .toast-error, .toast-warning, .toast-info) {
+  background: var(--dl-toast-glass);
+  border: 1px solid var(--dl-toast-rim);
+  color: var(--dl-fg, #fff);
+}
+
 /* ---------- desktop: toasts tucked behind the window's edge (<Toaster>) ----------
    The stack hangs off the window's right edge. The toaster is a box that ends
    exactly at that edge and clips what passes it, so a toast shifted right

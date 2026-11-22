@@ -9,7 +9,8 @@ import { type RefObject } from "react";
  * and the one with the highest rank wins:
  *
  * - "pill": the bottom bar in any of its faces. The family case, and what the
- *   toaster does with nothing registered.
+ *   toaster does with nothing registered, so long as a bar is on the page
+ *   (`useToastPill`). On a page with no bar the toast is a plain one.
  * - "line": some other surface's edge is the floor (a parked chip). A toast
  *   announces just above that line and then leaves, out of sight until the
  *   pill is the dock again. A stack already fanned out stays out.
@@ -66,6 +67,19 @@ export declare function refreshToastDock(): void;
 export declare function measureToastCover(selector: string): ToastDock | null;
 /** The dock the toaster draws now, or null while it is the pill. */
 export declare function readToastDock(): ToastDock | null;
+/** Counts one pill on the page until the returned function is called. */
+export declare function registerToastPill(): () => void;
+/** Whether a bottom bar has said its pill is on the page. */
+export declare function readToastPill(): boolean;
+/** Whether a bottom bar has said its pill is on the page. */
+export declare function useToastPill(): boolean;
+/**
+ * Counts a pill while the caller is mounted and `on`. A layout effect, so a
+ * bar that mounts in the same commit as a toast is counted before that
+ * commit is painted, and the toast never shows one frame in the plain
+ * layout.
+ */
+export declare function useToastPillPresence(on?: boolean): void;
 /** Called by the `<Toaster>` as the cover its selector names comes and goes. */
 export declare function setNamedToastCover(up: boolean): void;
 /**

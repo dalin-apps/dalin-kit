@@ -58,6 +58,7 @@ import {
   readSwipe,
   type SwipeStart,
 } from "./stack-swipe.js";
+import { useToastPillPresence } from "./toast-dock.js";
 import {
   readToastCount,
   readToastsExpanded,
@@ -266,6 +267,9 @@ export function useStackSwipe({
   pullOn,
   reducedMotion,
 }: StackSwipeOptions): StackSwipe {
+  // The pill's swipe is mounted with the bar, so it says a pill is on the
+  // page: the `<Toaster>` docks phone toasts only while one is.
+  useToastPillPresence(zone === "pill");
   const press = useRef<Press | null>(null);
   const guardUntil = useRef(0);
   // The app's side, read at the moment a press needs it, so a new callback

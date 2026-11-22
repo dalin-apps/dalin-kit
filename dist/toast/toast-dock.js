@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 /**
  * Room an announce needs above a line: the pill-sized toast at its 1.1
  * announce scale, the 12px it stands off the line, and a notch's worth of
@@ -93,6 +93,57 @@ export function readToastDock() {
     return current;
 }
 /**
+ * Whether there is a pill on the page to dock behind.
+ *
+ * The pill is the dock "with nothing registered", but a phone page with no
+ * bottom bar at all (a sign-in page, a guest page) has no pill either, and
+ * a toast docked there took a pill's footprint at the bottom of an empty
+ * screen and tucked behind nothing. So each thing that only exists beside a
+ * bar counts one pill while it is mounted: the pill's swipe
+ * (`useStackSwipe` with zone "pill"), the `<ToastBand>`, and a dock
+ * registered as "pill". With none, the `<Toaster>` shows a plain toast.
+ */
+let pills = 0;
+/** Counts one pill on the page until the returned function is called. */
+export function registerToastPill() {
+    pills++;
+    if (pills === 1)
+        emit();
+    let counted = true;
+    return () => {
+        if (!counted)
+            return;
+        counted = false;
+        pills--;
+        if (pills === 0)
+            emit();
+    };
+}
+/** Whether a bottom bar has said its pill is on the page. */
+export function readToastPill() {
+    return pills > 0;
+}
+function readPillOnServer() {
+    return false;
+}
+/** Whether a bottom bar has said its pill is on the page. */
+export function useToastPill() {
+    return useSyncExternalStore(subscribe, readToastPill, readPillOnServer);
+}
+/**
+ * Counts a pill while the caller is mounted and `on`. A layout effect, so a
+ * bar that mounts in the same commit as a toast is counted before that
+ * commit is painted, and the toast never shows one frame in the plain
+ * layout.
+ */
+export function useToastPillPresence(on = true) {
+    useLayoutEffect(() => {
+        if (!on)
+            return;
+        return registerToastPill();
+    }, [on]);
+}
+/**
  * Whether a surface named by `<Toaster cover>` is on screen. The `<Toaster>`
  * watches its selector and writes the answer here, so the band, which an app
  * mounts elsewhere, can read it.
@@ -136,6 +187,7 @@ export function useToastDockKind() {
  */
 export function registerToastDock(el, options = {}) {
     const key = Symbol("dock");
+    const pill = options.kind === "pill" ? registerToastPill() : null;
     entries.set(key, {
         el,
         kind: options.kind ?? "line",
@@ -154,6 +206,7 @@ export function registerToastDock(el, options = {}) {
     window.addEventListener("resize", apply);
     return () => {
         entries.delete(key);
+        pill?.();
         observer?.disconnect();
         el?.removeEventListener("transitionend", apply);
         window.removeEventListener("resize", apply);
@@ -168,6 +221,8 @@ export function registerToastDock(el, options = {}) {
  */
 export function useToastDock(ref, options = {}) {
     const { kind = "line", rank = 0, edge = "top", line, active = true } = options;
+    // A registered pill is a pill on the page, from the commit it mounts in.
+    useToastPillPresence(kind === "pill" && active);
     useEffect(() => {
         const el = ref?.current ?? null;
         if (!active || (!el && line === undefined))

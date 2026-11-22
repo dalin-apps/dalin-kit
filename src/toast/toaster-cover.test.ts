@@ -13,6 +13,10 @@ import { ToastBand } from "./toast-band.js";
 import { Toaster, type ToasterProps } from "./toaster.js";
 import { measureToastCover, readToastCovered } from "./toast-dock.js";
 import { readToastsExpanded, setToastsExpanded } from "./toast-stack.js";
+import { withPill } from "../../test/pill.js";
+
+// These are the docked stack's tests, and a stack docks only beside a pill.
+withPill();
 
 let host: HTMLElement;
 let root: Root;

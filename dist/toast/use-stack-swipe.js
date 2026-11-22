@@ -42,6 +42,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, } from "react";
 import { SWIPE_CLICK_GUARD_MS, SWIPE_LIFT_MAX_PX, claimSwipe, inSwipeBand, readSwipe, } from "./stack-swipe.js";
+import { useToastPillPresence } from "./toast-dock.js";
 import { readToastCount, readToastsExpanded, setToastsExpanded, } from "./toast-stack.js";
 /** The nav pill, when the app does not name its own. */
 export const DEFAULT_PILL_SELECTOR = "[data-dl-pill]";
@@ -157,6 +158,9 @@ function follow(current, x, y, host) {
 }
 /** Reads a drag on the pill or the gaps beside it as the toast stack's swipe. */
 export function useStackSwipe({ zone, pill, onTick, onFan, onTuck, liftTarget, pullOn, reducedMotion, }) {
+    // The pill's swipe is mounted with the bar, so it says a pill is on the
+    // page: the `<Toaster>` docks phone toasts only while one is.
+    useToastPillPresence(zone === "pill");
     const press = useRef(null);
     const guardUntil = useRef(0);
     // The app's side, read at the moment a press needs it, so a new callback

@@ -102,6 +102,10 @@ export type ToasterProps = {
  * line and then leaves, and the stack waits out of sight until the pill is
  * the dock again (`toast-over` in toast.css).
  *
+ * A phone page with no bottom bar has no pill to dock behind. There the
+ * toast is a plain one on the bottom edge (`toast-plain`): no announce, no
+ * stack behind anything, Sonner's own four seconds.
+ *
  * On desktop the stack hangs off the window's right edge, standing on
  * `--dl-toast-floor` so it never shares the corner with a floating button. A
  * toast slides out from under that edge, holds in the corner, then slides

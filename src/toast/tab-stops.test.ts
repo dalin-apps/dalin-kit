@@ -13,6 +13,10 @@ import { readCss, ruleFor } from "../../test/css.js";
 import { holdTabStops } from "./tab-stops.js";
 import { setToastsExpanded } from "./toast-stack.js";
 import { PINNED_TOAST, Toaster } from "./toaster.js";
+import { withPill } from "../../test/pill.js";
+
+// These are the docked stack's tests, and a stack docks only beside a pill.
+withPill();
 
 /** A docked toast stack as Sonner draws it: a live section that is not a
  *  tab stop, a list item that is, and an action button inside it. */

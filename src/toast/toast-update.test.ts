@@ -13,6 +13,10 @@ import { outweighs, readCss, rulesWith, specificity, splitList } from "../../tes
 import { toastLine } from "./toast-line.js";
 import { PINNED_TOAST, Toaster } from "./toaster.js";
 import { announcesUpdate, faceOf, textOf } from "./toast-update.js";
+import { withPill } from "../../test/pill.js";
+
+// These are the docked stack's tests, and a stack docks only beside a pill.
+withPill();
 
 const face = (over: Partial<ToastT>) => faceOf({ id: 1, ...over } as ToastT);
 
