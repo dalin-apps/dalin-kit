@@ -23,6 +23,10 @@ import { useEffect, useSyncExternalStore, type RefObject } from "react";
  * the `<ToastBand>` stands down while the dock is not the pill. The line is
  * measured from the dock's element: on resize, when a transition on it ends,
  * and again each time a toast arrives.
+ *
+ * `<Toaster cover>` names covers by selector in place of registering each.
+ * Its toasts are drawn over the cover for their announce and dive alone, but
+ * whether one is up is known the whole time (`useToastCovered`).
  */
 export type ToastDockKind = "pill" | "line" | "cover";
 
@@ -152,6 +156,37 @@ export function measureToastCover(selector: string): ToastDock | null {
 /** The dock the toaster draws now, or null while it is the pill. */
 export function readToastDock(): ToastDock | null {
   return current;
+}
+
+/**
+ * Whether a surface named by `<Toaster cover>` is on screen. The `<Toaster>`
+ * watches its selector and writes the answer here, so the band, which an app
+ * mounts elsewhere, can read it.
+ */
+let named = false;
+
+/** Called by the `<Toaster>` as the cover its selector names comes and goes. */
+export function setNamedToastCover(up: boolean): void {
+  if (named === up) return;
+  named = up;
+  emit();
+}
+
+/**
+ * Whether a cover hides the phone's bottom bar now: a dock registered as
+ * "cover" is the winner, or a surface named by `<Toaster cover>` is up.
+ */
+export function readToastCovered(): boolean {
+  return named || current?.kind === "cover";
+}
+
+function readCoveredOnServer(): boolean {
+  return false;
+}
+
+/** Whether a cover hides the phone's bottom bar now. */
+export function useToastCovered(): boolean {
+  return useSyncExternalStore(subscribe, readToastCovered, readCoveredOnServer);
 }
 
 function readServer(): ToastDock | null {

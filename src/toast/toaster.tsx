@@ -12,6 +12,7 @@ import {
 import {
   measureToastCover,
   refreshToastDock,
+  setNamedToastCover,
   useToastDockState,
   type ToastDock,
 } from "./toast-dock.js";
@@ -19,6 +20,7 @@ import { holdTabStops } from "./tab-stops.js";
 import { useToastTags } from "./toast-tags.js";
 import { ToastSpinner } from "./toast-spinner.js";
 import { PINNED_CLASS, PROGRESS_CLASS, announcesUpdate, faceOf, type ToastFace } from "./toast-update.js";
+import { useLiveCover } from "./use-live-cover.js";
 import { useNamedState } from "./use-named-state.js";
 import { setPhoneMaxWidth, usePhoneLayout } from "./use-phone-layout.js";
 
@@ -230,6 +232,15 @@ function useHeldDock(phase: Phase, phone: boolean, measured: ToastDock | null): 
   return live ?? held.current ?? (phase !== null ? measured : null);
 }
 
+/** The cover a selector names, measured now. A selector the browser can't parse names none. */
+function measureNamedCover(selector: string): ToastDock | null {
+  try {
+    return measureToastCover(selector);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Sonner pauses every toast's dismiss timer while a pointer is down on the
  * stack, and clears that flag on a `pointerup` at the list. Nothing else
@@ -404,6 +415,10 @@ export type ToasterProps = {
    * edge and dives it behind (see `useToastDock`, which does the same for a
    * surface that registers itself). Name every full-screen overlay here, or
    * its toasts announce under its scrim.
+   *
+   * The selector is also watched between toasts. While a cover is up a
+   * fanned stack is tucked, and the `<ToastBand>` is inert and out of the
+   * tab order, since it lies under the cover (`useToastCovered`).
    */
   cover?: string;
   /**
@@ -492,9 +507,16 @@ export function Toaster({
   const [measured, setMeasured] = useState<ToastDock | null>(null);
   const onAnnounce = useCallback(() => {
     refreshToastDock();
-    setMeasured(cover && isMobile ? measureToastCover(cover) : null);
+    setMeasured(cover && isMobile ? measureNamedCover(cover) : null);
   }, [cover, isMobile]);
   const root = useRef<HTMLDivElement>(null);
+  // Between toasts the selector is watched too, so a cover that opens over a
+  // fanned stack tucks it, and the band knows to stand down under it.
+  const coverUp = useLiveCover(cover, isMobile, root);
+  useEffect(() => {
+    setNamedToastCover(coverUp);
+    return () => setNamedToastCover(false);
+  }, [coverUp]);
   const find = useToastTags(root, toasts);
   const { phase, again } = useAnnouncePhase(
     toasts,
@@ -534,8 +556,9 @@ export function Toaster({
   }, [gateOpen, expanded]);
 
   // A sheet or dialog over the bar tucks a fanned stack: the band that would
-  // tuck it is under the cover.
-  const covered = dock?.kind === "cover";
+  // tuck it is under the cover. That is a dock registered as a cover, a cover
+  // measured as a toast arrived, or one the `cover` selector names right now.
+  const covered = dock?.kind === "cover" || coverUp;
   useEffect(() => {
     if (covered && expanded) setToastsExpanded(false);
   }, [covered, expanded]);

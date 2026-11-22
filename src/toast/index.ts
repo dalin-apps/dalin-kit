@@ -28,9 +28,11 @@ export {
 export {
   dockLine,
   measureToastCover,
+  readToastCovered,
   readToastDock,
   refreshToastDock,
   registerToastDock,
+  useToastCovered,
   useToastDock,
   useToastDockKind,
   useToastDockState,

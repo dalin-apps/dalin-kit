@@ -92,6 +92,33 @@ export function measureToastCover(selector) {
 export function readToastDock() {
     return current;
 }
+/**
+ * Whether a surface named by `<Toaster cover>` is on screen. The `<Toaster>`
+ * watches its selector and writes the answer here, so the band, which an app
+ * mounts elsewhere, can read it.
+ */
+let named = false;
+/** Called by the `<Toaster>` as the cover its selector names comes and goes. */
+export function setNamedToastCover(up) {
+    if (named === up)
+        return;
+    named = up;
+    emit();
+}
+/**
+ * Whether a cover hides the phone's bottom bar now: a dock registered as
+ * "cover" is the winner, or a surface named by `<Toaster cover>` is up.
+ */
+export function readToastCovered() {
+    return named || current?.kind === "cover";
+}
+function readCoveredOnServer() {
+    return false;
+}
+/** Whether a cover hides the phone's bottom bar now. */
+export function useToastCovered() {
+    return useSyncExternalStore(subscribe, readToastCovered, readCoveredOnServer);
+}
 function readServer() {
     return null;
 }

@@ -45,6 +45,10 @@ export type ToasterProps = {
      * edge and dives it behind (see `useToastDock`, which does the same for a
      * surface that registers itself). Name every full-screen overlay here, or
      * its toasts announce under its scrim.
+     *
+     * The selector is also watched between toasts. While a cover is up a
+     * fanned stack is tucked, and the `<ToastBand>` is inert and out of the
+     * tab order, since it lies under the cover (`useToastCovered`).
      */
     cover?: string;
     /**

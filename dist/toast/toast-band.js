@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useToastDockState } from "./toast-dock.js";
+import { useToastCovered, useToastDockState } from "./toast-dock.js";
 import { toggleToastsExpanded, useToastCount, useToastsExpanded } from "./toast-stack.js";
 import { usePhoneLayout } from "./use-phone-layout.js";
 import { stackTick, useStackSwipe } from "./use-stack-swipe.js";
@@ -15,8 +15,9 @@ import { stackTick, useStackSwipe } from "./use-stack-swipe.js";
  * and the page under it keeps its scroll. One tap toggles the fan, and a tap
  * that changes what you see ticks (`onTick`, or `onFan` and `onTuck` apart).
  * It also stands down while the
- * dock is not the pill (toast-dock.ts): over a parked chip or under a sheet
- * it would lie across that surface.
+ * dock is not the pill (toast-dock.ts): over a parked chip it would lie
+ * across that surface. Under a cover (a sheet, a dialog, or whatever
+ * `<Toaster cover>` names) it is inert and out of the tab order.
  *
  * The gaps level with the pill also take the swipe the pill does
  * (use-stack-swipe.ts): up past the pill fans the stack out, down tucks it.
@@ -40,10 +41,18 @@ export function ToastBand({ label = "Show notifications", ...host }) {
     const expanded = useToastsExpanded();
     const phone = usePhoneLayout();
     const dock = useToastDockState();
+    const covered = useToastCovered();
     const swipe = useStackSwipe({ zone: "band", ...host });
-    if (count === 0 || !phone || dock !== null)
+    if (count === 0 || !phone)
         return null;
-    return (_jsx("button", { type: "button", className: "toast-band", "aria-label": label, "aria-expanded": expanded, ...swipe, 
+    // Over another surface's line the band would lie across that surface.
+    if (dock !== null && !covered)
+        return null;
+    return (_jsx("button", { type: "button", className: "toast-band", "aria-label": label, "aria-expanded": expanded, 
+        // Under a cover the band is out of reach of a finger and should be out
+        // of reach of Tab too. It stays mounted, so focus and the swipe's state
+        // have somewhere to be when the cover goes.
+        inert: covered, tabIndex: covered ? -1 : undefined, ...swipe, 
         // A tap on the band leaves focus where it was: Chrome would otherwise
         // focus the button on mousedown, pulling focus (and a phone's keyboard)
         // out of whatever the reader was typing in. Tab still reaches it.

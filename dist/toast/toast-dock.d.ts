@@ -20,6 +20,10 @@ import { type RefObject } from "react";
  * the `<ToastBand>` stands down while the dock is not the pill. The line is
  * measured from the dock's element: on resize, when a transition on it ends,
  * and again each time a toast arrives.
+ *
+ * `<Toaster cover>` names covers by selector in place of registering each.
+ * Its toasts are drawn over the cover for their announce and dive alone, but
+ * whether one is up is known the whole time (`useToastCovered`).
  */
 export type ToastDockKind = "pill" | "line" | "cover";
 /** What the toaster draws while the dock is not the pill. */
@@ -62,6 +66,15 @@ export declare function refreshToastDock(): void;
 export declare function measureToastCover(selector: string): ToastDock | null;
 /** The dock the toaster draws now, or null while it is the pill. */
 export declare function readToastDock(): ToastDock | null;
+/** Called by the `<Toaster>` as the cover its selector names comes and goes. */
+export declare function setNamedToastCover(up: boolean): void;
+/**
+ * Whether a cover hides the phone's bottom bar now: a dock registered as
+ * "cover" is the winner, or a surface named by `<Toaster cover>` is up.
+ */
+export declare function readToastCovered(): boolean;
+/** Whether a cover hides the phone's bottom bar now. */
+export declare function useToastCovered(): boolean;
 /** The dock the toaster draws now, or null while it is the pill. */
 export declare function useToastDockState(): ToastDock | null;
 /** The kind of surface phone toasts dock to now: "pill" with nothing else registered. */

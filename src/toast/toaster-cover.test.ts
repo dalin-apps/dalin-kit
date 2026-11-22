@@ -9,8 +9,9 @@ import { createElement, act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
+import { ToastBand } from "./toast-band.js";
 import { Toaster, type ToasterProps } from "./toaster.js";
-import { measureToastCover } from "./toast-dock.js";
+import { measureToastCover, readToastCovered } from "./toast-dock.js";
 import { readToastsExpanded, setToastsExpanded } from "./toast-stack.js";
 
 let host: HTMLElement;
@@ -171,5 +172,109 @@ describe("<Toaster cover>", () => {
     sheet(400);
     await raiseToast("two");
     expect(readToastsExpanded()).toBe(false);
+  });
+});
+
+describe("<Toaster cover>, watched live", () => {
+  /** Lets the watcher's observer report and its frame run. */
+  async function frame() {
+    await act(async () => {
+      await Promise.resolve();
+      vi.advanceTimersByTime(20);
+    });
+  }
+  /** Lets the plain hold and the dive run out, so the stack is tucked. */
+  async function tucked() {
+    await act(async () => {
+      vi.advanceTimersByTime(1150 + 720);
+    });
+  }
+  async function mountWithBand(props: ToasterProps) {
+    await act(async () => {
+      root.render(createElement("div", null, createElement(Toaster, { key: "t", ...props }), createElement(ToastBand, { key: "b" })));
+    });
+  }
+  const band = () => document.querySelector<HTMLButtonElement>(".toast-band");
+
+  it("tucks a fanned stack when a cover opens over it, with no toast arriving", async () => {
+    await mount({ cover: ".sheet" });
+    await raiseToast();
+    await tucked();
+    await act(async () => {
+      setToastsExpanded(true);
+    });
+    expect(has("toast-stack-open")).toBe(true);
+    sheet(400);
+    await frame();
+    expect(readToastsExpanded()).toBe(false);
+    expect(has("toast-stack-open")).toBe(false);
+  });
+
+  it("knows a cover is up between toasts, and that it has gone", async () => {
+    await mount({ cover: ".sheet" });
+    await raiseToast();
+    await tucked();
+    expect(readToastCovered()).toBe(false);
+    const el = sheet(400);
+    await frame();
+    expect(readToastCovered()).toBe(true);
+    // The mark on the list is still the arriving toast's alone.
+    expect(has("toast-over")).toBe(false);
+    el.remove();
+    await frame();
+    expect(readToastCovered()).toBe(false);
+  });
+
+  it("follows a cover that is named by an attribute", async () => {
+    await mount({ cover: '.sheet:not([data-state="closing"])' });
+    await raiseToast();
+    await tucked();
+    const el = sheet(400);
+    await frame();
+    expect(readToastCovered()).toBe(true);
+    el.setAttribute("data-state", "closing");
+    await frame();
+    expect(readToastCovered()).toBe(false);
+  });
+
+  it("makes the band inert and takes it out of the tab order while a cover is up", async () => {
+    await mountWithBand({ cover: ".sheet" });
+    await raiseToast();
+    await tucked();
+    expect(band()?.hasAttribute("inert")).toBe(false);
+    expect(band()?.tabIndex).toBe(0);
+    const el = sheet(400);
+    await frame();
+    expect(band()?.hasAttribute("inert")).toBe(true);
+    expect(band()?.tabIndex).toBe(-1);
+    el.remove();
+    await frame();
+    expect(band()?.hasAttribute("inert")).toBe(false);
+    expect(band()?.tabIndex).toBe(0);
+  });
+
+  it("watches nothing on the desktop, and nothing with no selector", async () => {
+    await mount();
+    await raiseToast();
+    sheet(400);
+    await frame();
+    expect(readToastCovered()).toBe(false);
+    await act(async () => {
+      toast.dismiss();
+      vi.advanceTimersByTime(2000);
+    });
+    phone = false;
+    await mount({ cover: ".sheet", className: "x" });
+    await raiseToast();
+    await frame();
+    expect(readToastCovered()).toBe(false);
+  });
+
+  it("names nothing with a selector the browser can't parse", async () => {
+    await mount({ cover: ".sheet[[" });
+    await raiseToast();
+    await frame();
+    expect(readToastCovered()).toBe(false);
+    expect(has("toast-announcing")).toBe(true);
   });
 });
