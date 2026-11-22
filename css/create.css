@@ -1,19 +1,33 @@
 /* @dalin/kit create.css: the create button (Compose, New event, Upload).
 
-   What it is. Two classes for the one accent-glass button each app has.
+   What it is. Three classes for the one accent-glass button each app has.
    `.dl-create` is the whole button: 44px tall, 8px corners, and calendar's
    original glass written relative to --dl-accent, so every app gets the same
-   brightness in its own hue. `.dl-create-shape` is the height and corners
-   alone, for an app that keeps its own glass (notes).
+   brightness in its own hue. `.dl-create-glass` is that glass alone, for a
+   shape the app owns: the phone's 56px circle, or a layer inside a button
+   whose own pseudo-elements are taken. `.dl-create-shape` is the height and
+   corners alone, for an app that keeps a glass of its own.
 
    How an app adopts it. Import this file, set --dl-accent on :root, and put
    the class on the app's own <button>. The app keeps the button's layout: its
    width, padding, icon and label. The glass uses both pseudo-elements, so the
-   button must not draw its own ::before or ::after.
+   element must not draw its own ::before or ::after; where it has to, put
+   `.dl-create-glass` on a <span> inside it instead.
 
-   What an app must not override. The height, the corners, and any colour or
-   filter in the recipe. The glass belongs to the create action only; every
-   other committing button stays neutral or solid.
+   With `.dl-create-glass` the app sets the size and the corners, and the
+   glass follows them (its two layers inherit the radius). Its `position` and
+   `transition` sit in :where(), so the app's own values for those two win
+   without a second class or !important.
+
+   Keyboard focus. Both glass classes set a box-shadow, and this file is not
+   in a cascade layer, so that shadow beats a ring an app draws as a shadow
+   from inside one (Tailwind's ring utilities). So the ring ships here as an
+   outline, which no shadow can cover. --dl-focus-ring is its colour; the
+   family has not picked one, so it falls back to the text colour.
+
+   What an app must not override. The height and the corners of `.dl-create`,
+   and any colour or filter in the recipe. The glass belongs to the create
+   action only; every other committing button stays neutral or solid.
 
    The recipe uses relative colour syntax (oklch(from ...)), which needs
    Chrome 119, Safari 16.4 or Firefox 128. */
@@ -23,8 +37,10 @@
   border-radius: var(--dl-r-create, 8px);
 }
 
-.dl-create {
-  position: relative;
+/* The glass: the same declarations for the whole button and for the glass
+   alone. */
+.dl-create,
+.dl-create-glass {
   isolation: isolate;
   color: var(--dl-fg, #fff);
   background: linear-gradient(
@@ -35,13 +51,36 @@
   backdrop-filter: blur(10px);
   border: 1px solid oklch(from var(--dl-accent) calc(l + 0.02) c h / 0.58);
   box-shadow: 0 1px 2px oklch(0 0 0 / 0.2);
+}
+/* The two layers below are placed against the element, and the hover eases.
+   The whole button owns both. On the glass alone they are defaults: an app
+   that positions the element itself (a circle fixed in a bar, a layer under
+   an icon) or adds a transform to the transition states its own. */
+.dl-create {
+  position: relative;
+  transition:
+    background var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    border-color var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+:where(.dl-create-glass) {
+  position: relative;
   transition:
     background var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
     border-color var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 
+/* Keyboard focus: an outline, so the box-shadow above can't hide it. A glass
+   layer inside a focused button wears the ring for it. */
+.dl-create:focus-visible,
+.dl-create-glass:focus-visible,
+:focus-visible > .dl-create-glass {
+  outline: 2px solid var(--dl-focus-ring, var(--dl-fg, #fff));
+  outline-offset: 2px;
+}
+
 /* The highlight: a soft light from the top right corner. */
-.dl-create::before {
+.dl-create::before,
+.dl-create-glass::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -57,7 +96,8 @@
 
 /* The glint: a 1px inner rim, shown brightest at the top right and bottom
    left by the conic mask, so the edge catches light the way glass does. */
-.dl-create::after {
+.dl-create::after,
+.dl-create-glass::after {
   content: "";
   position: absolute;
   inset: -1px;
@@ -91,7 +131,8 @@
 }
 
 @media (hover: hover) {
-  .dl-create:hover {
+  .dl-create:hover,
+  .dl-create-glass:hover {
     background: linear-gradient(
       180deg,
       oklch(from var(--dl-accent) calc(l + 0.06) calc(c + 0.03) h / 0.48) 0%,
