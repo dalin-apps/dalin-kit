@@ -1,3 +1,10 @@
+/** The kinds a bare toast may be given: the four with a colour and an icon of their own. */
+export type ToastDefaultKind = "info" | "success" | "warning" | "error";
+/**
+ * The class of the progress kind, for a plain toast that carries it itself
+ * (with `<ToastSpinner>` as its icon). `toast.loading()` needs neither.
+ */
+export declare const PROGRESS_TOAST = "toast-progress";
 /**
  * The class that pins a toast: `toast("Sending in 5s", { className: PINNED_TOAST })`.
  * A pinned toast stays in view until it is dismissed or replaced: out from
@@ -40,6 +47,13 @@ export type ToasterProps = {
      * its toasts announce under its scrim.
      */
     cover?: string;
+    /**
+     * The kind a bare `toast("...")` takes. Without it a bare toast wears the
+     * plain glass with no icon, so its tucked desktop tab is a blank strip.
+     * With it, every toast has a tint and an icon. Leave it out to keep the
+     * plain glass.
+     */
+    defaultKind?: ToastDefaultKind;
 };
 /**
  * The family's toaster. Mount it once at the layout root and never unmount
@@ -76,5 +90,5 @@ export type ToasterProps = {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export declare function Toaster({ gateOpen, phoneMaxWidth, className: appClassName, cover }: ToasterProps): import("react").JSX.Element;
+export declare function Toaster({ gateOpen, phoneMaxWidth, className: appClassName, cover, defaultKind, }: ToasterProps): import("react").JSX.Element;
 //# sourceMappingURL=toaster.d.ts.map

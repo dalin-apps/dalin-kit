@@ -1,4 +1,11 @@
-export { PINNED_TOAST, Toaster, type ToasterProps } from "./toaster.js";
+export {
+  PINNED_TOAST,
+  PROGRESS_TOAST,
+  Toaster,
+  type ToastDefaultKind,
+  type ToasterProps,
+} from "./toaster.js";
+export { PROGRESS_DONE_TOAST, ToastSpinner } from "./toast-spinner.js";
 export { ToastBand, type ToastBandProps } from "./toast-band.js";
 export { toastLine } from "./toast-line.js";
 export { announcesUpdate, faceOf, textOf, type ToastFace } from "./toast-update.js";

@@ -1,4 +1,5 @@
-export { PINNED_TOAST, Toaster } from "./toaster.js";
+export { PINNED_TOAST, PROGRESS_TOAST, Toaster, } from "./toaster.js";
+export { PROGRESS_DONE_TOAST, ToastSpinner } from "./toast-spinner.js";
 export { ToastBand } from "./toast-band.js";
 export { toastLine } from "./toast-line.js";
 export { announcesUpdate, faceOf, textOf } from "./toast-update.js";

@@ -1,11 +1,12 @@
 "use client";
 import { jsx as _jsx } from "react/jsx-runtime";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Toaster as SonnerToaster, useSonner } from "sonner";
 import { setToastCount, setToastsExpanded, useToastsExpanded, } from "./toast-stack.js";
 import { measureToastCover, refreshToastDock, useToastDockState, } from "./toast-dock.js";
 import { useToastTags } from "./toast-tags.js";
-import { PINNED_CLASS, announcesUpdate, faceOf } from "./toast-update.js";
+import { ToastSpinner } from "./toast-spinner.js";
+import { PINNED_CLASS, PROGRESS_CLASS, announcesUpdate, faceOf } from "./toast-update.js";
 import { setPhoneMaxWidth, usePhoneLayout } from "./use-phone-layout.js";
 // How long a freshly-arrived mobile toast stays popped above the card
 // (bubble-in + hold) before it starts slotting into the stack.
@@ -36,14 +37,24 @@ const DESKTOP_VISIBLE = 5;
  * desktop column does hang off a corner, so it keeps Sonner's own two.
  */
 const PHONE_SWIPE_DIRECTIONS = ["top", "right", "bottom", "left"];
-/** The tint class for each toast kind (toast.css). A bare `toast.message`
- *  carries none and wears the plain glass. */
+/** The tint class for each toast kind (toast.css). `loading` is the progress
+ *  kind: `toast.loading()` and a promise toast while it waits. A bare
+ *  `toast.message` carries none and wears the plain glass, unless the app
+ *  names a default kind (`defaultKind`). */
 const TOAST_CLASS_NAMES = {
     error: "toast-error",
     success: "toast-success",
     warning: "toast-warning",
     info: "toast-info",
+    loading: PROGRESS_CLASS,
 };
+/**
+ * The class of the progress kind, for a plain toast that carries it itself
+ * (with `<ToastSpinner>` as its icon). `toast.loading()` needs neither.
+ */
+export const PROGRESS_TOAST = PROGRESS_CLASS;
+/** Sonner's own icons stay, but for the progress kind: the family's spinner. */
+const TOAST_ICONS = { loading: _jsx(ToastSpinner, {}) };
 /**
  * The class that pins a toast: `toast("Sending in 5s", { className: PINNED_TOAST })`.
  * A pinned toast stays in view until it is dismissed or replaced: out from
@@ -83,7 +94,7 @@ const AGAIN_ATTR = "data-again";
  * is found (toast-tags.ts); an update whose card can't be found is not
  * announced, since announcing would pop the wrong toast.
  */
-function useAnnouncePhase(toasts, holdFor, onAnnounce, find) {
+function useAnnouncePhase(toasts, holdFor, onAnnounce, find, bareKind) {
     const [phase, setPhase] = useState(null);
     const [again, setAgain] = useState(false);
     const seen = useRef(new Map());
@@ -95,7 +106,7 @@ function useAnnouncePhase(toasts, holdFor, onAnnounce, find) {
         const changed = [];
         for (const t of toasts) {
             const id = String(t.id);
-            const now = faceOf(t);
+            const now = faceOf(t, bareKind);
             const was = seen.current.get(id);
             faces.set(id, now);
             if (!was)
@@ -133,7 +144,7 @@ function useAnnouncePhase(toasts, holdFor, onAnnounce, find) {
                 marked.current = null;
             }, hold + SLOT_MS),
         ];
-    }, [toasts, holdFor, onAnnounce, find]);
+    }, [toasts, holdFor, onAnnounce, find, bareKind]);
     useEffect(() => () => {
         timers.current.forEach(clearTimeout);
         marked.current?.removeAttribute(AGAIN_ATTR);
@@ -327,7 +338,7 @@ function useNoHoverExpand(root, docked) {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover }) {
+export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover, defaultKind, }) {
     // The width is shared, so the band and the app's own `usePhoneLayout`
     // switch at the same pixel as the toaster.
     useEffect(() => {
@@ -349,7 +360,10 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
     }, [cover, isMobile]);
     const root = useRef(null);
     const find = useToastTags(root);
-    const { phase, again } = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold, onAnnounce, find);
+    const { phase, again } = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold, onAnnounce, find, defaultKind);
+    // One object for as long as the default kind stands, so Sonner's cards
+    // are not handed new class names on every render.
+    const classNames = useMemo(() => (defaultKind ? { ...TOAST_CLASS_NAMES, default: `toast-bare ${TOAST_CLASS_NAMES[defaultKind]}` } : TOAST_CLASS_NAMES), [defaultKind]);
     const dock = useHeldDock(phase, isMobile, measured);
     // Mirror the live toast count into the shared store. This Toaster never
     // unmounts (it's at the layout root), so the count is always authoritative.
@@ -410,9 +424,9 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         .join(" ") || undefined;
     // `display: contents` leaves no box, so the toaster keeps its own fixed
     // position and every selector that reaches it still does.
-    return (_jsx("div", { ref: root, style: { display: "contents" }, children: _jsx(SonnerToaster, { theme: "dark", position: "bottom-right", gap: 8, className: className, style: dock ? { "--dl-dock-line": `${dock.line}px` } : undefined, expand: stackOpen || tucked, visibleToasts: tucked ? DESKTOP_VISIBLE : undefined, swipeDirections: isMobile ? [...PHONE_SWIPE_DIRECTIONS] : undefined, toastOptions: {
+    return (_jsx("div", { ref: root, style: { display: "contents" }, children: _jsx(SonnerToaster, { theme: "dark", position: "bottom-right", gap: 8, className: className, style: dock ? { "--dl-dock-line": `${dock.line}px` } : undefined, expand: stackOpen || tucked, visibleToasts: tucked ? DESKTOP_VISIBLE : undefined, swipeDirections: isMobile ? [...PHONE_SWIPE_DIRECTIONS] : undefined, icons: TOAST_ICONS, toastOptions: {
                 duration: isMobile ? MOBILE_DURATION_MS : DESKTOP_DURATION_MS,
-                classNames: TOAST_CLASS_NAMES,
+                classNames,
             } }) }));
 }
 //# sourceMappingURL=toaster.js.map

@@ -30,7 +30,7 @@ export type ToastFace = {
 
 /** The class a pinned toast carries. Named here and re-exported as PINNED_TOAST. */
 export const PINNED_CLASS = "toast-pinned";
-/** The class of the progress kind (toast.css). */
+/** The class of the progress kind (toast.css). Re-exported as PROGRESS_TOAST. */
 export const PROGRESS_CLASS = "toast-progress";
 
 /** The plain words of a title: a string, or the text inside the element it is. */
@@ -47,12 +47,16 @@ function hasClass(toast: ToastT, name: string): boolean {
   return (toast.className ?? "").split(/\s+/).includes(name);
 }
 
-/** What a toast is and says, as far as an announce cares. */
-export function faceOf(toast: ToastT): ToastFace {
+/**
+ * What a toast is and says, as far as an announce cares. `bare` is what a
+ * toast with no type counts as: the `<Toaster>`'s default kind when it has
+ * one, so a bare toast and a typed one that look alike are one kind.
+ */
+export function faceOf(toast: ToastT, bare = "default"): ToastFace {
   const title = textOf(toast.title);
   const description = textOf(toast.description);
   return {
-    type: toast.type ?? "default",
+    type: toast.type ?? bare,
     quiet: toast.type === "loading" || hasClass(toast, PROGRESS_CLASS) || hasClass(toast, PINNED_CLASS),
     text: description ? `${title}\n${description}` : title,
   };

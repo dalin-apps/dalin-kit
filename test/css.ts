@@ -28,6 +28,13 @@ export function ruleWith(css: string, needle: string): string {
   return found[0]![1];
 }
 
+/** The body of the one rule whose whole selector is `selector`. Throws on none or several. */
+export function ruleFor(css: string, selector: string): string {
+  const found = rulesWith(css, selector).filter(([list]) => list === selector);
+  if (found.length !== 1) throw new Error(`${found.length} rules are exactly ${selector}`);
+  return found[0]![1];
+}
+
 /** Splits on commas that are not inside brackets. */
 export function splitList(list: string): string[] {
   const parts: string[] = [];

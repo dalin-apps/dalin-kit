@@ -76,7 +76,8 @@
    instead of going dark to hold a red or a blue line of text.
    The four tint literals are repeated in the phone block below, where
    each kind layers its tint over the nav pill's glass. Change a hue
-   here and there together.
+   here and there together. The four icon colours are repeated once
+   too, for a bare toast under a default kind.
 
    Sonner sets its own system font stack on the toaster, in a style
    tag it appends after ours, so the second attribute is what lets
@@ -203,6 +204,92 @@
 .toast-info [data-icon] {
   color: oklch(0.80 0.13 255);
 }
+/* The progress kind: work that has started and not answered. It wears the
+   app's own accent in the same recipe as the other kinds, the tint at 22%
+   over the bar's glass and a 36% rim, with white words. `toast.loading()`
+   raises it, and so does a promise toast while it waits; the <Toaster> hands
+   Sonner the spinner below as that kind's icon. A plain toast may carry the
+   class and <ToastSpinner> itself. The fallback blue is the info kind's, for
+   an app that has set no --dl-accent. */
+.toast-progress {
+  background:
+    linear-gradient(
+      color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) 22%, transparent),
+      color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) 22%, transparent)
+    ),
+    var(--dl-toast-glass) !important;
+  backdrop-filter: var(--dl-toast-blur);
+  border: 1px solid color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) 36%, transparent) !important;
+  color: var(--dl-fg, #fff) !important;
+}
+/* The spinner: a ring with one arc in the accent. It says the work is alive
+   and never how far it has got. On the desktop it is what a tucked progress
+   tab shows. */
+.toast-spinner {
+  display: block;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid oklch(1 0 0 / 0.18);
+  border-top-color: var(--dl-accent, oklch(0.62 0.16 255));
+  animation: toast-spin 0.9s linear infinite;
+}
+@keyframes toast-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The default kind (<Toaster defaultKind>). A bare `toast("...")` has no
+   type, so Sonner gives it no kind class and no icon: it wore the plain
+   glass, and its tucked desktop tab was a blank strip of it. With a default
+   kind named, the <Toaster> gives every bare toast that kind's class beside
+   `toast-bare`, and these rules draw the kind's icon where Sonner would have
+   put one, since Sonner renders no icon element without a type. The icon is
+   Sonner's own glyph as a mask, in the kind's icon colour, in the same 20px
+   box at the same place: the toast's padding, Sonner's two icon margins and
+   its 6px gap. A bare toast that brings its own icon keeps it. */
+[data-sonner-toast].toast-bare:not(:has(> [data-icon])) > [data-content] {
+  margin-left: calc(var(--toast-icon-margin-start) + 16px + var(--toast-icon-margin-end) + 6px);
+}
+[data-sonner-toast].toast-bare:not(:has(> [data-icon])) > [data-content]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(16px + var(--toast-icon-margin-start) + var(--toast-svg-margin-start));
+  width: 20px;
+  height: 20px;
+  translate: 0 -50%;
+  background: currentColor;
+  -webkit-mask: var(--toast-bare-icon) center / contain no-repeat;
+  mask: var(--toast-bare-icon) center / contain no-repeat;
+  pointer-events: none;
+}
+.toast-bare.toast-info {
+  --toast-bare-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z'/%3E%3C/svg%3E");
+}
+.toast-bare.toast-info > [data-content]::before {
+  color: oklch(0.80 0.13 255);
+}
+.toast-bare.toast-success {
+  --toast-bare-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z'/%3E%3C/svg%3E");
+}
+.toast-bare.toast-success > [data-content]::before {
+  color: oklch(0.80 0.14 155);
+}
+.toast-bare.toast-warning {
+  --toast-bare-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003zM12 8.25a.75.75 0 01.75.75v3.75a.75.75 0 01-1.5 0V9a.75.75 0 01.75-.75zm0 8.25a.75.75 0 100-1.5.75.75 0 000 1.5z'/%3E%3C/svg%3E");
+}
+.toast-bare.toast-warning > [data-content]::before {
+  color: oklch(0.85 0.12 80);
+}
+.toast-bare.toast-error {
+  --toast-bare-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' clip-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z'/%3E%3C/svg%3E");
+}
+.toast-bare.toast-error > [data-content]::before {
+  color: oklch(0.75 0.18 25);
+}
 
 /* ---------- the phone: a pill docked behind the nav pill (<Toaster>) ----------
    Every rule from here to the keyframes is the phone layout, on while the
@@ -287,6 +374,54 @@
     linear-gradient(oklch(0.62 0.16 255 / 0.22), oklch(0.62 0.16 255 / 0.22)),
     var(--dl-toast-glass) !important;
   border-width: 1.5px !important;
+}
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast].toast-progress {
+  border-width: 1.5px !important;
+}
+
+/* THE PROGRESS CARD: the one card behind the pill that isn't blank. A toast
+   tucked behind the pill shows only its top 16px, where no icon reaches, so
+   work still going wears a bar along its top edge with a segment sweeping
+   across it. Like the spinner, it says the work is alive and never how far
+   it has got. A result may keep the bar, solid green, until it times out:
+   the app puts `toast-progress-done` on it. Sonner draws its own ::before
+   while a toast is swiped or removed, so those states keep theirs. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)
+  [data-sonner-toast]:is(.toast-progress, .toast-progress-done):not([data-swiping="true"], [data-removed="true"])::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: calc(var(--dl-bar-h) / 2);
+  right: calc(var(--dl-bar-h) / 2);
+  height: 3px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)
+  [data-sonner-toast].toast-progress:not([data-swiping="true"], [data-removed="true"])::before {
+  background:
+    linear-gradient(var(--dl-accent, oklch(0.62 0.16 255)), var(--dl-accent, oklch(0.62 0.16 255))) no-repeat,
+    oklch(1 0 0 / 0.12);
+  background-size:
+    30% 100%,
+    100% 100%;
+  animation: toast-bar-sweep 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)
+  [data-sonner-toast].toast-progress-done:not([data-swiping="true"], [data-removed="true"])::before {
+  background: oklch(0.62 0.14 155);
+}
+
+/* A bare toast under a default kind: the phone's capsule has 20px of
+   padding, and a toast with a button shows no icon at all (below). */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast].toast-bare:not(:has(> [data-icon])) > [data-content]::before {
+  left: calc(20px + var(--toast-icon-margin-start) + var(--toast-svg-margin-start));
+}
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast].toast-bare:has([data-button]) > [data-content] {
+  margin-left: 0;
+}
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast].toast-bare:has([data-button]) > [data-content]::before {
+  display: none;
 }
 
 /* A toast carrying a button stops being centred and becomes a line with
@@ -607,6 +742,21 @@
   100% {
     transform: translateY(calc(-1 * var(--notif-peek) * var(--slot, 1)))
       scale(calc(1 - 0.05 * var(--slot, 1))) rotate(0deg);
+  }
+}
+
+/* The progress card's sweep: the 30% segment from off the left to off the
+   right. */
+@keyframes toast-bar-sweep {
+  from {
+    background-position:
+      -43% 0,
+      0 0;
+  }
+  to {
+    background-position:
+      143% 0,
+      0 0;
   }
 }
 

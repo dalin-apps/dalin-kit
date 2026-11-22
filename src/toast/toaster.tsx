@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 import { Toaster as SonnerToaster, useSonner } from "sonner";
 import type { ToastT } from "sonner";
@@ -16,7 +16,8 @@ import {
   type ToastDock,
 } from "./toast-dock.js";
 import { useToastTags } from "./toast-tags.js";
-import { PINNED_CLASS, announcesUpdate, faceOf, type ToastFace } from "./toast-update.js";
+import { ToastSpinner } from "./toast-spinner.js";
+import { PINNED_CLASS, PROGRESS_CLASS, announcesUpdate, faceOf, type ToastFace } from "./toast-update.js";
 import { setPhoneMaxWidth, usePhoneLayout } from "./use-phone-layout.js";
 
 // How long a freshly-arrived mobile toast stays popped above the card
@@ -54,14 +55,29 @@ const DESKTOP_VISIBLE = 5;
  */
 const PHONE_SWIPE_DIRECTIONS = ["top", "right", "bottom", "left"] as const;
 
-/** The tint class for each toast kind (toast.css). A bare `toast.message`
- *  carries none and wears the plain glass. */
+/** The tint class for each toast kind (toast.css). `loading` is the progress
+ *  kind: `toast.loading()` and a promise toast while it waits. A bare
+ *  `toast.message` carries none and wears the plain glass, unless the app
+ *  names a default kind (`defaultKind`). */
 const TOAST_CLASS_NAMES = {
   error: "toast-error",
   success: "toast-success",
   warning: "toast-warning",
   info: "toast-info",
+  loading: PROGRESS_CLASS,
 } as const;
+
+/** The kinds a bare toast may be given: the four with a colour and an icon of their own. */
+export type ToastDefaultKind = "info" | "success" | "warning" | "error";
+
+/**
+ * The class of the progress kind, for a plain toast that carries it itself
+ * (with `<ToastSpinner>` as its icon). `toast.loading()` needs neither.
+ */
+export const PROGRESS_TOAST = PROGRESS_CLASS;
+
+/** Sonner's own icons stay, but for the progress kind: the family's spinner. */
+const TOAST_ICONS = { loading: <ToastSpinner /> };
 
 /**
  * The class that pins a toast: `toast("Sending in 5s", { className: PINNED_TOAST })`.
@@ -113,6 +129,7 @@ function useAnnouncePhase(
   holdFor: (arrived: ToastT[]) => number,
   onAnnounce: () => void,
   find: (id: string) => HTMLElement | null,
+  bareKind: string | undefined,
 ): { phase: Phase; again: boolean } {
   const [phase, setPhase] = useState<Phase>(null);
   const [again, setAgain] = useState(false);
@@ -126,7 +143,7 @@ function useAnnouncePhase(
     const changed: ToastT[] = [];
     for (const t of toasts) {
       const id = String(t.id);
-      const now = faceOf(t);
+      const now = faceOf(t, bareKind);
       const was = seen.current.get(id);
       faces.set(id, now);
       if (!was) arrived.push(t);
@@ -162,7 +179,7 @@ function useAnnouncePhase(
         marked.current = null;
       }, hold + SLOT_MS),
     ];
-  }, [toasts, holdFor, onAnnounce, find]);
+  }, [toasts, holdFor, onAnnounce, find, bareKind]);
 
   useEffect(
     () => () => {
@@ -348,6 +365,13 @@ export type ToasterProps = {
    * its toasts announce under its scrim.
    */
   cover?: string;
+  /**
+   * The kind a bare `toast("...")` takes. Without it a bare toast wears the
+   * plain glass with no icon, so its tucked desktop tab is a blank strip.
+   * With it, every toast has a tint and an icon. Leave it out to keep the
+   * plain glass.
+   */
+  defaultKind?: ToastDefaultKind;
 };
 
 /**
@@ -385,7 +409,13 @@ export type ToasterProps = {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover }: ToasterProps) {
+export function Toaster({
+  gateOpen = true,
+  phoneMaxWidth,
+  className: appClassName,
+  cover,
+  defaultKind,
+}: ToasterProps) {
   // The width is shared, so the band and the app's own `usePhoneLayout`
   // switch at the same pixel as the toaster.
   useEffect(() => {
@@ -406,7 +436,19 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
   }, [cover, isMobile]);
   const root = useRef<HTMLDivElement>(null);
   const find = useToastTags(root);
-  const { phase, again } = useAnnouncePhase(toasts, tucked ? desktopHold : mobileHold, onAnnounce, find);
+  const { phase, again } = useAnnouncePhase(
+    toasts,
+    tucked ? desktopHold : mobileHold,
+    onAnnounce,
+    find,
+    defaultKind,
+  );
+  // One object for as long as the default kind stands, so Sonner's cards
+  // are not handed new class names on every render.
+  const classNames = useMemo(
+    () => (defaultKind ? { ...TOAST_CLASS_NAMES, default: `toast-bare ${TOAST_CLASS_NAMES[defaultKind]}` } : TOAST_CLASS_NAMES),
+    [defaultKind],
+  );
   const dock = useHeldDock(phase, isMobile, measured);
 
   // Mirror the live toast count into the shared store. This Toaster never
@@ -483,9 +525,10 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         expand={stackOpen || tucked}
         visibleToasts={tucked ? DESKTOP_VISIBLE : undefined}
         swipeDirections={isMobile ? [...PHONE_SWIPE_DIRECTIONS] : undefined}
+        icons={TOAST_ICONS}
         toastOptions={{
           duration: isMobile ? MOBILE_DURATION_MS : DESKTOP_DURATION_MS,
-          classNames: TOAST_CLASS_NAMES,
+          classNames,
         }}
       />
     </div>

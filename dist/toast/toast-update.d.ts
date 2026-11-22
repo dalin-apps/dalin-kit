@@ -28,12 +28,16 @@ export type ToastFace = {
 };
 /** The class a pinned toast carries. Named here and re-exported as PINNED_TOAST. */
 export declare const PINNED_CLASS = "toast-pinned";
-/** The class of the progress kind (toast.css). */
+/** The class of the progress kind (toast.css). Re-exported as PROGRESS_TOAST. */
 export declare const PROGRESS_CLASS = "toast-progress";
 /** The plain words of a title: a string, or the text inside the element it is. */
 export declare function textOf(node: ReactNode | (() => ReactNode)): string;
-/** What a toast is and says, as far as an announce cares. */
-export declare function faceOf(toast: ToastT): ToastFace;
+/**
+ * What a toast is and says, as far as an announce cares. `bare` is what a
+ * toast with no type counts as: the `<Toaster>`'s default kind when it has
+ * one, so a bare toast and a typed one that look alike are one kind.
+ */
+export declare function faceOf(toast: ToastT, bare?: string): ToastFace;
 /** Whether a toast that went from `was` to `now` under one id announces again. */
 export declare function announcesUpdate(was: ToastFace, now: ToastFace): boolean;
 //# sourceMappingURL=toast-update.d.ts.map
