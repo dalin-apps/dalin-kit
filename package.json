@@ -1,6 +1,6 @@
 {
   "name": "@dalin/kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The shared design base of the dalin apps: tokens, the toast, the create button, and the helpers each app had copied.",
   "type": "module",
   "license": "MIT",

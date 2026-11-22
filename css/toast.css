@@ -8,7 +8,10 @@
    then docks behind the nav pill. Version 0.1 adds to it without changing
    how those look: a dock other than the pill, pinned toasts, a toast
    announced again when it is updated in place, a progress kind, and a
-   default kind for a bare toast.
+   default kind for a bare toast. Version 0.2 adds a plain toast for a phone
+   page with no pill, slivers above a line that is not a cover, a calm
+   announce for a pinned toast's result, and an optional scrim under a
+   fanned stack.
 
    How an app adopts it. Import this file once, on every route, after the
    app's own base sheet. Mount <Toaster> at the layout root and <ToastBand>
