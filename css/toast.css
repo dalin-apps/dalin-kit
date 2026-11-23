@@ -206,7 +206,10 @@
   font-size: 13px !important;
   font-weight: 500 !important;
   white-space: nowrap !important;
-  transition: background var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+  transition:
+    background var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    filter var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    scale var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 [data-sonner-toast] [data-button]:last-of-type {
   border-radius: 0 calc(var(--border-radius) - 1px) calc(var(--border-radius) - 1px) 0 !important;
@@ -227,6 +230,22 @@
   outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff)) !important;
   outline-offset: calc(-1 * var(--dl-focus-w, 2px)) !important;
   box-shadow: none !important;
+}
+/* Pressed (the owner's pick on 2026-11-23). On the desktop: the hover's
+   fill, one step darker. On the phone's pill: the segment shrinks a little
+   and brightens, and only brightens while the toast is still (`toast-still`,
+   the app's motion switch or the system's). It is written as `scale`, not
+   `transform`. A disabled action shows no press. */
+[data-sonner-toaster]:not(.toast-phone) [data-sonner-toast] [data-button]:active:not(:disabled, [aria-disabled="true"]) {
+  background: oklch(1 0 0 / 0.07) !important;
+  filter: brightness(var(--dl-press-dim, 0.92));
+}
+[data-sonner-toaster].toast-phone [data-sonner-toast] [data-button]:active:not(:disabled, [aria-disabled="true"]) {
+  scale: var(--dl-press-scale, 0.97);
+  filter: brightness(var(--dl-press-bright, 1.12));
+}
+[data-sonner-toaster].toast-phone.toast-still [data-sonner-toast] [data-button]:active {
+  scale: none;
 }
 /* An Undo toast's line (toastLine): the item's name first, in the heavier
    weight, then what happened to it. The name is the part

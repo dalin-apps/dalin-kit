@@ -130,12 +130,13 @@
   height: 20px;
 }
 /* Pressed: the family's icon press. The glyph turns white, and the
-   magnifying glass fills its lens. No box behind either. */
-.dl-phone-icon:active {
+   magnifying glass fills its lens. No box behind either. The press itself
+   is the phone's, with the search rows and Cancel below. */
+.dl-phone-icon:active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])) {
   background: none;
   color: var(--dl-fg, #fff);
 }
-.dl-phone-search-icon:active circle {
+.dl-phone-search-icon:active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])) circle {
   fill: currentColor;
 }
 .dl-phone-icon:focus-visible {
@@ -250,6 +251,27 @@
   outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff));
   outline-offset: var(--dl-focus-offset, 2px);
   border-radius: var(--dl-r-control, 7px);
+}
+
+/* The phone's press (the owner's pick on 2026-11-23), on the header's
+   icons, Cancel and the search rows: the control shrinks a little and
+   brightens, at once, as everything in this sheet does. Nothing is drawn
+   behind it. It is written as `scale`, not `transform`, so it adds to
+   whatever transform the app gives the control. A control that is disabled
+   or busy shows no press. */
+:is(.dl-phone-icon, .dl-phone-search-cancel, .dl-phone-search-row):active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])) {
+  scale: var(--dl-press-scale, 0.97);
+  filter: brightness(var(--dl-press-bright, 1.12));
+}
+/* Under reduced motion it only brightens: the app's own switch where it
+   has spoken (`data-dl-motion` on <html>), the system's setting otherwise. */
+html[data-dl-motion="reduce"] :is(.dl-phone-icon, .dl-phone-search-cancel, .dl-phone-search-row):active {
+  scale: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-dl-motion="full"]) :is(.dl-phone-icon, .dl-phone-search-cancel, .dl-phone-search-row):active {
+    scale: none;
+  }
 }
 
 /* The suggestions and the results scroll under the field. The list ends

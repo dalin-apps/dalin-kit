@@ -213,6 +213,12 @@ html[data-dl-motion="reduce"] .dl-menu.dl-context-menu[data-ending-style]:not([d
 .dl-menu-item:is([data-highlighted], [data-popup-open]) {
   background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
 }
+/* Pressed, with the pointer: the highlight, one step darker (the owner's
+   pick on 2026-11-23). A disabled row has none. */
+.dl-menu-item:active:not([data-disabled], [aria-disabled="true"]) {
+  background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
+  filter: brightness(var(--dl-press-dim, 0.92));
+}
 .dl-menu-item[data-disabled] {
   opacity: 0.5;
   pointer-events: none;

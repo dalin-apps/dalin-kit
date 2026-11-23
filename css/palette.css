@@ -225,6 +225,12 @@ html[data-dl-motion="reduce"] :is(.dl-palette, .dl-palette-dim) {
 .dl-palette-row[data-highlighted] {
   background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
 }
+/* Pressed, with the pointer: the highlight, one step darker (the owner's
+   pick on 2026-11-23). */
+.dl-palette-row:active:not([data-disabled], [aria-disabled="true"]) {
+  background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
+  filter: brightness(var(--dl-press-dim, 0.92));
+}
 .dl-palette-icon {
   flex: none;
   display: grid;

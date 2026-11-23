@@ -42,7 +42,7 @@ describe(".dl-create, the whole button", () => {
 
 describe(".dl-create-glass, the glass alone", () => {
   it("shares the recipe with the whole button, rule for rule", () => {
-    const glass = rulesWith(css, ".dl-create-glass").filter(([list]) => !list.includes(":where") && !list.includes("focus"));
+    const glass = rulesWith(css, ".dl-create-glass").filter(([list]) => !list.includes(":where") && !list.includes("focus") && !list.includes(":active") && !list.includes("disabled"));
     expect(glass.length).toBe(4);
     for (const [list] of glass) {
       const selectors = splitList(list);

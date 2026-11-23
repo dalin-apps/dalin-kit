@@ -69,13 +69,17 @@
   position: relative;
   transition:
     background var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
-    border-color var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+    border-color var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    filter var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    scale var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 :where(.dl-create-glass) {
   position: relative;
   transition:
     background var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
-    border-color var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+    border-color var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    filter var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    scale var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 
 /* Keyboard focus: an outline, so the box-shadow above can't hide it. A glass
@@ -151,5 +155,42 @@
       oklch(from var(--dl-accent) calc(l - 0.06) c h / 0.4) 100%
     );
     border-color: oklch(from var(--dl-accent) calc(l + 0.08) c h / 0.72);
+  }
+}
+
+/* Pressed (the owner's pick on 2026-11-23). On the desktop: the hover's
+   glass, one step darker. A glass layer inside a pressed button takes the
+   look for it. A control that is disabled or busy shows no press (see
+   below), and the phone's press is the next rule's. */
+.dl-create:active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"]), .dl-phone *),
+.dl-create-glass:active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"]), .dl-phone *),
+:active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"]), .dl-phone *) > .dl-create-glass {
+  background: linear-gradient(
+    180deg,
+    oklch(from var(--dl-accent) calc(l + 0.06) calc(c + 0.03) h / 0.48) 0%,
+    oklch(from var(--dl-accent) calc(l - 0.06) c h / 0.4) 100%
+  );
+  border-color: oklch(from var(--dl-accent) calc(l + 0.08) c h / 0.72);
+  filter: brightness(var(--dl-press-dim, 0.92));
+}
+/* On the phone (anything inside `.dl-phone`, the class an app puts on its
+   phone layout): the glass shrinks a little and brightens. It is written
+   as `scale`, not `transform`, so a circle the app places with a transform
+   stays where it is. */
+.dl-phone :is(.dl-create, .dl-create-glass):active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])),
+.dl-phone :active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])) > .dl-create-glass {
+  scale: var(--dl-press-scale, 0.97);
+  filter: brightness(var(--dl-press-bright, 1.12));
+}
+/* Under reduced motion it only brightens: the app's own switch where it
+   has spoken (`data-dl-motion` on <html>), the system's setting otherwise. */
+html[data-dl-motion="reduce"] .dl-phone :is(.dl-create, .dl-create-glass):active,
+html[data-dl-motion="reduce"] .dl-phone :active > .dl-create-glass {
+  scale: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-dl-motion="full"]) .dl-phone :is(.dl-create, .dl-create-glass):active,
+  html:not([data-dl-motion="full"]) .dl-phone :active > .dl-create-glass {
+    scale: none;
   }
 }

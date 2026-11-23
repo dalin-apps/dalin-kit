@@ -870,10 +870,11 @@ describe("phone.css, the header", () => {
   });
 
   it("draws no box behind a pressed icon: it turns white, and the glass fills its lens", () => {
-    const pressed = ruleFor(css, ".dl-phone-icon:active");
+    const ready = ':not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"]))';
+    const pressed = ruleFor(css, `.dl-phone-icon:active${ready}`);
     expect(pressed).toContain("background: none");
     expect(pressed).toContain("color: var(--dl-fg, #fff)");
-    expect(ruleFor(css, ".dl-phone-search-icon:active circle")).toContain("fill: currentColor");
+    expect(ruleFor(css, `.dl-phone-search-icon:active${ready} circle`)).toContain("fill: currentColor");
   });
 });
 
