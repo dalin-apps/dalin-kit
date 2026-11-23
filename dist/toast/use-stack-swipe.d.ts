@@ -75,8 +75,11 @@ export type StackSwipeHost = {
      */
     pullOn?: string;
     /**
-     * Whether motion is reduced right now. Defaults to the system's setting; an
-     * app with its own motion switch passes its reader, so that switch wins.
+     * Whether motion is reduced right now. Left out, it is the kit's one
+     * answer (helpers/motion.ts): the app's reader if it named one with
+     * `setMotionReader`, else the switch the `<Toaster>` was handed as
+     * selectors, else the system's setting. So an app that has told the
+     * `<Toaster>` about its switch passes nothing here.
      */
     reducedMotion?: () => boolean;
 };

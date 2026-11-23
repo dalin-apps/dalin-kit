@@ -12,6 +12,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { SWIPE_SLOP_PX, SWIPE_TUCK_PX } from "./stack-swipe.js";
 import { ToastBand } from "./toast-band.js";
 import { readToastsExpanded, setToastCount, setToastsExpanded } from "./toast-stack.js";
+import { setMotionReader } from "../helpers/motion.js";
 import { useStackSwipe, type StackSwipeHost } from "./use-stack-swipe.js";
 
 /** A pill whose top edge is at 700, pressed in its middle. */
@@ -98,6 +99,36 @@ function pull() {
   pointer("pointerdown", START_Y);
   pointer("pointermove", START_Y - SWIPE_SLOP_PX - 8);
 }
+
+describe("the swell and the app's motion switch", () => {
+  afterEach(() => {
+    setMotionReader(null);
+  });
+
+  it("swells the pill with nothing said, since the system asks for nothing here", () => {
+    mount();
+    pull();
+    pointer("pointermove", PILL.top - 20);
+    expect(pill().dataset.pull).toBe("swell");
+  });
+
+  it("follows the one reader the app named, with none passed to the hook", () => {
+    setMotionReader(() => true);
+    mount();
+    pull();
+    pointer("pointermove", PILL.top - 20);
+    expect(readToastsExpanded()).toBe(true);
+    expect(pill().dataset.pull).toBeUndefined();
+  });
+
+  it("lets the hook's own reader win over the shared one", () => {
+    setMotionReader(() => true);
+    mount({ reducedMotion: () => false });
+    pull();
+    pointer("pointermove", PILL.top - 20);
+    expect(pill().dataset.pull).toBe("swell");
+  });
+});
 
 describe("the swipe as version 0 had it", () => {
   it("lets a tap on a tab through and leaves the stack alone", () => {

@@ -25,15 +25,13 @@
  * file twice with the list of overlays changed.
  */
 import { startedFromKeyboard } from "./input-modality.js";
+import { reducesMotion } from "./motion.js";
 /** The mark on a fading copy. */
 export const LEAVING_ATTR = "data-dl-leaving";
 // Past the 110ms fade. A timer as well as `animationend`, because an app may
 // fade a copy's parts instead of the copy (notes' page menu), and then no
 // animation ends on the copy's own node.
 const REMOVE_AFTER_MS = 170;
-function systemReducesMotion() {
-    return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 /** What a clone does not carry: a field's typed value. */
 function copyFields(from, to) {
     const live = from.querySelectorAll("input, textarea, select");
@@ -111,7 +109,7 @@ function leave(node, parent, before, scrolled, keepIds) {
 export function leaveInPlace(node, options = {}) {
     if (!(node instanceof HTMLElement) || !node.parentNode)
         return;
-    if (startedFromKeyboard() || (options.reducedMotion ?? systemReducesMotion)())
+    if (startedFromKeyboard() || (options.reducedMotion ?? reducesMotion)())
         return;
     // A close asked for twice in one tick leaves one copy.
     if (node.nextElementSibling?.hasAttribute(LEAVING_ATTR))
@@ -128,7 +126,7 @@ export function endFades(selector) {
  * Starts watching for the named overlays leaving the document; returns the
  * function that stops it. Call it once, from an effect at the app's root.
  */
-export function watchLeaving({ selectors, reducedMotion = systemReducesMotion }) {
+export function watchLeaving({ selectors, reducedMotion = reducesMotion }) {
     const all = selectors.join(", ");
     if (!all)
         return () => { };

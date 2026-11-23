@@ -8,6 +8,7 @@ import { holdTabStops } from "./tab-stops.js";
 import { useToastTags } from "./toast-tags.js";
 import { ToastSpinner } from "./toast-spinner.js";
 import { MOTION_CLASS, scopeSonnerReducedMotion } from "./sonner-motion.js";
+import { motionReaderFor, setToasterMotionReader } from "../helpers/motion.js";
 import { PINNED_CLASS, PROGRESS_CLASS, announcesUpdate, faceOf } from "./toast-update.js";
 import { useLiveCover } from "./use-live-cover.js";
 import { useNamedState } from "./use-named-state.js";
@@ -469,6 +470,15 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         if (fullMotionSelector)
             scopeSonnerReducedMotion();
     }, [fullMotionSelector]);
+    // The app's switch, said once. The band, the pill's swipe and the close
+    // fade are script and ask helpers/motion.ts, which answers from these two
+    // selectors while this toaster is mounted, so the app names its switch here
+    // and nowhere else.
+    useEffect(() => {
+        if (!reducedMotionSelector && !fullMotionSelector)
+            return;
+        return setToasterMotionReader(motionReaderFor(reducedMotionSelector, fullMotionSelector));
+    }, [reducedMotionSelector, fullMotionSelector]);
     const solid = useNamedState(reducedTransparencySelector, undefined);
     // The width is shared, so the band and the app's own `usePhoneLayout`
     // switch at the same pixel as the toaster.

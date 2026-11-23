@@ -26,6 +26,7 @@
  */
 
 import { startedFromKeyboard } from "./input-modality.js";
+import { reducesMotion } from "./motion.js";
 
 /** The mark on a fading copy. */
 export const LEAVING_ATTR = "data-dl-leaving";
@@ -42,15 +43,13 @@ export type LeavingOptions = {
    */
   selectors: readonly string[];
   /**
-   * Whether motion is reduced right now. Defaults to the system's setting; an
-   * app with its own motion switch passes its reader, so that switch wins.
+   * Whether motion is reduced right now. Left out, it is the kit's one
+   * answer (motion.ts): the app's reader if it named one with
+   * `setMotionReader`, else the switch the `<Toaster>` was handed as
+   * selectors, else the system's setting.
    */
   reducedMotion?: () => boolean;
 };
-
-function systemReducesMotion(): boolean {
-  return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 
 /** What a clone does not carry: a field's typed value. */
 function copyFields(from: Element, to: Element): void {
@@ -135,7 +134,7 @@ function leave(node: HTMLElement, parent: Node, before: Node | null, scrolled: S
  */
 export function leaveInPlace(node: Element | null, options: Pick<LeavingOptions, "reducedMotion"> = {}): void {
   if (!(node instanceof HTMLElement) || !node.parentNode) return;
-  if (startedFromKeyboard() || (options.reducedMotion ?? systemReducesMotion)()) return;
+  if (startedFromKeyboard() || (options.reducedMotion ?? reducesMotion)()) return;
   // A close asked for twice in one tick leaves one copy.
   if (node.nextElementSibling?.hasAttribute(LEAVING_ATTR)) return;
   leave(node, node.parentNode, node.nextSibling, null, false);
@@ -151,7 +150,7 @@ export function endFades(selector: string): void {
  * Starts watching for the named overlays leaving the document; returns the
  * function that stops it. Call it once, from an effect at the app's root.
  */
-export function watchLeaving({ selectors, reducedMotion = systemReducesMotion }: LeavingOptions): () => void {
+export function watchLeaving({ selectors, reducedMotion = reducesMotion }: LeavingOptions): () => void {
   const all = selectors.join(", ");
   if (!all) return () => {};
   const kindOf = (node: HTMLElement) => selectors.find((selector) => node.matches(selector));

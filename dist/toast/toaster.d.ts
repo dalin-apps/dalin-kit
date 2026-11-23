@@ -76,6 +76,10 @@ export type ToasterProps = {
      * asks for reduced motion, the toast keeps its phases and loses the travel
      * between them (`toast-still` in toast.css). Without it the system's
      * setting alone decides, which Sonner already honours.
+     *
+     * This and `fullMotionSelector` are also the one place an app names its
+     * motion switch for the kit's script: the `<ToastBand>`, `useStackSwipe`
+     * and `watchLeaving` follow them unless given a reader of their own.
      */
     reducedMotionSelector?: string;
     /**

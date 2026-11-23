@@ -44,6 +44,7 @@ import { useCallback, useEffect, useMemo, useRef, } from "react";
 import { SWIPE_CLICK_GUARD_MS, SWIPE_LIFT_MAX_PX, claimSwipe, inSwipeBand, readSwipe, } from "./stack-swipe.js";
 import { useToastPillPresence } from "./toast-dock.js";
 import { readToastCount, readToastsExpanded, setToastsExpanded, } from "./toast-stack.js";
+import { reducesMotion } from "../helpers/motion.js";
 /** The nav pill, when the app does not name its own. */
 export const DEFAULT_PILL_SELECTOR = "[data-dl-pill]";
 const TOASTER_SELECTOR = '[data-sonner-toaster][data-y-position="bottom"]';
@@ -130,14 +131,11 @@ function claim(current, event) {
     begin(current);
     return true;
 }
-function systemReducesMotion() {
-    return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 /** The stack moves: buzz, swell the lens, and fan or tuck. */
 function settle(current, open, host) {
     current.done = true;
     stackTick(host, open);
-    swell(current, (host.reducedMotion ?? systemReducesMotion)());
+    swell(current, (host.reducedMotion ?? reducesMotion)());
     setToastsExpanded(open);
 }
 /** Follows a claimed press to the pointer's current position. */

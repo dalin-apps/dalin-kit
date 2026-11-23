@@ -232,7 +232,7 @@ While a finger pulls, the hook writes `data-pull="on"` on the pill, with `--pull
 | `onFan`, `onTuck` | The two ticks apart. Each falls back to `onTick`. |
 | `liftTarget` | A selector for a second element that gets `--pull-lift` with the pill, such as a button beside it that rises too. |
 | `pullOn` | A selector the matched pill must also match to draw the pull. While it doesn't, the swipe still works, nothing is written on the pill, and the peeking cards don't lift. |
-| `reducedMotion` | A reader for the app's own motion switch. Defaults to the system's setting. |
+| `reducedMotion` | A reader for the app's own motion switch. Left out, the part follows the switch the `<Toaster>` was told about (see "One place for the motion switch"). |
 
 `<ToastBand>` also takes `label`, its accessible name, which defaults to "Show notifications".
 
@@ -244,15 +244,17 @@ The band is the way in. It is a button named "Show notifications" with `aria-exp
 
 ### Reduced motion and reduced transparency
 
-Each app has its own switch for these, on its own attribute. Name the selector and the kit applies its own rules, so the app restates none:
+Each app has its own switch for these, on its own attribute. Name the selector and the kit applies its own rules, so the app restates none. This is calendar's, the one app with all three:
 
 ```tsx
 <Toaster
-  reducedMotionSelector='html[data-motion="reduce"]'
+  reducedMotionSelector='html[data-motion="reduced"]'
   fullMotionSelector='html[data-motion="full"]'
   reducedTransparencySelector='html[data-glass="off"]'
 />
 ```
+
+The value is each app's own word. Calendar writes `data-motion="reduced"`. Mail and drive write `data-motion="reduce"` and have no Full choice, so they pass that one selector. Notes writes one attribute with no value, shown further down. Copy the selector from the app's stylesheet: a selector that never matches fails silently, and the toast then follows the system's setting alone.
 
 While the first matches, or the system asks for reduced motion, the phases still happen and the travel between them doesn't. The progress bar stops mid sweep and the spinner slows to 2.4s. While the third matches, each toast is drawn solid: `--dl-toast-solid` under the kind's tint, with no blur. Without that prop a toast is always glass.
 
@@ -268,6 +270,22 @@ While the first matches, or the system asks for reduced motion, the phases still
 Sonner has its own rule for the system's setting, in the stylesheet it appends to the page, and it stops every toast's transitions and animations with `!important`. For an app that names a full-motion selector, the kit scopes that rule once to toasters without `toast-motion`, and writes the class on its list while the choice is on. Any other toaster on the page is ruled as before.
 
 Pass `reducedMotionSelector` even where the app has a blanket rule of its own, the kind that cuts every element's animation to one run of next to no time. The kit's rules outweigh that blanket rule, so the spinner keeps turning slowly and the progress bar holds mid sweep, but they apply only while `toast-still` is on. Without the prop the app's rule stops the spinner after one turn.
+
+### One place for the motion switch
+
+The toast is told about the switch with selectors because a stylesheet needs a class to key on. The band, the pill's swipe and the close fade are script, and in 0.2 each took a reader of its own. An app that forgot one got the system's setting for that part.
+
+From 0.3 the two selectors on the `<Toaster>` are the one place. While a `<Toaster>` that names them is mounted, `<ToastBand>`, `useStackSwipe`, `watchLeaving` and `leaveInPlace` follow the same answer, so the app passes them no `reducedMotion`. With no selector named they follow the system's setting, as before.
+
+An app whose switch is not a selector names its reader once instead:
+
+```tsx
+import { setMotionReader } from "@dalin/kit";
+
+useEffect(() => setMotionReader(() => settings.motion === "reduced"), []);
+```
+
+That reader wins over the toaster's selectors, and a `reducedMotion` option passed to one part still wins for that part. `reducesMotion()` returns the answer in force for the app's own code, and `systemReducesMotion()` is the system's setting alone.
 
 ### Variables an app may set
 
@@ -363,7 +381,7 @@ import { watchLeaving } from "@dalin/kit";
 useEffect(() => watchLeaving({ selectors: [".event-menu", ".settings-scrim"], reducedMotion }), []);
 ```
 
-Name each overlay that should fade. A scrim that wraps its card is named alone, since its copy carries the card. No copy is left for a close that started from the keyboard, under reduced motion, for an overlay removed with its container, or for one replaced by another of its kind. `reducedMotion` is a reader for the app's own switch and defaults to the system's setting.
+Name each overlay that should fade. A scrim that wraps its card is named alone, since its copy carries the card. No copy is left for a close that started from the keyboard, under reduced motion, for an overlay removed with its container, or for one replaced by another of its kind. `reducedMotion` is a reader for the app's own switch. Left out, the fade follows the switch the `<Toaster>` was told about.
 
 An overlay that stays mounted and hides by a class calls `leaveInPlace(node)` before it hides, and `endFades(selector)` as it opens again. The copy carries `data-dl-leaving` (`LEAVING_ATTR`). `shouldLeave` is the rule for one node, exported for tests. This replaces calendar's and notes' `src/lib/leaving.ts` and their `[data-leaving]` rules.
 

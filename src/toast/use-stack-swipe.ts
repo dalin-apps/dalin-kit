@@ -64,6 +64,7 @@ import {
   readToastsExpanded,
   setToastsExpanded,
 } from "./toast-stack.js";
+import { reducesMotion } from "../helpers/motion.js";
 
 /** The nav pill, when the app does not name its own. */
 export const DEFAULT_PILL_SELECTOR = "[data-dl-pill]";
@@ -120,8 +121,11 @@ export type StackSwipeHost = {
    */
   pullOn?: string;
   /**
-   * Whether motion is reduced right now. Defaults to the system's setting; an
-   * app with its own motion switch passes its reader, so that switch wins.
+   * Whether motion is reduced right now. Left out, it is the kit's one
+   * answer (helpers/motion.ts): the app's reader if it named one with
+   * `setMotionReader`, else the switch the `<Toaster>` was handed as
+   * selectors, else the system's setting. So an app that has told the
+   * `<Toaster>` about its switch passes nothing here.
    */
   reducedMotion?: () => boolean;
 };
@@ -232,15 +236,11 @@ function claim(current: Press, event: ReactPointerEvent<HTMLElement>): boolean {
   return true;
 }
 
-function systemReducesMotion(): boolean {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
 /** The stack moves: buzz, swell the lens, and fan or tuck. */
 function settle(current: Press, open: boolean, host: StackSwipeHost) {
   current.done = true;
   stackTick(host, open);
-  swell(current, (host.reducedMotion ?? systemReducesMotion)());
+  swell(current, (host.reducedMotion ?? reducesMotion)());
   setToastsExpanded(open);
 }
 
