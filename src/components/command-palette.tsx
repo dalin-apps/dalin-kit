@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -96,6 +97,13 @@ type Group = { id: string; heading: string; items: PaletteItem[] };
 
 const ACTIONS_ID = "dl:actions";
 
+/**
+ * The Enter hint's cap: the return arrow, as the key itself is printed. One
+ * 20px cap, so the slot it holds open on every row costs the row's date 30px
+ * and no more. The word would hold 60px open.
+ */
+const ENTER_KEY = "\u21b5";
+
 /** Whether a key press belongs to a field the reader is typing in. */
 function inField(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -124,7 +132,8 @@ function Marked({ text, query }: { text: string; query: string }): ReactNode {
  * frosted, with the app dimmed behind it. Results come in groups under
  * sentence-case headings, with the words of the query marked in each row.
  * The arrows move the focus, which always rests on a row, and that row
- * shows an Enter hint where its own shortcut would be. Enter runs it,
+ * shows an Enter hint (the return arrow, as a keycap) where its own
+ * shortcut would be. Enter runs it,
  * Escape closes the palette, and so does a press outside it.
  *
  * The app supplies what it searches (`sources`) and what it can do
@@ -161,6 +170,7 @@ export function CommandPalette({
   const [results, setResults] = useState<Record<string, PaletteItem[]>>({});
   const [busy, setBusy] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const hintId = useId();
   // Whether the palette lands, and leaves, without animation: the keyboard
   // opened it, or the last thing done in it was a key.
   const [instant, setInstant] = useState(false);
@@ -308,6 +318,7 @@ export function CommandPalette({
                 className="dl-palette-input"
                 placeholder={placeholder}
                 aria-label={placeholder}
+                aria-describedby={hintId}
                 aria-busy={busy > 0 || undefined}
                 autoComplete="off"
                 autoCorrect="off"
@@ -317,6 +328,10 @@ export function CommandPalette({
                 <Kbd>Esc</Kbd>
               </Dialog.Close>
             </div>
+            {/* The hint is a picture of a key, hidden from a screen reader; these are its words. */}
+            <span id={hintId} className="dl-palette-status">
+              Press Enter to open the highlighted result.
+            </span>
             {/* One region that stays mounted, so a change in its words is announced. */}
             <div role="status" aria-live="polite" className="dl-palette-status">
               {nothing ? "No results." : asked && busy === 0 ? `${count} ${count === 1 ? "result" : "results"}.` : ""}
@@ -357,7 +372,7 @@ export function CommandPalette({
                               nothing in the row moves as the focus does. */}
                           <span className="dl-palette-keys" aria-hidden="true">
                             {item.keys && item.keys.length > 0 ? <Kbd keys={item.keys} className="dl-palette-own" /> : null}
-                            <Kbd className="dl-palette-enter">Enter</Kbd>
+                            <Kbd className="dl-palette-enter">{ENTER_KEY}</Kbd>
                           </span>
                         </Autocomplete.Item>
                       )}

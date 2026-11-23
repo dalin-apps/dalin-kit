@@ -78,7 +78,8 @@ export type CommandPaletteProps = {
  * frosted, with the app dimmed behind it. Results come in groups under
  * sentence-case headings, with the words of the query marked in each row.
  * The arrows move the focus, which always rests on a row, and that row
- * shows an Enter hint where its own shortcut would be. Enter runs it,
+ * shows an Enter hint (the return arrow, as a keycap) where its own
+ * shortcut would be. Enter runs it,
  * Escape closes the palette, and so does a press outside it.
  *
  * The app supplies what it searches (`sources`) and what it can do

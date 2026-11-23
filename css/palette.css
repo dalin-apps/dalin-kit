@@ -7,7 +7,8 @@
    icon, a title with an optional muted second line, and at its right a
    date or a count and then the row's own shortcut. The words of the query
    are marked in the title and the second line. The focused row wears the
-   overlay's highlight and shows an Enter keycap in the shortcut's slot.
+   overlay's highlight and shows an Enter keycap (the return arrow) in the
+   shortcut's slot.
 
    How an app adopts it. Import this file once, after tokens.css and
    menu.css (the keycap is menu.css's), and mount <CommandPalette> at the

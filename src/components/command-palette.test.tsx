@@ -234,18 +234,19 @@ describe("what it shows", () => {
     await type(field(), "zebra");
     expect(rows()).toHaveLength(0);
     expect(one(".dl-palette-note")?.textContent).toBe("No results for “zebra”.");
-    expect(one(".dl-palette-status")?.textContent).toBe("No results.");
+    expect(one('.dl-palette-status[role="status"]')?.textContent).toBe("No results.");
     await mountPalette({ open: true, emptyText: (query) => `Nothing called ${query}` });
     expect(one(".dl-palette-note")?.textContent).toBe("Nothing called zebra");
   });
 
   it("tells a screen reader how many results a query found", async () => {
     await mountPalette({ open: true });
-    expect(one(".dl-palette-status")?.textContent).toBe("");
+    const status = () => one('.dl-palette-status[role="status"]')?.textContent;
+    expect(status()).toBe("");
     await type(field(), "sound");
-    expect(one(".dl-palette-status")?.textContent).toBe("3 results.");
+    expect(status()).toBe("3 results.");
     await type(field(), "groceries");
-    expect(one(".dl-palette-status")?.textContent).toBe("1 result.");
+    expect(status()).toBe("1 result.");
   });
 
   it("shows only the query row with nothing to list and nothing typed", async () => {
@@ -269,9 +270,15 @@ describe("the focused row", () => {
     for (const row of rows()) {
       const slot = row.querySelector(".dl-palette-keys")!;
       expect(slot.getAttribute("aria-hidden")).toBe("true");
-      expect(slot.querySelector(".dl-palette-enter kbd")?.textContent).toBe("Enter");
+      expect(slot.querySelector(".dl-palette-enter kbd")?.textContent).toBe("\u21b5");
       expect(row.lastElementChild).toBe(slot);
     }
+  });
+
+  it("says the hint in words to a screen reader, on the field", async () => {
+    await mountPalette({ open: true });
+    const hint = document.getElementById(field()!.getAttribute("aria-describedby")!);
+    expect(hint?.textContent).toBe("Press Enter to open the highlighted result.");
   });
 
   it("moves with the arrows, with the caret staying in the field", async () => {
