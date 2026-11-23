@@ -1,7 +1,7 @@
 /* @dalin/kit tokens.css: the values the four dalin apps share.
 
    What it is. Custom properties, named --dl-*, for what the owner has decided
-   so far: the typeface, the desktop sidebar's fill, the text colours (the
+   so far: the typeface, the surfaces by position, the text colours (the
    accent as text among them), the corners, the motion timings and the
    meaning colours. A question that is
    still open has no token here, so a missing value means "not decided", and
@@ -31,8 +31,25 @@
   /* The `dalin.` wordmark stays in Georgia, which ships on macOS and Windows. */
   --dl-font-wordmark: Georgia, "Times New Roman", serif;
 
-  /* The desktop sidebar's fill. */
+  /* Surfaces, by position (the owner's pick on 2026-11-22). A pane takes its
+     fill from where it stands, left to right, and never from what it holds:
+     the sidebar, then a second pane (mail's list, drive's file list), then
+     the content (the reader, the page, calendar's grid, drive's inspector).
+     So drive's file list is the list step under an inspector on the content
+     step. Raised is a card or a field standing on a pane. */
   --dl-sidebar: #151515;
+  --dl-list: #181818;
+  --dl-content: #1c1c1c;
+  --dl-raised: #242424;
+  /* The selected lift: the open row, the picked item. One grey on every
+     pane, so selection reads the same in every column. */
+  --dl-selected: #262626;
+  /* A row under the pointer: one notch above the pane it sits on, so it
+     always shows against its own pane and never matches the selected lift.
+     A row in the sidebar reads --dl-hover-sidebar, and so on. */
+  --dl-hover-sidebar: var(--dl-list);
+  --dl-hover-list: var(--dl-content);
+  --dl-hover-content: var(--dl-raised);
 
   /* Text. Faint is the dimmest grey that still holds 4.5:1 on the lightest
      surface it sits on, #2f2f2f (4.53:1 measured; #858d96 gave 3.98:1). */

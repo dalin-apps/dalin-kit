@@ -60,8 +60,15 @@ const ACCENTS: Record<string, [number, number, number]> = {
   notes: [0.85, 0.175, 95],
   drive: [0.64, 0.16, 240],
 };
-/** The panes small accent text sits on: the sidebar and list, and the reader. */
-const PANES = ["#151515", "#1c1c1c"];
+/** The panes small accent text sits on: the sidebar, the list and the content. */
+const PANES = ["#151515", "#181818", "#1c1c1c"];
+
+/** A token's value as written, with one level of var() followed. */
+function token(name: string): string {
+  const value = new RegExp(`${name}:\\s*([^;]+);`).exec(css)?.[1]?.trim() ?? "";
+  const ref = /^var\((--dl-[\w-]+)\)$/.exec(value)?.[1];
+  return ref ? token(ref) : value;
+}
 
 describe("tokens.css", () => {
   it("defines custom properties and nothing else", () => {
@@ -70,6 +77,29 @@ describe("tokens.css", () => {
     for (const line of rules[0]![1].split(";").map((d) => d.trim()).filter(Boolean)) {
       expect(line.startsWith("--dl-"), line).toBe(true);
     }
+  });
+});
+
+describe("the surface ladder", () => {
+  const LADDER = ["--dl-sidebar", "--dl-list", "--dl-content", "--dl-raised", "--dl-selected"];
+
+  it("is the owner's values, by position", () => {
+    expect(LADDER.map(token)).toEqual(["#151515", "#181818", "#1c1c1c", "#242424", "#262626"]);
+  });
+
+  it("steps up, each surface lighter than the one before", () => {
+    const light = LADDER.map((name) => luminance(hex(token(name))));
+    for (let i = 1; i < light.length; i++) expect(light[i]!).toBeGreaterThan(light[i - 1]!);
+  });
+
+  it.each([
+    ["--dl-hover-sidebar", "--dl-sidebar", "--dl-list"],
+    ["--dl-hover-list", "--dl-list", "--dl-content"],
+    ["--dl-hover-content", "--dl-content", "--dl-raised"],
+  ])("%s is one notch above its pane, and under the selected lift", (hover, pane, notch) => {
+    expect(token(hover)).toBe(token(notch));
+    expect(luminance(hex(token(hover)))).toBeGreaterThan(luminance(hex(token(pane))));
+    expect(luminance(hex(token(hover)))).toBeLessThan(luminance(hex(token("--dl-selected"))));
   });
 });
 
