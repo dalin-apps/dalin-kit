@@ -11,7 +11,7 @@
    context menu) has none.
 
    How an app adopts it. Import this file once, after tokens.css, and use
-   the components from @dalin/kit. They are shadcn's Base UI files with the
+   the components from @dalin/kit/components. They are shadcn's Base UI files with the
    classes below in place of utility classes, so an app that has those files
    swaps the import. Delete the app's own menu and popover surface rules.
 

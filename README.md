@@ -10,7 +10,9 @@ Version 0.3 holds the tokens, the toast, the create button, the wordmark with it
 npm install github:gomezsj12/dalin-kit
 ```
 
-It imports as `@dalin/kit`. The built `dist/` is committed, so an install needs no build step. React 19, sonner 2 and `@base-ui/react` 1.4.1 or later are peer dependencies. Base UI was optional through 0.2, when nothing imported it. The components in 0.3 are built on it, and all four apps already ship it.
+It imports as `@dalin/kit`. The built `dist/` is committed, so an install needs no build step. React 19 and sonner 2 are peer dependencies. `@base-ui/react` 1.4.1 or later is an optional one: the components are built on it, and the toast and the helpers are not.
+
+The package has two code entries. `@dalin/kit` is the toast and the helpers, and loads nothing of Base UI. `@dalin/kit/components` is everything built on Base UI: the wordmark and family switcher, menus, the palette, the empty state and the phone parts. In 0.3 the root exported the components as well, so importing the toast loaded Base UI. An app moving to 0.4 changes those imports to `@dalin/kit/components`. `@dalin/kit/toast` and `@dalin/kit/helpers` are each half of the root alone.
 
 The kit is tested on sonner 2.0.7, which the four apps lock, and on 2.0.8. The components are tested on Base UI 1.4.1 and 1.9.0, the oldest and the newest the apps ship.
 
@@ -56,7 +58,7 @@ Set three variables on `:root`. The kit supplies everything else.
 }
 ```
 
-Every component exports from `@dalin/kit`, and from `@dalin/kit/components` for an app that wants them apart from the toast.
+The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
 
@@ -513,7 +515,7 @@ The recipe needs relative colour syntax: Chrome 119, Safari 16.4 or Firefox 128.
 ## The wordmark
 
 ```tsx
-import { Wordmark } from "@dalin/kit";
+import { Wordmark } from "@dalin/kit/components";
 
 <Wordmark app="mail" size={32} />
 ```
@@ -536,7 +538,7 @@ Give the wordmark a `key` that changes to play the roll again, as an app does ea
 ## The family switcher
 
 ```tsx
-import { FamilySwitcher } from "@dalin/kit";
+import { FamilySwitcher } from "@dalin/kit/components";
 
 <FamilySwitcher app="mail" size={32} folded={folded} />
 ```
@@ -563,7 +565,7 @@ It needs `wordmark.css` and `menu.css`.
 These are shadcn's Base UI files (`dropdown-menu`, `context-menu`, `popover`), restyled once and shared. The parts and their props are Base UI's. An app that has those files swaps the import and deletes its copy; `menu.css` replaces the utility classes.
 
 ```tsx
-import { Menu, MenuContent, MenuItem, MenuSeparator, MenuShortcut, MenuTrigger } from "@dalin/kit";
+import { Menu, MenuContent, MenuItem, MenuSeparator, MenuShortcut, MenuTrigger } from "@dalin/kit/components";
 
 <Menu>
   <MenuTrigger>More</MenuTrigger>
@@ -581,7 +583,7 @@ import { Menu, MenuContent, MenuItem, MenuSeparator, MenuShortcut, MenuTrigger }
 A context menu is the same menu opened at the pointer, and it takes the same rows:
 
 ```tsx
-import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@dalin/kit";
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@dalin/kit/components";
 
 <ContextMenu>
   <ContextMenuTrigger render={<li className="row" />}>...</ContextMenuTrigger>
@@ -628,7 +630,7 @@ What the look comes to, from `menu.css`:
 ## The empty state
 
 ```tsx
-import { EmptyState } from "@dalin/kit";
+import { EmptyState } from "@dalin/kit/components";
 
 <EmptyState icon={<DriveIcon />} title="Nothing here yet" />
 ```
@@ -647,7 +649,7 @@ It has no subtitle prop, on purpose. In a flex pane it grows into the free space
 ## The command palette
 
 ```tsx
-import { CommandPalette } from "@dalin/kit";
+import { CommandPalette } from "@dalin/kit/components";
 
 <CommandPalette
   appKey="/"
@@ -707,7 +709,7 @@ The action filter needs every word of the query, in any order, in the title or t
 ## The phone header and search
 
 ```tsx
-import { PhoneHeader, PhoneHeaderIcon, PhoneSearch } from "@dalin/kit";
+import { PhoneHeader, PhoneHeaderIcon, PhoneSearch } from "@dalin/kit/components";
 
 <PhoneHeader title="Inbox" line="All mailboxes · 44 unread" onSearch={() => setSearching(true)} />
 
