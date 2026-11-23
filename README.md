@@ -556,7 +556,7 @@ import { FamilySwitcher } from "@dalin/kit/components";
 <FamilySwitcher app="mail" size={32} folded={folded} />
 ```
 
-It goes where the sidebar's `<Wordmark>` was. Nothing shows at rest. Pointing at the wordmark for 150ms, or pressing it, opens the frosted menu to the right of the wordmark, from its top, with an arrow. That is the owner's pick on 2026-11-22: the menu stands over the top of the next column and never under the wordmark, where it covered mail's Compose and notes' search. With no room on the right it flips to the left, and it never drops to the other axis. The menu lists the four apps as their own wordmarks, each period in that app's accent, with a check on the app you are in.
+It goes where the sidebar's `<Wordmark>` was. Nothing shows at rest. Pointing at the wordmark for 150ms, or pressing it, opens the frosted menu to the right of the wordmark, from its top, with an arrow. That is the owner's pick on 2026-11-22: the menu stands over the top of the next column and never under the wordmark, where it covered mail's Compose and notes' search. From 0.5 its left edge sits 10px past the sidebar's right edge, so the arrow's tip meets that edge and the menu lands at the same x in every app: 250 for a 240px sidebar. In 0.4 it opened 10px past the end of the wordmark, at an x that changed with the app's name, and covered the sidebar's search glass and refresh. The sidebar is the closest `<aside>` or `[data-sidebar]` around the wordmark, measured each time the menu opens, so a resized or folded sidebar is read as it is. With no room on the right it flips to the left, and it never drops to the other axis. The menu lists the four apps as their own wordmarks, each period in that app's accent, with a check on the app you are in.
 
 Every row is a link: `https://mail.dalin.pro`, `https://calendar.dalin.pro`, `https://notes.dalin.pro` and `https://drive.dalin.pro`. A middle click or a long press does what it does on any link.
 
@@ -571,6 +571,8 @@ A menu the resting pointer opened is shown and not yet in use. It takes no focus
 | `label` | `"Switch app"` | What the control does. Its accessible name reads "dalin. mail. Switch app". |
 | `hrefs` | none | Another address for an app, for a build that is not on dalin.pro: `{ mail: "http://localhost:3000" }`. |
 | `side`, `align` | `"right"`, `"start"` | Where the menu opens against the wordmark. The phone's header passes `"bottom"`, since a phone has no column beside its title. |
+| `boundary` | the closest `<aside>` or `[data-sidebar]` | The column the menu opens past. Pass an element for a sidebar that is neither, or `false` to open 10px past the wordmark as in 0.4. A menu below the wordmark ignores it. |
+| `boundaryOffset` | 10 | How far past the boundary's right edge the menu's left edge sits. |
 | `className` | none | The app's own class on the trigger, beside `dl-switcher-trigger`. |
 
 It needs `wordmark.css` and `menu.css`.

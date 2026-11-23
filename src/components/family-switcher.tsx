@@ -5,7 +5,7 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { DALIN_APPS, dalinApp, type DalinApp } from "./apps.js";
 import { withClass } from "./cx.js";
 import { CheckGlyph } from "./icons.js";
-import { MenuContent, MenuLinkItem } from "./menu.js";
+import { ARROW_OFFSET_PX, MenuContent, MenuLinkItem } from "./menu.js";
 import { Wordmark, type WordmarkProps } from "./wordmark.js";
 
 /** How long the pointer rests on the wordmark before the menu opens, and how long it may leave before it closes. */
@@ -35,7 +35,34 @@ export type FamilySwitcherProps = Pick<WordmarkProps, "size" | "folded" | "rollO
    */
   side?: MenuPrimitive.Positioner.Props["side"];
   align?: MenuPrimitive.Positioner.Props["align"];
+  /**
+   * The column the menu opens past. Opened to the right, the menu's left
+   * edge stands `boundaryOffset` past this element's right edge, so it lands
+   * at the same x in every app and covers nothing in the sidebar: not the
+   * search glass, not refresh, not the create button. Left out, it is the
+   * closest sidebar around the wordmark (`<aside>` or `[data-sidebar]`).
+   * Pass `false` to open just past the wordmark instead.
+   */
+  boundary?: Element | null | false;
+  /**
+   * How far past the boundary's right edge the menu's left edge stands. The
+   * arrow's height by default, so the arrow's tip meets the sidebar's edge.
+   */
+  boundaryOffset?: number;
 };
+
+/** The sidebar the menu opens past, when the app names none. */
+export const SWITCHER_BOUNDARY = "aside, [data-sidebar]";
+
+/**
+ * How far the menu stands off the wordmark's right edge so its left edge
+ * sits `gap` past the boundary's right edge. Never nearer the wordmark than
+ * the gap itself, for a boundary that ends before the wordmark does.
+ */
+export function offsetPastBoundary(trigger: DOMRect, boundary: DOMRect | null, gap: number): number {
+  if (!boundary) return gap;
+  return Math.max(gap, boundary.right + gap - trigger.right);
+}
 
 /**
  * Where the menu may go when its side has no room: the opposite side, and
@@ -49,8 +76,10 @@ const STAY_BESIDE = { side: "flip", align: "shift", fallbackAxisSide: "none" } a
  *
  * Nothing shows at rest; the wordmark is the wordmark. Pointing at it, or
  * pressing it, opens the family's frosted menu to its right, from its top,
- * with an arrow: over the top of the next column, and never under the
- * wordmark, where it covered mail's Compose and notes' search. The menu
+ * with an arrow at the wordmark: just past the sidebar's right edge, over
+ * the top of the next column, at the same x in every app. Never under the
+ * wordmark, where it covered mail's Compose and notes' search, and never
+ * over the sidebar's search glass or refresh beside it. The menu
  * lists the four apps as their own wordmarks, each period in that app's
  * accent, with a check on the app you are in. Every row is a link to the
  * app, so a middle click or a long press does what it does on a link.
@@ -77,8 +106,20 @@ export function FamilySwitcher({
   className,
   side = "right",
   align = "start",
+  boundary,
+  boundaryOffset = ARROW_OFFSET_PX,
 }: FamilySwitcherProps): ReactNode {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  // Measured each time the menu is placed, so a sidebar that was resized or
+  // folded since is read as it is now. Only a menu beside the wordmark opens
+  // past the sidebar; one below it (the phone's) stands off as any menu does.
+  const sideOffset = ({ side: placed }: { side: string }): number => {
+    const el = triggerRef.current;
+    if (!el || (placed !== "right" && placed !== "inline-end") || boundary === false) return ARROW_OFFSET_PX;
+    const column = boundary ?? el.closest(SWITCHER_BOUNDARY);
+    return offsetPastBoundary(el.getBoundingClientRect(), column ? column.getBoundingClientRect() : null, boundaryOffset);
+  };
   // Whether a resting pointer opened the menu and nothing has been done in
   // it since. While so, the menu is shown and not in use.
   const shown = useRef(false);
@@ -101,6 +142,7 @@ export function FamilySwitcher({
       }}
     >
       <MenuPrimitive.Trigger
+        ref={triggerRef}
         data-slot="family-switcher"
         className={withClass("dl-switcher-trigger", className)}
         aria-label={`dalin. ${dalinApp(app).name}. ${label}`}
@@ -116,6 +158,7 @@ export function FamilySwitcher({
         className="dl-switcher"
         side={side}
         align={align}
+        sideOffset={sideOffset}
         collisionAvoidance={STAY_BESIDE}
         aria-label="dalin apps"
         // Base UI moves focus into every menu as it opens. For one a

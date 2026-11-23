@@ -7,7 +7,7 @@ import { act } from "react";
 import { describe, expect, it } from "vitest";
 import { readCss, ruleFor } from "../../test/css.js";
 import { all, click, key, mount, one, settle, withDom } from "../../test/dom.js";
-import { FamilySwitcher } from "./family-switcher.js";
+import { FamilySwitcher, offsetPastBoundary } from "./family-switcher.js";
 
 withDom();
 
@@ -222,6 +222,99 @@ describe("<FamilySwitcher>", () => {
     expect(trigger().querySelector(".dl-wordmark")?.hasAttribute("data-folded")).toBe(true);
     await mount(<FamilySwitcher app="mail" rollOut />);
     expect(trigger().querySelector(".dl-wordmark")?.hasAttribute("data-roll")).toBe(true);
+  });
+});
+
+/** A page laid out as the apps are: a 240px sidebar, the wordmark at its top left, as wide as the app's name. */
+const rect = (x: number, y: number, w: number, h: number) =>
+  ({ x, y, left: x, top: y, width: w, height: h, right: x + w, bottom: y + h, toJSON() {} }) as DOMRect;
+async function placedAt(node: Parameters<typeof mount>[0], wordmarkWidth: number, sidebar = 240) {
+  const real = Element.prototype.getBoundingClientRect;
+  Element.prototype.getBoundingClientRect = function (this: Element) {
+    if (this.matches("aside, [data-sidebar]")) return rect(0, 0, sidebar, 900);
+    if (this.matches(".other-column")) return rect(0, 0, 300, 900);
+    if (this.matches('[data-slot="family-switcher"]')) return rect(16, 14, wordmarkWidth, 36);
+    if (this.matches(".dl-menu-positioner")) return rect(0, 0, 176, 180);
+    return real.call(this);
+  };
+  // jsdom's viewport is 0 by 0, and a menu with no room flips.
+  const page = document.documentElement;
+  Object.defineProperty(page, "clientWidth", { value: 1440, configurable: true });
+  Object.defineProperty(page, "clientHeight", { value: 900, configurable: true });
+  try {
+    await mount(node);
+    await click(trigger());
+    await settle(50);
+    const style = one(".dl-menu-positioner")!.style.transform;
+    const [, x, y] = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(style)!;
+    return { x: Number(x), y: Number(y) };
+  } finally {
+    Element.prototype.getBoundingClientRect = real;
+    delete (page as { clientWidth?: number }).clientWidth;
+    delete (page as { clientHeight?: number }).clientHeight;
+  }
+}
+
+describe("<FamilySwitcher>, where the menu lands", () => {
+  // Each app's wordmark ends somewhere else: the old menu opened 10px past
+  // it, at x 162 in mail and 216 in calendar, over the sidebar's search.
+  it.each([
+    ["mail", 136],
+    ["calendar", 190],
+    ["notes", 146],
+    ["drive", 145.5],
+  ] as const)("opens %s's menu just past the sidebar's right edge, at the same x in every app", async (app, width) => {
+    const at = await placedAt(
+      <aside>
+        <FamilySwitcher app={app} />
+      </aside>,
+      width,
+    );
+    expect(at.x).toBe(250);
+  });
+
+  it("keeps the menu's top where it was, on the wordmark's top", async () => {
+    const past = await placedAt(<aside><FamilySwitcher app="mail" /></aside>, 136);
+    // A fresh tree, so the press opens a new menu and does not close the first.
+    const beside = await placedAt(<aside key="beside"><FamilySwitcher app="mail" boundary={false} /></aside>, 136);
+    expect(past.y).toBe(beside.y);
+    expect(beside.x).toBe(16 + 136 + 10);
+    expect(menu()?.getAttribute("data-side")).toBe("right");
+  });
+
+  it("finds a sidebar marked [data-sidebar] as well as an <aside>", async () => {
+    const at = await placedAt(<div data-sidebar=""><FamilySwitcher app="notes" /></div>, 146);
+    expect(at.x).toBe(250);
+  });
+
+  it("follows a sidebar of another width", async () => {
+    const at = await placedAt(<aside><FamilySwitcher app="notes" /></aside>, 146, 252);
+    expect(at.x).toBe(262);
+  });
+
+  it("takes the boundary and the offset an app passes", async () => {
+    const column = document.createElement("div");
+    column.className = "other-column";
+    document.body.appendChild(column);
+    const at = await placedAt(<aside><FamilySwitcher app="drive" boundary={column} boundaryOffset={16} /></aside>, 145.5);
+    expect(at.x).toBe(316);
+  });
+
+  it("opens past the wordmark as before where no sidebar holds it", async () => {
+    const at = await placedAt(<FamilySwitcher app="mail" />, 136);
+    expect(at.x).toBe(162);
+  });
+
+  it("leaves a menu below the wordmark, the phone's, where it was", async () => {
+    const at = await placedAt(<aside><FamilySwitcher app="mail" side="bottom" /></aside>, 136);
+    expect(menu()?.getAttribute("data-side")).toBe("bottom");
+    expect(at.y).toBe(14 + 36 + 10);
+  });
+
+  it("works the offset out from the two edges, never nearer the wordmark than the gap", () => {
+    expect(offsetPastBoundary(rect(16, 14, 136, 36), rect(0, 0, 240, 900), 10)).toBe(98);
+    expect(offsetPastBoundary(rect(16, 14, 136, 36), rect(0, 0, 100, 900), 10)).toBe(10);
+    expect(offsetPastBoundary(rect(16, 14, 136, 36), null, 10)).toBe(10);
   });
 });
 
