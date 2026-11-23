@@ -6,6 +6,7 @@ import { registerToastDock } from "../toast/toast-dock.js";
 import { pushBackEntry } from "./back-entry.js";
 import { cx } from "./cx.js";
 import { SearchGlyph } from "./icons.js";
+import { useToasterTab } from "./toaster-tab.js";
 /** A person's circle as a row's lead: 28px, white initials. */
 export function PhoneSearchAvatar({ initials, color, className }) {
     return (_jsx("span", { className: cx("dl-phone-search-avatar", className), style: color ? { background: color } : undefined, "aria-hidden": "true", children: initials }));
@@ -103,6 +104,8 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
             return;
         return registerToastDock(sheet, { kind: "cover", rank: COVER_RANK });
     }, [sheet]);
+    // A toast raised over the sheet keeps its Undo in reach of Tab.
+    useToasterTab(open ? sheet : null);
     // The sheet's history entry. Kept in a ref and not tied to one effect's
     // cleanup: React's strict mode runs every effect twice as a tree mounts,
     // and an entry popped and pushed again in one task would lose the second

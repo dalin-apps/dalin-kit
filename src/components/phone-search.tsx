@@ -6,6 +6,7 @@ import { registerToastDock } from "../toast/toast-dock.js";
 import { pushBackEntry, type BackEntry } from "./back-entry.js";
 import { cx } from "./cx.js";
 import { SearchGlyph } from "./icons.js";
+import { useToasterTab } from "./toaster-tab.js";
 
 /** One row of the phone's search: a suggestion before a query, or a result after one. */
 export type PhoneSearchRow = {
@@ -258,6 +259,9 @@ export function PhoneSearch({
     if (!sheet) return;
     return registerToastDock(sheet, { kind: "cover", rank: COVER_RANK });
   }, [sheet]);
+
+  // A toast raised over the sheet keeps its Undo in reach of Tab.
+  useToasterTab(open ? sheet : null);
 
   // The sheet's history entry. Kept in a ref and not tied to one effect's
   // cleanup: React's strict mode runs every effect twice as a tree mounts,

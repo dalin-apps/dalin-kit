@@ -8,6 +8,7 @@ import { cx } from "./cx.js";
 import { SearchGlyph } from "./icons.js";
 import { Kbd } from "./kbd.js";
 import { matchParts, matchesQuery } from "./palette-match.js";
+import { useToasterTab } from "./toaster-tab.js";
 const ACTIONS_ID = "dl:actions";
 /**
  * The Enter hint's cap: the return arrow, as the key itself is printed. One
@@ -61,6 +62,10 @@ export function CommandPalette({ open: openProp, onOpenChange, sources = NO_SOUR
     const [results, setResults] = useState({});
     const [busy, setBusy] = useState(0);
     const inputRef = useRef(null);
+    // The panel's element as state: a toast over the dim keeps its action in
+    // reach of Tab while the panel is up (toaster-tab.ts).
+    const [panel, setPanel] = useState(null);
+    useToasterTab(open ? panel : null);
     const hintId = useId();
     // Whether the palette lands, and leaves, without animation: the keyboard
     // opened it, or the last thing done in it was a key.
@@ -163,7 +168,7 @@ export function CommandPalette({ open: openProp, onOpenChange, sources = NO_SOUR
     const asked = query.trim() !== "";
     const nothing = groups.length === 0 && asked && busy === 0;
     const count = groups.reduce((sum, group) => sum + group.items.length, 0);
-    return (_jsx(Dialog.Root, { open: open, onOpenChange: setOpen, children: _jsxs(Dialog.Portal, { children: [_jsx(Dialog.Backdrop, { className: "dl-palette-dim", "data-instant": instant ? "" : undefined }), _jsx(Dialog.Popup, { "data-slot": "command-palette", className: cx("dl-palette", className), "data-instant": instant ? "" : undefined, "aria-label": label, initialFocus: inputRef, 
+    return (_jsx(Dialog.Root, { open: open, onOpenChange: setOpen, children: _jsxs(Dialog.Portal, { children: [_jsx(Dialog.Backdrop, { className: "dl-palette-dim", "data-instant": instant ? "" : undefined }), _jsx(Dialog.Popup, { ref: setPanel, "data-slot": "command-palette", className: cx("dl-palette", className), "data-instant": instant ? "" : undefined, "aria-label": label, initialFocus: inputRef, 
                     // A key pressed inside means the keyboard is driving, and what it
                     // does next (Enter, Escape) should not animate. A press hands the
                     // turn back to the pointer. Heard on the way down: the field

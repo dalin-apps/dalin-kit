@@ -640,6 +640,8 @@ Ctrl K opens and closes it (Cmd K on a Mac). The app's own key opens it too, whe
 
 Results come in groups under sentence-case headings, and the words of the query are marked in each row's title and second line. The focused row shows an Enter keycap in the slot its own shortcut sits in. That slot is on every row, so nothing in a row moves as the focus does.
 
+The palette is modal, so Tab stays in it, with one exception. A toast that can take Tab joins the loop: Tab in the field goes to the toast's action and Tab there comes back. A press on a toast leaves the palette open.
+
 Per the curator's motion rule, opening it from the keyboard does not animate, and neither does closing it after a key. Opened by a press on a search button, it fades in over 150ms.
 
 | Prop | Default | What it does |
@@ -749,6 +751,8 @@ The sheet owns the system's back while it is open. Opening pushes one history en
 A row that closes search runs once that entry has gone, a moment after the tap. Run first, a row that opens a page would push the page's entry, and the step back would take that one. An app that closes search from a row of its own and then pushes a route has the same race to mind. An app that already gives search a history entry passes `systemBack={false}`, or the two stack. Rows then run inside the tap, as in 0.3.
 
 The sheet registers itself as a toast cover, so a toast raised while it is open is drawn over it and not under. An app's `<Toaster cover>` selector need not name it.
+
+A toast over the sheet stays usable. A press on it leaves search open, and its action is in the sheet's tab order: Tab on the sheet's last stop goes to the toast, and Tab on the toast's last stop comes back to the field. Shift+Tab runs the same loop the other way. A toast the toaster holds out of the tab order, such as a tucked one, is skipped. The command palette does the same.
 
 `phone.css` reads three variables: `--dl-phone-inset` (16px), `--dl-phone-fill` (the sheet's fill, `#151515`) and `--dl-phone-search-z` (50, over the bottom bar).
 

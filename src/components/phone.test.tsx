@@ -9,7 +9,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ACCENTS, RENDER, contrast, hex } from "../../test/color.js";
 import { readCss, ruleFor, ruleNaming } from "../../test/css.js";
-import { all, click, key, mount, one, settle, type, withDom } from "../../test/dom.js";
+import { all, click, key, mount, one, press, settle, type, withDom, withToast } from "../../test/dom.js";
 import { readToastCovered } from "../toast/toast-dock.js";
 import { PhoneHeader, PhoneHeaderIcon, type PhoneHeaderProps } from "./phone-header.js";
 import { PhoneSearch, PhoneSearchAvatar, type PhoneSearchProps, type PhoneSearchSection } from "./phone-search.js";
@@ -573,6 +573,68 @@ describe("<PhoneSearch>, the system's back", () => {
       expect(compose2).toHaveBeenCalledTimes(1);
     });
     await settle(100);
+  });
+});
+
+describe("<PhoneSearch>, under a toast", () => {
+  it("stays open when a toast over it is pressed", async () => {
+    const { action } = withToast();
+    const undo = vi.fn();
+    action.addEventListener("click", undo);
+    await mount(<Search />);
+    await tapSearch();
+    await press(action);
+    expect(undo).toHaveBeenCalledTimes(1);
+    expect(sheet()).not.toBeNull();
+    await click(one(".dl-phone-search-cancel"));
+    await landed();
+  });
+
+  it("lets Tab leave its last stop for the toast, and brings it back after the toast's last", async () => {
+    const { toast, action } = withToast();
+    await mount(<Search />);
+    await tapSearch();
+    const stops = all<HTMLElement>(".dl-phone-search :is(input, button)");
+    const last = stops[stops.length - 1]!;
+    last.focus();
+    await key("Tab");
+    expect(document.activeElement).toBe(toast);
+    // Between a toast's own stops the browser moves, and the kit stays out.
+    const inside = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+    toast.dispatchEvent(inside);
+    expect(inside.defaultPrevented).toBe(false);
+    action.focus();
+    await key("Tab");
+    expect(document.activeElement).toBe(field());
+    await key("Tab", field(), { shiftKey: true });
+    expect(document.activeElement).toBe(action);
+    toast.focus();
+    await key("Tab", toast, { shiftKey: true });
+    expect(document.activeElement).toBe(last);
+    await click(one(".dl-phone-search-cancel"));
+    await landed();
+  });
+
+  it("keeps Tab to itself with no toast to reach, or one the toaster holds back", async () => {
+    await mount(<Search />);
+    await tapSearch();
+    const stops = all<HTMLElement>(".dl-phone-search :is(input, button)");
+    const last = stops[stops.length - 1]!;
+    const tab = () => {
+      last.focus();
+      const event = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+      last.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(tab()).toBe(false);
+    // A tucked stack: the toaster has taken its stops out of the tab order.
+    const { toast, action } = withToast();
+    toast.tabIndex = -1;
+    action.tabIndex = -1;
+    expect(tab()).toBe(false);
+    expect(document.activeElement).toBe(last);
+    await click(one(".dl-phone-search-cancel"));
+    await landed();
   });
 });
 

@@ -88,3 +88,30 @@ export async function type(input: HTMLInputElement | null | undefined, value: st
   });
   await settle();
 }
+
+/**
+ * A toaster on the page as Sonner draws one: a live region holding the list,
+ * one toast (tabindex 0, as Sonner gives it) and its action. Removed with
+ * the rest of the body after each test.
+ */
+export function withToast(): { toast: HTMLElement; action: HTMLButtonElement } {
+  const region = document.createElement("section");
+  region.setAttribute("aria-live", "polite");
+  region.setAttribute("aria-label", "Notifications alt+T");
+  region.tabIndex = -1;
+  region.innerHTML =
+    '<ol data-sonner-toaster tabindex="-1"><li data-sonner-toast tabindex="0"><div data-title>Archived</div><button data-button data-action>Undo</button></li></ol>';
+  document.body.appendChild(region);
+  return { toast: region.querySelector("li")!, action: region.querySelector("button")! };
+}
+
+/** A whole press on an element, as a pointer makes one: down, up, click. */
+export async function press(el: Element | null | undefined): Promise<void> {
+  if (!el) throw new Error("nothing to press");
+  await act(async () => {
+    for (const name of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) {
+      el.dispatchEvent(new MouseEvent(name, { bubbles: true, cancelable: true, button: 0 }));
+    }
+  });
+  await settle(60);
+}

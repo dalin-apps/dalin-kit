@@ -18,6 +18,7 @@ import { cx } from "./cx.js";
 import { SearchGlyph } from "./icons.js";
 import { Kbd } from "./kbd.js";
 import { matchParts, matchesQuery } from "./palette-match.js";
+import { useToasterTab } from "./toaster-tab.js";
 
 /** One row of the palette: a result, or an action. */
 export type PaletteItem = {
@@ -170,6 +171,10 @@ export function CommandPalette({
   const [results, setResults] = useState<Record<string, PaletteItem[]>>({});
   const [busy, setBusy] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  // The panel's element as state: a toast over the dim keeps its action in
+  // reach of Tab while the panel is up (toaster-tab.ts).
+  const [panel, setPanel] = useState<HTMLDivElement | null>(null);
+  useToasterTab(open ? panel : null);
   const hintId = useId();
   // Whether the palette lands, and leaves, without animation: the keyboard
   // opened it, or the last thing done in it was a key.
@@ -281,6 +286,7 @@ export function CommandPalette({
       <Dialog.Portal>
         <Dialog.Backdrop className="dl-palette-dim" data-instant={instant ? "" : undefined} />
         <Dialog.Popup
+          ref={setPanel}
           data-slot="command-palette"
           className={cx("dl-palette", className)}
           data-instant={instant ? "" : undefined}

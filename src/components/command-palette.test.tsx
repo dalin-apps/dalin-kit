@@ -9,7 +9,7 @@
 import { act, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readCss, ruleFor, ruleNaming } from "../../test/css.js";
-import { all, click, key, mount, one, settle, type, withDom } from "../../test/dom.js";
+import { all, click, key, mount, one, press as pressOn, settle, type, withDom, withToast } from "../../test/dom.js";
 import { INPUT_ATTR } from "../helpers/input-modality.js";
 import { CommandPalette, type CommandPaletteProps, type PaletteItem, type PaletteSource } from "./command-palette.js";
 
@@ -382,6 +382,46 @@ describe("closing it", () => {
     expect(close.getAttribute("aria-label")).toBe("Close");
     expect(close.tabIndex).toBe(-1);
     expect(close.querySelector("kbd")?.textContent).toBe("Esc");
+  });
+});
+
+describe("under a toast", () => {
+  it("stays open when a toast over it is pressed", async () => {
+    const { action } = withToast();
+    const undo = vi.fn();
+    action.addEventListener("click", undo);
+    await mountPalette();
+    await press({ key: "k", ctrlKey: true });
+    await pressOn(action);
+    expect(undo).toHaveBeenCalledTimes(1);
+    expect(palette()).not.toBeNull();
+  });
+
+  it("lets Tab leave the field for the toast's action, and brings it back", async () => {
+    const { toast, action } = withToast();
+    await mountPalette();
+    await press({ key: "k", ctrlKey: true });
+    expect(document.activeElement).toBe(field());
+    const out = await press({ key: "Tab" }, field()!);
+    expect(out.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(toast);
+    expect(palette()).not.toBeNull();
+    action.focus();
+    await press({ key: "Tab" }, action);
+    expect(document.activeElement).toBe(field());
+    await press({ key: "Tab", shiftKey: true }, field()!);
+    expect(document.activeElement).toBe(action);
+    // Tab moved the focus and did nothing else: no row ran, nothing closed.
+    expect(palette()).not.toBeNull();
+    expect(field()?.value).toBe("");
+  });
+
+  it("keeps Tab in the field with no toast to reach", async () => {
+    await mountPalette();
+    await press({ key: "k", ctrlKey: true });
+    const event = await press({ key: "Tab" }, field()!);
+    expect(event.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(field());
   });
 });
 
