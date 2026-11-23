@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.4 holds the tokens, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.4 is listed under "Moving an app from 0.3 to 0.4".
+Version 0.5 holds the tokens, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.5 is listed under "Moving an app from 0.4 to 0.5", and the step before it under "Moving an app from 0.3 to 0.4".
 
 ## Install
 
@@ -44,6 +44,8 @@ From 0.4 the component sheets (`menu`, `palette`, `phone`, `empty`, `wordmark`, 
 
 That puts the kit after Tailwind's reset and before its utilities. A utility the app passes through `className` then wins over the kit's default, whatever the two selectors weigh: `<MenuContent className="min-w-64">`, `<MenuItem className="whitespace-normal">`. So does a rule in the app's own `components` layer, and so does any rule the app writes outside a layer.
 
+An app's own class passed to a kit part can break that part's layout, so check the part after adding one: calendar's `.phone` class on a kit part did.
+
 Without that line the `dalin` layer is defined when the kit's first sheet loads, after Tailwind's layers, and the kit's defaults beat utilities as they did in 0.3. An app's unlayered rules win either way, including one lighter than the kit's rule it used to lose to. Check an app's own rules on `.dl-*` classes when it takes 0.4.
 
 Three sheets stay out of the layer. `tokens.css` needs none: its values sit in `:where(:root)` and weigh nothing. `toast.css` has to beat the stylesheet Sonner appends to the page, which is unlayered, and a layered rule can't. `create.css` goes on the app's own button beside the app's utilities, and holds the glass recipe and nothing an app should change, so in a layer a stray shadow or ring utility would replace the glass.
@@ -61,6 +63,20 @@ Set three variables on `:root`. The kit supplies everything else.
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.4 to 0.5
+
+0.5 comes from a polish pass over the four apps. Two things need a look in the app.
+
+- `<FamilySwitcher>` opens just past the sidebar's right edge, the closest `<aside>` or `[data-sidebar]` around the wordmark, so its menu lands at x 250 beside a 240px sidebar in every app. A sidebar that is neither passes `boundary`.
+- `<MenuLinkItem>` closes its menu on a click. A link row that should leave its menu open passes `closeOnClick={false}`.
+
+The rest needs nothing from the app, or is there to adopt:
+
+- `--dl-scrim` (black at 62%) dims the page under a sheet or a dialog. The command palette's dim reads it.
+- `--dl-sheet-handle`, `--dl-sheet-handle-w` and `--dl-sheet-handle-h` draw a phone sheet's grab handle: a 40 by 4 pill of white at 22%.
+- `--dl-sidebar-w` is the desktop sidebar's default width, 240px.
+- `--dl-accent-text` raises the accent to a lightness of at least 0.80, up from 0.78, so mail's violet clears 4.5:1 on its tint over `#2f2f2f`.
 
 ## Moving an app from 0.3 to 0.4
 
@@ -560,7 +576,7 @@ import { FamilySwitcher } from "@dalin/kit/components";
 <FamilySwitcher app="mail" size={32} folded={folded} />
 ```
 
-It goes where the sidebar's `<Wordmark>` was. Nothing shows at rest. Pointing at the wordmark for 150ms, or pressing it, opens the frosted menu to the right of the wordmark, from its top, with an arrow. That is the owner's pick on 2026-11-22: the menu stands over the top of the next column and never under the wordmark, where it covered mail's Compose and notes' search. From 0.5 its left edge sits 10px past the sidebar's right edge, so the arrow's tip meets that edge and the menu lands at the same x in every app: 250 for a 240px sidebar. In 0.4 it opened 10px past the end of the wordmark, at an x that changed with the app's name, and covered the sidebar's search glass and refresh. The sidebar is the closest `<aside>` or `[data-sidebar]` around the wordmark, measured each time the menu opens, so a resized or folded sidebar is read as it is. With no room on the right it flips to the left, and it never drops to the other axis. The menu lists the four apps as their own wordmarks, each period in that app's accent, with a check on the app you are in.
+It goes where the sidebar's `<Wordmark>` was. Nothing shows at rest. Pointing at the wordmark for 150ms, or pressing it, opens the frosted menu to the right of the wordmark, from its top, with an arrow. That is the owner's pick on 2026-11-22: the menu stands over the top of the next column and never under the wordmark, where it covered mail's Compose and notes' search. From 0.5 it opens past the sidebar. Its left edge sits 10px beyond the sidebar's right edge, where the arrow's tip meets that edge, so the menu lands at the same x in every app (250 beside a 240px sidebar). In 0.4 it opened 10px past the end of the wordmark, at an x that changed with the app's name, over the sidebar's search glass and refresh. The sidebar is the closest `<aside>` or `[data-sidebar]` around the wordmark, measured as the menu opens, so a resized or folded one is read as it stands. With no room on the right it flips to the left, and it never drops to the other axis. The menu lists the four apps as their own wordmarks, each period in that app's accent, with a check on the app you are in.
 
 Every row is a link: `https://mail.dalin.pro`, `https://calendar.dalin.pro`, `https://notes.dalin.pro` and `https://drive.dalin.pro`. A middle click or a long press does what it does on any link.
 
@@ -883,7 +899,7 @@ import { TipKey, shortcutLabel } from "@dalin/kit";
 
 That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel` takes `Mod`, `Shift` and `Alt` for the platform's keys and writes every other key as given. `<TipKey>` draws the dot and the key in the muted grey, or in the app's own `className`, and renders nothing without a key. `tipText("Archive", "E")` is the same line as a string. `shortcutLabelFor(mac, keys)` and `isMacPlatform(platform)` are the pure halves. The tooltip itself stays each app's own.
 
-## Not in version 0.4
+## Not in version 0.5
 
 These are still open, so the kit has no value for them: type sizes, disabled states, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
 
