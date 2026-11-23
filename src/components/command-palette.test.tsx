@@ -281,6 +281,40 @@ describe("the focused row", () => {
     expect(hint?.textContent).toBe("Press Enter to open the highlighted result.");
   });
 
+  it("shows the row's own verb beside the Enter hint, for a row that does something other than open", async () => {
+    const files: PaletteSource = {
+      id: "files",
+      heading: "Files",
+      search: () => [
+        page("budget", "Budget.xlsx", "Finance", { verb: "Open" }),
+        page("deck", "Deck.key", "Shared with me", { verb: "Reveal" }),
+        page("plain", "Notes.txt"),
+      ],
+    };
+    await mount(<CommandPalette open sources={[files]} />);
+    const hints = rows().map((row) => row.querySelector(".dl-palette-enter")!);
+    expect(hints.map((hint) => hint.querySelector(".dl-palette-verb")?.textContent ?? null)).toEqual(["Open", "Reveal", null]);
+    // The word, then the cap, in the cell the stylesheet shows on the focused row.
+    expect([...hints[1]!.children].map((child) => child.className)).toEqual(["dl-palette-verb", "dl-kbd"]);
+    expect(hints[1]!.closest(".dl-palette-keys")?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("says the focused row's verb in the hint a screen reader hears, and open for a row that names none", async () => {
+    const files: PaletteSource = {
+      id: "files",
+      heading: "Files",
+      search: () => [page("plain", "Notes.txt"), page("deck", "Deck.key", "Shared with me", { verb: "Reveal" })],
+    };
+    await mount(<CommandPalette open sources={[files]} />);
+    const hint = () => document.getElementById(field()!.getAttribute("aria-describedby")!)?.textContent;
+    expect(hint()).toBe("Press Enter to open the highlighted result.");
+    await key("ArrowDown", field());
+    expect(focused()[0]?.textContent).toContain("Deck.key");
+    expect(hint()).toBe("Press Enter to reveal the highlighted result.");
+    await key("ArrowUp", field());
+    expect(hint()).toBe("Press Enter to open the highlighted result.");
+  });
+
   it("moves with the arrows, with the caret staying in the field", async () => {
     await mountPalette({ open: true });
     await key("ArrowDown", field());
@@ -699,6 +733,15 @@ describe("palette.css", () => {
     expect(ruleNaming(css, ".dl-palette-enter")).toContain("visibility: hidden");
     expect(ruleNaming(css, ".dl-palette-row[data-highlighted] .dl-palette-own")).toContain("visibility: hidden");
     expect(ruleFor(css, ".dl-palette-row[data-highlighted] .dl-palette-enter")).toContain("visibility: visible");
+  });
+
+  it("sets the verb small and muted, 6px before the Enter cap", () => {
+    const verb = ruleFor(css, ".dl-palette-verb");
+    expect(verb).toContain("font-size: 12px");
+    expect(verb).toContain("color: var(--dl-fg-muted, #b8b8b8)");
+    const hint = ruleFor(css, ".dl-palette-keys > .dl-palette-enter");
+    expect(hint).toContain("display: inline-flex");
+    expect(hint).toContain("gap: 6px");
   });
 
   it("keeps both in one cell, so the focus moving shifts nothing in a row", () => {

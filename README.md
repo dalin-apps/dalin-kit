@@ -673,6 +673,8 @@ Ctrl K opens and closes it (Cmd K on a Mac). The app's own key opens it too, whe
 
 Results come in groups under sentence-case headings, and the words of the query are marked in each row's title and second line. The focused row shows an Enter keycap in the slot its own shortcut sits in. That slot is on every row, so nothing in a row moves as the focus does.
 
+A row may name its `verb`, for a row that Enter does not open: drive's "Reveal" for a file shown in its folder. The word sits before the Enter cap on the focused row, small and muted. The hint a screen reader hears on the field says it too: "Press Enter to reveal the highlighted result", where it says "open" for a row that names none. A row with a verb holds the word's width open at its right end, focused or not.
+
 The palette is modal, so Tab stays in it, with one exception. A toast that can take Tab joins the loop: Tab in the field goes to the toast's action and Tab there comes back. A press on a toast leaves the palette open.
 
 Per the curator's motion rule, opening it from the keyboard does not animate, and neither does closing it after a key. Opened by a press on a search button, it fades in over 150ms.
@@ -704,6 +706,7 @@ A row, whether a result or an action, is a `PaletteItem`:
 | `subtitle` | A muted second line: where the result lives, or the line that matched. |
 | `icon` | From the app's own set, drawn at 16px. |
 | `meta` | What ends the first line at the right: a date, a count. |
+| `verb` | What Enter does to the row, in one word, where "open" is not it: "Reveal". |
 | `keys` | An action's own shortcut, as keycaps. |
 | `keywords` | More words the action filter may match, beside the title. |
 | `done` | Draws the title struck through and muted. |

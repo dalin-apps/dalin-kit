@@ -281,6 +281,21 @@ html[data-dl-motion="reduce"] :is(.dl-palette, .dl-palette-dim) {
 .dl-palette-keys > * {
   grid-area: 1 / 1;
 }
+/* The Enter hint: the return arrow as a cap, and before it the row's own
+   verb where the row names one ("Reveal"). The cell is as wide on every
+   row that names a verb as on the focused one, so the word costs those
+   rows its width and still moves nothing. */
+.dl-palette-keys > .dl-palette-enter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dl-palette-verb {
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--dl-fg-muted, #b8b8b8);
+  white-space: nowrap;
+}
 .dl-palette-enter,
 .dl-palette-row[data-highlighted] .dl-palette-own {
   visibility: hidden;

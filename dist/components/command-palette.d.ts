@@ -11,6 +11,12 @@ export type PaletteItem = {
     icon?: ReactNode;
     /** What ends the first line at the right: a date, a time, a count. */
     meta?: ReactNode;
+    /**
+     * What Enter does to the row, in one word, where "open" is not it:
+     * "Reveal" for a file shown in its folder. Drawn beside the Enter hint on
+     * the highlighted row, and said in the hint a screen reader hears.
+     */
+    verb?: string;
     /** The action's own shortcut, as keycaps at the row's right end: `["R"]`, `["Ctrl", "N"]`. */
     keys?: readonly string[];
     /** More words the palette's own filter may match an action by, beside its title. */
@@ -86,8 +92,9 @@ export declare const SOURCE_WAIT_MS = 400;
  * sentence-case headings, with the words of the query marked in each row.
  * The arrows move the focus, which always rests on a row, and that row
  * shows an Enter hint (the return arrow, as a keycap) where its own
- * shortcut would be. Enter runs it,
- * Escape closes the palette, and so does a press outside it.
+ * shortcut would be, with the row's verb before it where the row names
+ * one ("Reveal"). Enter runs it, Escape closes the palette, and so does a
+ * press outside it.
  *
  * The app supplies what it searches (`sources`) and what it can do
  * (`actions`); the palette owns the field, the keys, the grouping and the

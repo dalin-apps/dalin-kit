@@ -32,6 +32,12 @@ export type PaletteItem = {
   icon?: ReactNode;
   /** What ends the first line at the right: a date, a time, a count. */
   meta?: ReactNode;
+  /**
+   * What Enter does to the row, in one word, where "open" is not it:
+   * "Reveal" for a file shown in its folder. Drawn beside the Enter hint on
+   * the highlighted row, and said in the hint a screen reader hears.
+   */
+  verb?: string;
   /** The action's own shortcut, as keycaps at the row's right end: `["R"]`, `["Ctrl", "N"]`. */
   keys?: readonly string[];
   /** More words the palette's own filter may match an action by, beside its title. */
@@ -155,8 +161,9 @@ function Marked({ text, query }: { text: string; query: string }): ReactNode {
  * sentence-case headings, with the words of the query marked in each row.
  * The arrows move the focus, which always rests on a row, and that row
  * shows an Enter hint (the return arrow, as a keycap) where its own
- * shortcut would be. Enter runs it,
- * Escape closes the palette, and so does a press outside it.
+ * shortcut would be, with the row's verb before it where the row names
+ * one ("Reveal"). Enter runs it, Escape closes the palette, and so does a
+ * press outside it.
  *
  * The app supplies what it searches (`sources`) and what it can do
  * (`actions`); the palette owns the field, the keys, the grouping and the
@@ -202,6 +209,8 @@ export function CommandPalette({
   const [shown, setShown] = useState<Shown>(NOTHING_SHOWN);
   // How many sources have yet to answer the query in the field.
   const [busy, setBusy] = useState(0);
+  // The row the highlight is on, for the hint's verb.
+  const [active, setActive] = useState<PaletteItem | undefined>(undefined);
   // An Enter pressed while the list was stale, waiting for the answer.
   const heldEnter = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -416,6 +425,7 @@ export function CommandPalette({
             itemToStringValue={(item: PaletteItem) => item.title}
             autoHighlight="always"
             keepHighlight
+            onItemHighlighted={(item: PaletteItem | undefined) => setActive(item)}
           >
             <div className="dl-palette-query">
               <SearchGlyph />
@@ -436,7 +446,7 @@ export function CommandPalette({
             </div>
             {/* The hint is a picture of a key, hidden from a screen reader; these are its words. */}
             <span id={hintId} className="dl-palette-status">
-              Press Enter to open the highlighted result.
+              {`Press Enter to ${(active?.verb ?? "open").toLocaleLowerCase()} the highlighted result.`}
             </span>
             {/* One region that stays mounted, so a change in its words is announced. */}
             <div role="status" aria-live="polite" className="dl-palette-status">
@@ -478,7 +488,10 @@ export function CommandPalette({
                               nothing in the row moves as the focus does. */}
                           <span className="dl-palette-keys" aria-hidden="true">
                             {item.keys && item.keys.length > 0 ? <Kbd keys={item.keys} className="dl-palette-own" /> : null}
-                            <Kbd className="dl-palette-enter">{ENTER_KEY}</Kbd>
+                            <span className="dl-palette-enter">
+                              {item.verb ? <span className="dl-palette-verb">{item.verb}</span> : null}
+                              <Kbd>{ENTER_KEY}</Kbd>
+                            </span>
                           </span>
                         </Autocomplete.Item>
                       )}
