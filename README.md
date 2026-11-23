@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.5 holds the tokens, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.5 is listed under "Moving an app from 0.4 to 0.5", and the step before it under "Moving an app from 0.3 to 0.4".
+Version 0.6 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.6 is listed under "Moving an app from 0.5 to 0.6", and the steps before it under the two sections after that.
 
 ## Install
 
@@ -23,6 +23,7 @@ Import the stylesheets once, in the root layout, after the app's own base sheet:
 ```tsx
 import "./globals.css";
 import "@dalin/kit/tokens.css";
+import "@dalin/kit/base.css";
 import "@dalin/kit/toast.css";
 import "@dalin/kit/create.css";
 import "@dalin/kit/motion.css";
@@ -35,7 +36,7 @@ import "@dalin/kit/phone.css";
 
 The last five are new in 0.3, one to a part, so an app adds a sheet as it adopts that part. The family switcher and the command palette also need `menu.css`.
 
-From 0.4 the component sheets (`menu`, `palette`, `phone`, `empty`, `wordmark`, `motion`) put their rules in a cascade layer named `dalin`. State the layer order once, as the first line of the app's own sheet, before Tailwind is imported:
+From 0.4 the component sheets (`menu`, `palette`, `phone`, `empty`, `wordmark`, `motion`, and `base` from 0.6) put their rules in a cascade layer named `dalin`. State the layer order once, as the first line of the app's own sheet, before Tailwind is imported:
 
 ```css
 @layer theme, base, dalin, components, utilities;
@@ -50,19 +51,38 @@ Without that line the `dalin` layer is defined when the kit's first sheet loads,
 
 Three sheets stay out of the layer. `tokens.css` needs none: its values sit in `:where(:root)` and weigh nothing. `toast.css` has to beat the stylesheet Sonner appends to the page, which is unlayered, and a layered rule can't. `create.css` goes on the app's own button beside the app's utilities, and holds the glass recipe and nothing an app should change, so in a layer a stray shadow or ring utility would replace the glass.
 
-Set three variables on `:root`. The kit supplies everything else.
+Set two variables on `:root`. The kit supplies everything else.
 
 ```css
 :root {
   --dl-accent: oklch(0.64 0.16 50);
   --dl-font-face: var(--font-inter);
-  --dl-focus-ring: var(--dl-accent);
 }
 ```
+
+Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines it now, so an app can delete that line or keep it.
 
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.5 to 0.6
+
+0.6 comes from a pass over how the four apps behave. Five changes reach an app as soon as it installs 0.6. The first two need a look in the app.
+
+- A desktop toast's title is one line. A long one ends in an ellipsis, where it used to wrap to four lines and grow the card by 58.5px. The full words stay in the page for a screen reader, and the `<Toaster>` gives a cut title a `title` attribute with the whole text, so the pointer can read it. A title that fits gets none. Write each message to fit. Notes' `toastLine` already shortened the name, and still does.
+- `<ContextMenu>` stays open when the pointer leaves it. Before 0.6 it closed as soon as the pointer moved off its edge, with the reason `trigger-hover`, because Base UI doesn't count a right click as a click. It now closes on a click outside, Escape or a row, like the family's other menus.
+- `color-scheme: dark` on `:root`. The family is dark only, so scrollbars, date pickers and autofill draw dark in every app. Mail, calendar and drive drew them light before. Notes can delete its own line.
+- The command palette levels what is behind its glass with `--dl-overlay-level`, as the menus do, so its muted words hold over a white page. Over the family's dark panes nothing changes.
+- The palette's Esc keycap and the toast's action button get the keyboard ring, the two kit buttons that had none. The action's ring sits inside its segment, which runs to the card's edge.
+
+The rest is new tokens in `tokens.css`, there to adopt:
+
+- `--dl-selection-bg` (the accent) and `--dl-selection-fg` (its ink), read by the one `::selection` rule in the new `base.css`. Notes and drive already draw selection this way. Mail and calendar import `base.css` and delete their own rule. `--dl-accent-fg` is that ink, `oklch(0.16 0 0)`, notes' and drive's own. On mail's violet it reads 4.56:1, the lowest of the four accents.
+- `--dl-focus-ring` (the accent), `--dl-focus-w` (2px) and `--dl-focus-offset` (2px), the values all four apps drew. Every ring the kit draws reads them.
+- The z ladder, at the numbers in use today: `--dl-z-bar` 30, `--dl-z-search` 50, `--dl-z-toast` 60, `--dl-z-overlay` 70, `--dl-z-dialog` 80, `--dl-z-palette` 90 and `--dl-z-tooltip` 95. The kit's sheets read it under their own variables, so an app's `--dl-overlay-z` or `--dl-bar-z` still wins. The dialog step is calendar's and notes' settings scrim at 80, with the panel one over it at 81. The tooltip step is notes' 95. Mail draws its tooltip at 100, calendar at 1000 and drive at 50, and none of them reads the ladder yet.
+- `--dl-t-base`, 180ms, the value calendar, notes and drive each wrote as their own `--t-base`.
+- `--dl-font-mono`, the system's monospace. `menu.css` read it before any sheet defined it.
 
 ## Moving an app from 0.4 to 0.5
 
@@ -93,12 +113,13 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 
 ## Tokens
 
-`tokens.css` defines custom properties and no rules. Every value sits in `:where(:root)`, so the order it loads in never matters.
+`tokens.css` defines custom properties and one more line, `color-scheme: dark`. Every value sits in `:where(:root)`, so the order it loads in never matters.
 
 | Token | Value | Use |
 | --- | --- | --- |
 | `--dl-font` | Inter, then system and emoji fallbacks | Every app's text |
 | `--dl-font-wordmark` | Georgia | The `dalin.` wordmark |
+| `--dl-font-mono` | the system's monospace | A keycap's symbols, and any code an app shows |
 | `--dl-sidebar` | `#151515` | The desktop sidebar |
 | `--dl-list` | `#181818` | A second pane: mail's list, drive's file list |
 | `--dl-content` | `#1c1c1c` | The reader, the page, calendar's grid, drive's inspector |
@@ -128,6 +149,9 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 | `--dl-fg-muted` | `#b8b8b8` | Secondary text |
 | `--dl-fg-faint` | `#8f97a0` | The dimmest text, 4.53:1 on `#2f2f2f` |
 | `--dl-accent-text` | `--dl-accent` at a lightness of at least 0.80 | The accent as small text |
+| `--dl-accent-fg` | `oklch(0.16 0 0)` | Ink on an accent fill |
+| `--dl-selection-bg`, `--dl-selection-fg` | `--dl-accent`, `--dl-accent-fg` | Selected text (`base.css`) |
+| `--dl-focus-ring`, `--dl-focus-w`, `--dl-focus-offset` | `--dl-accent`, 2px, 2px | The keyboard ring |
 | `--dl-r-control` | 7px | Controls and tooltips |
 | `--dl-r-card` | 10px | Cards and menus |
 | `--dl-r-sheet` | 14px | Dialogs and phone sheets |
@@ -138,9 +162,13 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 | `--dl-t-open` | 150ms | A menu or dialog opening |
 | `--dl-t-close` | 110ms | The same closing |
 | `--dl-t-sheet` | 260ms | A phone sheet |
+| `--dl-t-base` | 180ms | A change that is not an open or a close |
 | `--dl-meaning-archive` | `oklch(0.68 0.19 25)` | Archive, red |
 | `--dl-meaning-starred` | `oklch(0.75 0.15 80)` | Starred, amber |
 | `--dl-meaning-spam` | `oklch(0.72 0.17 50)` | Spam, orange |
+| `--dl-z-bar`, `--dl-z-search`, `--dl-z-toast` | 30, 50, 60 | The phone bar, the phone search, the toaster over a sheet |
+| `--dl-z-overlay`, `--dl-z-dialog` | 70, 80 | Menus and popovers; a dialog's scrim, its panel one over |
+| `--dl-z-palette`, `--dl-z-tooltip` | 90, 95 | The command palette's dim, its panel one over; a tooltip |
 
 `--dl-accent-text` is new in 0.1. The accent is a fill colour: as 14px text on a 14% tint of itself it reads 3.5 to 4.4:1 in mail, calendar and drive. The token raises its lightness to at least 0.80 and keeps its hue and chroma, which clears 4.5:1 on that tint over the panes (`#151515` to `#1c1c1c`) and over `#2f2f2f`. The floor was 0.78 until 0.5, where mail's violet read 4.46:1 on its tint over `#2f2f2f`. At 0.80 the four accents read 4.77:1 (mail), 5.48:1 (calendar), 6.13:1 (notes) and 5.95:1 (drive) there, each with its channels clipped, the weaker of the two ways a browser may draw it. Read it for text and keep `--dl-accent` for fills, rings and tints. It needs relative colour syntax.
 
@@ -184,7 +212,7 @@ An app with a transparency switch points `--dl-overlay` at `--dl-overlay-solid` 
 
 ### The focus ring
 
-The keyboard ring is each app's accent, picked on 2026-11-22. `--dl-focus-ring` still falls back to the text colour where nothing sets it, so set it to `var(--dl-accent)` on `:root`, as the adoption block above does. The band, the create button, the family switcher and the phone's icons all read it.
+The keyboard ring is each app's accent, picked on 2026-11-22. From 0.6 `tokens.css` defines it: `--dl-focus-ring` is the accent, `--dl-focus-w` is 2px and `--dl-focus-offset` is 2px. The band, the create button, the family switcher, the phone's icons and search, the palette's Esc keycap and the toast's action all read them. The switcher keeps its 4px offset and the phone's icons their inset ring, since each sits that way in its own space.
 
 ## The toast
 
@@ -899,7 +927,7 @@ import { TipKey, shortcutLabel } from "@dalin/kit";
 
 That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel` takes `Mod`, `Shift` and `Alt` for the platform's keys and writes every other key as given. `<TipKey>` draws the dot and the key in the muted grey, or in the app's own `className`, and renders nothing without a key. `tipText("Archive", "E")` is the same line as a string. `shortcutLabelFor(mac, keys)` and `isMacPlatform(platform)` are the pure halves. The tooltip itself stays each app's own.
 
-## Not in version 0.5
+## Not in version 0.6
 
 These are still open, so the kit has no value for them: type sizes, disabled states, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
 
