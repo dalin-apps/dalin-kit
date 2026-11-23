@@ -22,8 +22,9 @@
    Keyboard focus. Both glass classes set a box-shadow, and this file is not
    in a cascade layer, so that shadow beats a ring an app draws as a shadow
    from inside one (Tailwind's ring utilities). So the ring ships here as an
-   outline, which no shadow can cover. --dl-focus-ring is its colour; the
-   family has not picked one, so it falls back to the text colour. A glass
+   outline, which no shadow can cover. --dl-focus-ring is its colour: the
+   family's ring is each app's accent (picked 2026-11-22), which the app sets
+   on :root, and it falls back to the text colour where none is set. A glass
    <span> inside a button that draws its own ring takes `dl-create-no-ring`
    as well, and draws none.
 

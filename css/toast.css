@@ -11,7 +11,9 @@
    default kind for a bare toast. Version 0.2 adds a plain toast for a phone
    page with no pill, slivers above a line that is not a cover, a calm
    announce for a pinned toast's result, and an optional scrim under a
-   fanned stack.
+   fanned stack. Version 0.3 puts the docked phone toast on the bottom bar's
+   own glass, fades the scrim in, and adds a countdown kind and two
+   variables for the progress kind's strength.
 
    How an app adopts it. Import this file once, on every route, after the
    app's own base sheet. Mount <Toaster> at the layout root and <ToastBand>
@@ -53,8 +55,9 @@
          How strong the accent is in the progress kind's glass and on its
          rim: 22% and 36%. The countdown kind reads the same two.
      --dl-focus-ring
-         The colour of the band's keyboard ring. The family has not picked
-         one, so it falls back to the text colour.
+         The colour of the band's keyboard ring. The family's ring is each
+         app's accent (picked 2026-11-22), which the app sets on :root. It
+         falls back to the text colour where none is set.
      --dl-toast-scrim
          The fill of the layer under a fanned phone stack, for an app that
          asked for one (<Toaster scrim>). Clear unless set.
@@ -970,8 +973,8 @@
    tucked stack), and it is as wide as the screen, so its own outline would
    be a rectangle across the whole bottom. The ring is drawn around the
    pill's footprint instead, 3px clear of it: the stack behind the pill is
-   what has focus. --dl-focus-ring is the app's ring colour; the family has
-   not picked one, so it falls back to the text colour. */
+   what has focus. --dl-focus-ring is the app's ring colour, its accent,
+   and falls back to the text colour where the app has set none. */
 .toast-band:focus-visible {
   outline: none;
 }

@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.2 has four things: the tokens, the toast, the create button, and three helpers each app had copied. A question that is still open has nothing here. What 0.2 changed is listed under "What changed in 0.2".
+Version 0.3 holds the tokens, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, and the helpers each app had copied. A question that is still open has nothing here. What 0.3 changed in the toast is listed under "What changed in 0.3".
 
 ## Install
 
@@ -10,7 +10,9 @@ Version 0.2 has four things: the tokens, the toast, the create button, and three
 npm install github:gomezsj12/dalin-kit
 ```
 
-It imports as `@dalin/kit`. The built `dist/` is committed, so an install needs no build step. React 19 and sonner 2 are peer dependencies; `@base-ui/react` is an optional peer, and nothing in the kit imports it yet. The kit is tested on sonner 2.0.7, which the four apps lock, and on 2.0.8.
+It imports as `@dalin/kit`. The built `dist/` is committed, so an install needs no build step. React 19, sonner 2 and `@base-ui/react` 1.4.1 or later are peer dependencies. Base UI was optional through 0.2, when nothing imported it. The components in 0.3 are built on it, and all four apps already ship it.
+
+The kit is tested on sonner 2.0.7, which the four apps lock, and on 2.0.8. The components are tested on Base UI 1.4.1 and 1.9.0, the oldest and the newest the apps ship.
 
 ## Adopt it in an app
 
@@ -22,16 +24,26 @@ import "@dalin/kit/tokens.css";
 import "@dalin/kit/toast.css";
 import "@dalin/kit/create.css";
 import "@dalin/kit/motion.css";
+import "@dalin/kit/wordmark.css";
+import "@dalin/kit/menu.css";
+import "@dalin/kit/empty.css";
+import "@dalin/kit/palette.css";
+import "@dalin/kit/phone.css";
 ```
 
-Set two variables on `:root`. The kit supplies everything else.
+The last five are new in 0.3, one to a part, so an app adds a sheet as it adopts that part. The family switcher and the command palette also need `menu.css`.
+
+Set three variables on `:root`. The kit supplies everything else.
 
 ```css
 :root {
   --dl-accent: oklch(0.64 0.16 50);
   --dl-font-face: var(--font-inter);
+  --dl-focus-ring: var(--dl-accent);
 }
 ```
+
+Every component exports from `@dalin/kit`, and from `@dalin/kit/components` for an app that wants them apart from the toast.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
 
@@ -43,7 +55,27 @@ Then delete the app's own copy of whatever the kit now covers. Two copies of a t
 | --- | --- | --- |
 | `--dl-font` | Inter, then system and emoji fallbacks | Every app's text |
 | `--dl-font-wordmark` | Georgia | The `dalin.` wordmark |
-| `--dl-sidebar` | `#151515` | The desktop sidebar's fill |
+| `--dl-sidebar` | `#151515` | The desktop sidebar |
+| `--dl-list` | `#181818` | A second pane: mail's list, drive's file list |
+| `--dl-content` | `#1c1c1c` | The reader, the page, calendar's grid, drive's inspector |
+| `--dl-raised` | `#242424` | A card or a field standing on a pane |
+| `--dl-selected` | `#262626` | The selected lift: the open row, the picked item |
+| `--dl-hover-sidebar`, `--dl-hover-list`, `--dl-hover-content` | `#181818`, `#1c1c1c`, `#242424` | A row under the pointer, by the pane it sits on |
+| `--dl-row-h`, `--dl-row-text` | 32px, 14px | A top navigation row in the sidebar |
+| `--dl-row-dense-h`, `--dl-row-dense-text` | 28px, 13px | A row in a long list under it |
+| `--dl-row-icon` | 17px | A sidebar row's icon |
+| `--dl-row-selected`, `--dl-row-selected-icon` | `--dl-selected`, `--dl-fg` | The open plain row, and its filled icon |
+| `--dl-bar-glass`, `--dl-bar-blur`, `--dl-bar-rim` | a grey at 45%, `blur(14px)`, white at 9% | The phone's bottom bar |
+| `--dl-border`, `--dl-border-strong` | `#2f2f2f`, `#3d3d3d` | A rule between blocks; the edge of a floating surface |
+| `--dl-overlay`, `--dl-overlay-blur` | `#202020` at 72%, `blur(16px) saturate(1.5)` | The overlay glass |
+| `--dl-overlay-level` | `contrast(0.709) brightness(0.468)` | Levels what is behind the glass |
+| `--dl-overlay-edge`, `--dl-overlay-shadow` | `--dl-border-strong`, one shadow | The glass's edge and its shadow |
+| `--dl-overlay-hover`, `--dl-overlay-rule` | white at 8%, white at 9% | A highlighted row on the glass; a rule inside a menu |
+| `--dl-overlay-solid` | `#1f1f1f` | The grey the frost reads as: an arrow, and the fill with transparency off |
+| `--dl-dialog` | `#1f1f1f` | The settings dialog, which stays solid |
+| `--dl-danger` | `oklch(0.68 0.19 25)` | A destructive act, as a fill or a ring |
+| `--dl-danger-text` | `--dl-danger` at a lightness of at least 0.74 | The same red as text |
+| `--dl-kbd-face`, `--dl-kbd-edge` | `#383838`, `#5c5c5c` | The keycap |
 | `--dl-fg` | `#ffffff` | Text |
 | `--dl-fg-muted` | `#b8b8b8` | Secondary text |
 | `--dl-fg-faint` | `#8f97a0` | The dimmest text, 4.53:1 on `#2f2f2f` |
@@ -64,13 +96,51 @@ Then delete the app's own copy of whatever the kit now covers. Two copies of a t
 
 `--dl-accent-text` is new in 0.1. The accent is a fill colour: as 14px text on a 14% tint of itself it reads 3.5 to 4.4:1 in mail, calendar and drive. The token raises its lightness to at least 0.78 and keeps its hue and chroma, which clears 4.5:1 on that tint over the panes (`#151515` to `#1c1c1c`). Read it for text and keep `--dl-accent` for fills, rings and tints. It needs relative colour syntax.
 
-Two rules have no token. Nothing animates when the action started from the keyboard, and `watchInputModality` (below) keeps the attribute an app's stylesheet reads for that. A sidebar row or icon whose place has a meaning shows its filled icon in the meaning colour on hover and while open; how a plain row looks when selected is not decided.
+One rule has no token. Nothing animates when the action started from the keyboard, and `watchInputModality` (below) keeps the attribute a stylesheet reads for that. The kit's own menus, popovers and palette follow it already.
 
 Don't override a token. If a screen needs a different value, ask the owner, and the answer goes in this file.
 
+### Surfaces, by position
+
+The owner picked this on 2026-11-22. A pane takes its fill from where it stands, left to right, and never from what it holds: the sidebar, then a second pane, then the content. So drive's file list is the list step under an inspector on the content step, and mail's list is one step up from its sidebar.
+
+A row under the pointer lightens to the next step above its own pane. It shows on every pane that way and never matches the selected lift, which is one grey everywhere. A row in the sidebar reads `--dl-hover-sidebar`, a row in a list `--dl-hover-list`, a row on the content `--dl-hover-content`.
+
+The sidebar's hover is the ladder's smallest step, `#151515` to `#181818`. If it reads too faint in the real screen, that is a question for the owner, not a value to override.
+
+### Sidebar rows
+
+Top navigation (Inbox, Home, the views) is a 32px row at 14px. A long list under it (calendars, folders, pinned pages) is a 28px row at 13px, so it shows more names and cuts fewer. Icons are 17px in both.
+
+The open plain row wears `--dl-row-selected` with its icon filled and white. A row whose place has a meaning shows its filled icon in that meaning's colour instead, on hover and while open, the same colour in every app: `--dl-meaning-archive`, `--dl-meaning-starred`, `--dl-meaning-spam`.
+
+These are tokens with no class behind them. Each app's sidebar keeps its own markup and reads the values.
+
+### The phone bar's glass
+
+`--dl-bar-glass` is calendar's bar: a grey at 45% over a 14px blur, with a rim of white at 9%. The owner picked it over the other three bars on 2026-11-22. An app points its own bar at the three tokens and deletes its own recipe. The phone toast wears the same glass by default (see "Variables an app may set").
+
+### The overlay glass
+
+Menus, context menus, popovers, the command palette, tooltips and phone sheets are frosted: `--dl-overlay` over `--dl-overlay-blur`, with the strong edge and one shadow. The settings dialog is the exception. It stays solid, on `--dl-dialog` with the same edge.
+
+The kit's own overlays read these tokens. An app's tooltip and its phone sheets are still its own, and read them from the app's rules.
+
+`--dl-overlay-level` is the toast's fix for bright content, applied to menus and popovers. A menu can open over a white email, where the bare glass turned pale and muted words fell to 3.2:1. The filter brings white down to a mid grey before the glass goes on, and muted words then hold 6.3:1. It leaves a dark pane where it is, so nothing changes on the family's own surfaces. Set it to `contrast(1)` to turn it off.
+
+An app with a transparency switch points `--dl-overlay` at `--dl-overlay-solid` while the switch is off. Its own rule already stops the blur.
+
+### The destructive red
+
+`--dl-danger` is mail's red. As 14px text it holds 5.2:1 on the glass over a dark pane, 4.2:1 on a highlighted row and 4.0:1 over a white page. So text reads `--dl-danger-text`, the same hue at a lightness of at least 0.74, which clears 4.5:1 in all three. It is the rule `--dl-accent-text` follows: one token for fills and rings, a lighter one for words.
+
+### The focus ring
+
+The keyboard ring is each app's accent, picked on 2026-11-22. `--dl-focus-ring` still falls back to the text colour where nothing sets it, so set it to `var(--dl-accent)` on `:root`, as the adoption block above does. The band, the create button, the family switcher and the phone's icons all read it.
+
 ## The toast
 
-This is notes' toast, and with no props set it behaves as it did in version 0, with the exceptions listed under "What changed by default" and "What changed in 0.2". On a desktop the stack hangs off the window's right edge: a toast slides out, holds in the corner, then tucks until only a glass tab with its icon shows, and pointing at a tab pulls the column out. On a phone a toast announces above the bottom bar, then docks behind the nav pill, which reads as the front card of the stack.
+This is notes' toast, and with no props set it behaves as it did in version 0, with the exceptions listed under "What changed by default", "What changed in 0.2" and "What changed in 0.3". On a desktop the stack hangs off the window's right edge: a toast slides out, holds in the corner, then tucks until only a glass tab with its icon shows, and pointing at a tab pulls the column out. On a phone a toast announces above the bottom bar, then docks behind the nav pill, which reads as the front card of the stack.
 
 ```tsx
 // app/layout.tsx
@@ -102,6 +172,7 @@ Raise toasts with sonner's own `toast.success`, `toast.error`, `toast.warning`, 
 | `phoneMaxWidth` | 767 | The widest viewport, in px, that gets the phone layout. Calendar's phone shell runs to 899. |
 | `className` | none | Extra classes for Sonner's list, beside the kit's own. |
 | `cover` | none | A selector for the surfaces that cover the phone's bottom bar: sheets, dialogs, viewers. It is watched the whole time, not only as a toast arrives. |
+| `coverSkip` | none | A selector for the app's own exit copies, which cover nothing, such as drive's `[data-ghost]`. |
 | `scrim` | `false` | `true` lays a clear layer under a fanned phone stack, and a tap on it tucks the stack. |
 | `onScrimTuck` | none | Called when that tap tucks the stack, for the app's haptic tick. |
 | `defaultKind` | none | The kind a bare `toast("...")` takes: `"info"`, `"success"`, `"warning"` or `"error"`. |
@@ -142,6 +213,14 @@ Over a `"line"` with room above it, the list also carries `toast-over-line`. `<T
 `<Toaster cover=".sheet, .dialog">` is the short form of `"cover"`. The kit looks for a matching surface as each toast arrives and announces above the highest one. The mark on the list lasts for that toast's announce and dive, then the stack waits behind the pill the cover hides. Name every full-screen overlay in the selector, or its toasts announce under its scrim.
 
 The selector is watched between toasts too. While a cover is up, a fanned stack is tucked and `<ToastBand>` is inert and out of the tab order. The same holds under a dock registered as `"cover"`. `useToastCovered()` returns that answer for the app's own code.
+
+A cover that closes may leave a copy of itself to fade out, and the copy still matches the selector. The kit skips its own copies (`data-dl-leaving`, from `watchLeaving`). An app that leaves copies under an attribute of its own names it in `coverSkip`:
+
+```tsx
+<Toaster cover=".dialog-overlay, .sheet" coverSkip="[data-ghost]" />
+```
+
+A surface that matches `coverSkip`, or sits inside one that does, is not a cover. `measureToastCover(selector, skip)` takes the same second argument.
 
 `useToastDockKind()` returns the kind in force, for an app that shows something only while the pill is the dock. `useToastDockState()`, `readToastDock()`, `readToastCovered()`, `refreshToastDock()`, `measureToastCover(selector)` and `dockLine()` are the pieces underneath.
 
@@ -212,6 +291,30 @@ A tick is not announced: progress that is still progress, a pinned countdown, or
 ### The progress kind and the default kind
 
 `toast.loading()` raises the progress kind (`toast-progress`): the app's accent in the same recipe as the other kinds, with a spinner as its icon. On the phone its card behind the pill wears a bar along the top edge that sweeps while the work runs. Put `PROGRESS_DONE_TOAST` on the result to keep that bar, solid green, until it times out. A plain toast can carry `PROGRESS_TOAST` itself with `<ToastSpinner />` as its `icon`.
+
+Two variables set how strong the accent is in that glass: `--dl-toast-progress-tint` (22%) and `--dl-toast-progress-rim` (36%). An app whose accent is strong lowers them on `:root`. Mail's violet sat at 12% with a 28% rim:
+
+```css
+:root {
+  --dl-toast-progress-tint: 12%;
+  --dl-toast-progress-rim: 28%;
+}
+```
+
+A countdown is its own kind (`toast-countdown`, the class `COUNTDOWN_TOAST` names): a toast that counts seconds down to something that can still be undone.
+
+```tsx
+import { COUNTDOWN_TOAST, PINNED_TOAST } from "@dalin/kit";
+
+toast("Sending in 5s", {
+  id,
+  className: `${PINNED_TOAST} ${COUNTDOWN_TOAST}`,
+  duration: Infinity,
+  action: { label: "Undo", onClick: undo },
+});
+```
+
+It wears the progress kind's glass and reads the same two variables. It draws no spinner, and on the phone no sweep bar, since the seconds in its words are the progress. The bar stays off even on a countdown that also carries a progress class. Its ticks are not announced.
 
 A bare `toast("...")` has no kind, so it wears the plain glass and its tucked desktop tab is a blank strip. `<Toaster defaultKind="info">` gives every bare toast that kind's tint and icon. It is off by default, which keeps notes' plain toast as it is.
 
@@ -291,7 +394,9 @@ That reader wins over the toaster's selectors, and a `reducedMotion` option pass
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `--dl-toast-glass`, `--dl-toast-blur`, `--dl-toast-rim` | notes' bar glass | The material under every kind's tint |
+| `--dl-toast-glass`, `--dl-toast-blur`, `--dl-toast-rim` | notes' bar glass | The material under every kind's tint on the desktop, and under a plain phone toast |
+| `--dl-toast-phone-glass`, `--dl-toast-phone-blur`, `--dl-toast-phone-rim` | `--dl-bar-glass`, `--dl-bar-blur`, `--dl-bar-rim` | The same three for the phone toast that docks behind the pill |
+| `--dl-toast-progress-tint`, `--dl-toast-progress-rim` | 22%, 36% | How strong the accent is in the progress and countdown kinds |
 | `--dl-toast-solid` | `#282828` | The fill in place of the glass while transparency is off |
 | `--dl-bar-w`, `--dl-bar-h` | 320px, 58px | The nav pill's measured size |
 | `--dl-bar-inset` | 16px | The bar's gap above the bottom safe area |
@@ -302,11 +407,15 @@ That reader wins over the toaster's selectors, and a `reducedMotion` option pass
 | `--dl-toast-room` | 24px | The gap beside a pulled out desktop toast |
 | `--dl-toast-level` | `contrast(0.709) brightness(0.468)` | Levels what is behind a desktop toast, so white words hold 4.5:1 over a white page |
 | `--dl-toast-scrim` | `transparent` | The fill of the layer under a fanned phone stack, with `<Toaster scrim>` |
-| `--dl-focus-ring` | the text colour | The keyboard ring on the band and the create button |
+| `--dl-toast-scrim-over` | `--dl-toast-scrim` | The same fill while the dock is not the pill |
+| `--dl-toast-scrim-fade` | 200ms | How long the scrim's fill takes to fade in |
+| `--dl-focus-ring` | the text colour | The keyboard ring: set it to the app's accent |
 
-The three glass variables need a note. On the phone the toast stands in for the nav pill, so the two read best as one material, and an app may point the three at its own bar's glass. The owner's pick on 2026-11-22 is notes' toast styling in every app, and the defaults are that styling. So leave them alone unless the owner asks for an app's toast to match its own bar. How strong the phone toast's glass should be is still his to decide.
+The docked phone toast stands in for the nav pill, so it wears the bar's glass. That is the owner's pick on 2026-11-22: "same frost as the bar". The three `--dl-toast-phone-*` variables default to the bar's tokens, and an app leaves them alone. The desktop toast and the plain phone toast keep notes' glass, in the three `--dl-toast-*` variables.
 
-The family has not picked a focus colour. `--dl-focus-ring` falls back to the text colour until it does, and an app points it at its own ring colour meanwhile.
+An app that pointed `--dl-toast-glass` at its own bar in 0.2, as notes did, can delete those lines. They no longer reach the docked phone toast.
+
+The scrim's fill may differ while the dock is not the pill. Mail is the case: it dims the page over its parked draft chip, leaves it clear over the pill, and so sets `--dl-toast-scrim-over` alone, where 0.2 needed a rule keyed on the kit's own class. The fill fades in over 200ms. Under reduced motion it lands at once.
 
 ### What an app must not override
 
@@ -331,6 +440,17 @@ Nine things differ from 0.1 with no props set.
 - The spinner and the progress bar hold under an app's blanket reduced-motion rule.
 
 A bare toast under `defaultKind` carries `toast-bare-info` in place of `toast-info`, which fixes typed toasts taking the default tint on Sonner 2.0.7. `scrim`, `onScrimTuck` and `fullMotionSelector` are new and off by default.
+
+### What changed in 0.3
+
+Four things differ from 0.2 with no props set.
+
+- The docked phone toast wears the bottom bar's glass (45% over a 14px blur, a 9% rim), where it wore notes'. The desktop toast is as it was.
+- The scrim's fill fades in over 200ms.
+- `<ToastBand>`, `useStackSwipe` and `watchLeaving` follow the motion switch the `<Toaster>` was told about, where each fell back to the system's setting.
+- The progress kind reads its strength from two variables. Their defaults are the old values.
+
+`coverSkip`, `COUNTDOWN_TOAST`, `--dl-toast-scrim-over` and `setMotionReader` are new and change nothing until used.
 
 ## The create button
 
@@ -367,9 +487,267 @@ Where the button draws a ring of its own, that makes two. Add `dl-create-no-ring
 
 The recipe needs relative colour syntax: Chrome 119, Safari 16.4 or Firefox 128.
 
+## The wordmark
+
+```tsx
+import { Wordmark } from "@dalin/kit";
+
+<Wordmark app="mail" size={32} />
+```
+
+That is "dalin" in Georgia, the period in the app's accent and the app's name in muted italic, as each sidebar drew it by hand. A screen reader hears one image, named "dalin. mail". It sets no height, padding or margin, so the sidebar's header and the phone's title row place it. `wordmark.css` styles it.
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `app` | required | `"mail"`, `"calendar"`, `"notes"` or `"drive"`. |
+| `size` | the font size around it | A number of px, or a CSS length. The sidebar and the phone's home title use 32. |
+| `accent` | the host app's `--dl-accent` | The period's colour. `"own"` is the named app's accent, whatever app draws it. Any other value is used as the colour. |
+| `folded` | `false` | Shows "d." alone, for a folded sidebar. |
+| `rollOut` | `false` | Rolls "alin" and the name out from behind "d." on mount: mail's sidebar animation, 1.1s and then 0.95s. |
+| `className`, `style` | none | The app's own, beside `dl-wordmark`. |
+
+Give the wordmark a `key` that changes to play the roll again, as an app does each time its sidebar unfolds. Nothing rolls while the system asks for reduced motion. An app with its own motion switch leaves `rollOut` off while that switch is on.
+
+`DALIN_APPS` is the four apps in order, each with its name, its accent and its address. `dalinApp(id)` is one of them.
+
+## The family switcher
+
+```tsx
+import { FamilySwitcher } from "@dalin/kit";
+
+<FamilySwitcher app="mail" size={32} folded={folded} />
+```
+
+It goes where the sidebar's `<Wordmark>` was. Nothing shows at rest. Pointing at the wordmark for 150ms, or pressing it, opens the frosted menu under it, with an arrow. The menu lists the four apps as their own wordmarks, each period in that app's accent, with a check on the app you are in.
+
+Every row is a link: `https://mail.dalin.pro`, `https://calendar.dalin.pro`, `https://notes.dalin.pro` and `https://drive.dalin.pro`. A middle click or a long press does what it does on any link.
+
+The wordmark is a button, so a keyboard reaches it. Enter or Space opens the menu, the arrows move through it, Enter follows a row, and Escape closes it and gives focus back. The menu is not modal: one that a resting pointer opened must not lock the page's scroll.
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `app` | required | The app this is drawn in. Its wordmark is the trigger and its row is the checked one. |
+| `size`, `folded`, `rollOut` | as `<Wordmark>` | Passed to the trigger's wordmark. |
+| `label` | `"Switch app"` | What the control does. Its accessible name reads "dalin. mail. Switch app". |
+| `hrefs` | none | Another address for an app, for a build that is not on dalin.pro: `{ mail: "http://localhost:3000" }`. |
+| `side`, `align` | `"bottom"`, `"start"` | Where the menu opens against the wordmark. |
+| `className` | none | The app's own class on the trigger, beside `dl-switcher-trigger`. |
+
+It needs `wordmark.css` and `menu.css`.
+
+## Menus, context menus and popovers
+
+These are shadcn's Base UI files (`dropdown-menu`, `context-menu`, `popover`), restyled once and shared. The parts and their props are Base UI's. An app that has those files swaps the import and deletes its copy; `menu.css` replaces the utility classes.
+
+```tsx
+import { Menu, MenuContent, MenuItem, MenuSeparator, MenuShortcut, MenuTrigger } from "@dalin/kit";
+
+<Menu>
+  <MenuTrigger>More</MenuTrigger>
+  <MenuContent>
+    <MenuItem onClick={reply}><ReplyIcon /> Reply</MenuItem>
+    <MenuItem onClick={star}><StarIcon /> Star <MenuShortcut keys={["S"]} /></MenuItem>
+    <MenuSeparator />
+    <MenuItem variant="destructive" onClick={archive}>
+      <ArchiveIcon /> Archive <MenuShortcut keys={["E"]} />
+    </MenuItem>
+  </MenuContent>
+</Menu>
+```
+
+A context menu is the same menu opened at the pointer, and it takes the same rows:
+
+```tsx
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@dalin/kit";
+
+<ContextMenu>
+  <ContextMenuTrigger render={<li className="row" />}>...</ContextMenuTrigger>
+  <ContextMenuContent>
+    <MenuItem onClick={reply}><ReplyIcon /> Reply</MenuItem>
+  </ContextMenuContent>
+</ContextMenu>
+```
+
+| Component | What it is |
+| --- | --- |
+| `Menu`, `MenuTrigger`, `MenuContent` | The root, the control and the frosted surface. |
+| `MenuItem`, `MenuLinkItem` | A row, and a row that is a link. |
+| `MenuCheckboxItem`, `MenuRadioGroup`, `MenuRadioItem` | Rows that hold a choice. The chosen one ends in a check. |
+| `MenuGroup`, `MenuLabel`, `MenuSeparator` | A group, its heading, and a rule between groups. |
+| `MenuShortcut` | A row's shortcut, as keycaps at its right end. |
+| `MenuSub`, `MenuSubTrigger`, `MenuSubContent` | A submenu. Its row ends in a chevron. |
+| `ContextMenu`, `ContextMenuTrigger`, `ContextMenuContent` | The menu at the pointer, on a right click or a long press. |
+| `Popover`, `PopoverTrigger`, `PopoverContent` | The same surface for anything else, 12px in. The width is the app's. |
+| `PopoverTitle`, `PopoverDescription`, `PopoverClose` | A popover's heading, its muted line, and a control that closes it. |
+| `Kbd` | A keycap: drive's and notes', one cap to a key. |
+
+The kit adds these props to Base UI's own:
+
+| Prop | On | What it does |
+| --- | --- | --- |
+| `arrow` | `MenuContent`, `PopoverContent` | Whether the surface points at its control. On by default. |
+| `variant` | `MenuItem`, `MenuLinkItem` | `"destructive"` is the red row. |
+| `inset` | `MenuItem`, `MenuLinkItem`, `MenuLabel`, `MenuSubTrigger` | Lines the words up with rows that have an icon. |
+| `keys` | `MenuShortcut`, `Kbd` | The keys, one cap each: `["Ctrl", "K"]`. A single cap may be the child instead. |
+| `align`, `alignOffset`, `side`, `sideOffset`, `anchor`, `collisionPadding` | The three content parts | Passed to Base UI's positioner. The context menu takes no `anchor`. |
+
+What the look comes to, from `menu.css`:
+
+- The surface is the overlay glass with 10px corners. Rows are 32px tall and sit 4px in, with a 7px corner.
+- A menu or popover anchored to a control has an arrow: drive's, a square turned 45 degrees and lined on its outer edges. A context menu has none, and neither has a submenu.
+- A shortcut is a keycap at the row's right end. Keycaps are hidden on a touch screen.
+- A destructive row is red, words and icon.
+- A group's label is small and muted, in the case it was written in. Write it in sentence case. Base UI needs `MenuLabel` inside a `MenuGroup`.
+- A menu fades in over 150ms and out over 110ms. It lands at once when the keyboard opened it, and under reduced motion. A context menu always opens at once.
+
+`--dl-overlay-z` is the z-index of every menu and popover. It is 70, over the toaster while that stands over a sheet. The settings dialog is not one of these surfaces and stays solid.
+
+## The empty state
+
+```tsx
+import { EmptyState } from "@dalin/kit";
+
+<EmptyState icon={<DriveIcon />} title="Nothing here yet" />
+```
+
+A 40px icon over a 16px title in weight 600, centred in its pane. These are drive's values from 2026-11-17, which the owner picked for all four apps on 2026-11-22: "just get rid of the subtitles, but leave the large text and icon".
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `title` | required | One line that says what is empty. |
+| `icon` | none | The place's icon, from the app's own set. Drawn at 40px in the faint grey. |
+| `action` | none | One control under the title, for a place whose empty state is where you fill it. |
+| `className` | none | The app's own, beside `dl-empty`. |
+
+It has no subtitle prop, on purpose. In a flex pane it grows into the free space, and in a block pane with a height it takes that height. `empty.css` styles it.
+
+## The command palette
+
+```tsx
+import { CommandPalette } from "@dalin/kit";
+
+<CommandPalette
+  appKey="/"
+  placeholder="Search pages and to-dos"
+  sources={sources}
+  actions={[{ id: "new", title: "New page", keys: ["N"], onSelect: newPage }]}
+/>
+```
+
+One palette for the four apps: a Base UI Dialog holding an inline Autocomplete, 600px wide and frosted, with the app dimmed behind it. It starts from calendar's palette and takes mail's search palette look. Mount it once at the app's root. It needs `palette.css` and `menu.css`.
+
+Ctrl K opens and closes it (Cmd K on a Mac). The app's own key opens it too, when pressed outside a text field. The caret is in the field as it opens. The arrows move the focus, which always rests on a row, Enter runs that row, and Escape or a press outside closes the palette.
+
+Results come in groups under sentence-case headings, and the words of the query are marked in each row's title and second line. The focused row shows an Enter keycap in the slot its own shortcut sits in. That slot is on every row, so nothing in a row moves as the focus does.
+
+Per the curator's motion rule, opening it from the keyboard does not animate, and neither does closing it after a key. Opened by a press on a search button, it fades in over 150ms.
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `sources` | none | What the palette searches, in the order the groups show. Keep the array stable between renders. |
+| `actions` | none | The app's actions. The palette filters them itself and lists them last. |
+| `actionsHeading` | `"Actions"` | The heading over the actions. |
+| `open`, `onOpenChange` | the palette owns it | For an app that owns the open state, such as one with a search button. |
+| `hotkey` | `true` | Whether Ctrl K opens and closes it. An editor that uses Ctrl K for links turns it off there. |
+| `appKey` | none | The app's own key for search, or several: `"/"`. |
+| `placeholder` | `"Search"` | The field's placeholder, which is also its accessible name. |
+| `label` | `"Command palette"` | The dialog's accessible name. |
+| `emptyText` | `No results for “query”.` | A function of the query, for the app's own words. |
+| `className` | none | The app's own, beside `dl-palette`. |
+
+A source is `{ id, heading, search }`. `search(query, signal)` returns rows, or a promise of them, and the signal aborts when the query changes or the palette closes. It is called with `""` as the palette opens, for whatever the app shows before a word is typed. A source that answers later keeps its last rows on screen until the new ones arrive.
+
+A row, whether a result or an action, is a `PaletteItem`:
+
+| Field | What it is |
+| --- | --- |
+| `id`, `title` | Required. The id is unique within its group. |
+| `subtitle` | A muted second line: where the result lives, or the line that matched. |
+| `icon` | From the app's own set, drawn at 16px. |
+| `meta` | What ends the first line at the right: a date, a count. |
+| `keys` | An action's own shortcut, as keycaps. |
+| `keywords` | More words the action filter may match, beside the title. |
+| `done` | Draws the title struck through and muted. |
+| `keepOpen` | Leaves the palette open after the row runs. |
+| `onSelect` | Required. The palette has closed by the time it runs, unless `keepOpen`. |
+
+The action filter needs every word of the query, in any order, in the title or the keywords, and ignores case and accents. `matchesQuery`, `matchParts`, `queryTerms` and `fold` are that rule, exported for a source that wants to match and mark the same way.
+
+`--dl-palette-z` is the dim's z-index (90, over the menus), and `--dl-palette-dim` is its fill.
+
+## The phone header and search
+
+```tsx
+import { PhoneHeader, PhoneHeaderIcon, PhoneSearch } from "@dalin/kit";
+
+<PhoneHeader title="Inbox" line="All mailboxes · 44 unread" onSearch={() => setSearching(true)} />
+
+<PhoneHeader
+  wordmark="notes"
+  onSearch={() => setSearching(true)}
+  action={<PhoneHeaderIcon label="Refresh" onClick={refresh}><RefreshIcon /></PhoneHeaderIcon>}
+/>
+```
+
+One phone layout for the four apps, on mail's numbers. The header is a 48px title row, 6px under the safe area and 16px in. Its title is a large one (28px, weight 700) or the app's wordmark at 32px, which drive's Home and notes' main list use. Under a large title sits one muted line.
+
+At the right are at most two plain icons, each a 20px glyph in a 44px target with no box behind it. Search is one of them and never a field, the owner's pick on 2026-11-22. Alone it takes the far right. Beside an icon the row already has, it sits to that icon's left, so the existing icon stays where it was.
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `title` | none | A large title. A string, or the app's own node for a title that does something, such as mail's folder button. |
+| `wordmark` | none | The app's wordmark in place of a title. |
+| `switcher` | `false` | Makes that wordmark the family switcher. |
+| `line` | none | One muted line under a large title. A wordmark takes none, since it reads as a tagline there. |
+| `onSearch` | none | Opens the app's search. With it, the header draws the magnifying glass. |
+| `searchLabel` | `"Search"` | The search icon's accessible name. |
+| `action` | none | The one other icon, a `<PhoneHeaderIcon>`. It keeps the far right. |
+| `className` | none | The app's own, beside `dl-phone-head`. |
+
+`<PhoneHeaderIcon label>` is a button that takes its glyph as a child. `label` is required, since a glyph has no words.
+
+Search is a sheet over the whole screen:
+
+```tsx
+<PhoneSearch
+  open={searching}
+  onOpenChange={setSearching}
+  placeholder="Search mail and people"
+  action={{ label: "Compose", icon: <PenIcon />, onSelect: compose }}
+  sections={[{ heading: "Recent", rows: recent }, { heading: "People", rows: people }]}
+  results={results}
+  onQueryChange={search}
+/>
+```
+
+It opens with the caret already in the field: the field focuses as it mounts, before any timer or frame, which is what lets a phone raise its keyboard. Cancel sits at the field's right, and the sheet covers the bottom bar. It opens and closes at once, with no slide.
+
+Before a word is typed it shows what calendar's search shows. First comes the app's create action, as a row in the accent. Then come the app's sections: what is recent or coming up, then people or places. Once there is a query it shows `results`, or the app's own body as children.
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `open`, `onOpenChange` | required | The app owns this. The header's search icon opens it; Cancel, Escape and a row close it. |
+| `placeholder` | `"Search"` | The field's placeholder, and the sheet's accessible name. |
+| `cancelLabel` | `"Cancel"` | The word on the button that closes search. |
+| `action` | none | `{ label, icon, onSelect }`: the row in the accent. |
+| `sections` | none | Shown before any query. |
+| `results` | none | Shown for a query. An empty array says nothing was found. |
+| `children` | none | The app's own results for a query, in place of `results`. |
+| `emptyText` | `No results for “query”.` | A function of the query. |
+| `query`, `onQueryChange` | the sheet owns the words | For an app that owns them, or wants to hear them change. |
+| `onSubmit` | none | Called when the keyboard's Search key is pressed. |
+| `fieldStart`, `fieldEnd` | none | The app's own pieces inside the field, such as calendar's calendar picker. |
+| `className` | none | The app's own, beside `dl-phone-search`. |
+
+A section is `{ heading, rows }`, or `{ heading, children }` for rows the kit has no shape for, such as calendar's agenda lines. A row is `{ id, title, subtitle, leading, keepOpen, onSelect }`. `leading` is a 20px glyph or a `<PhoneSearchAvatar initials color>`, a 28px circle. A section with no rows is not drawn.
+
+The sheet registers itself as a toast cover, so a toast raised while it is open is drawn over it and not under. An app's `<Toaster cover>` selector need not name it.
+
+`phone.css` reads three variables: `--dl-phone-inset` (16px), `--dl-phone-fill` (the sheet's fill, `#151515`) and `--dl-phone-search-z` (50, over the bottom bar).
+
 ## Helpers
 
-Three things each app had copied. They export from `@dalin/kit` and from `@dalin/kit/helpers`.
+Three things each app had copied, and the motion reader described under "One place for the motion switch". They export from `@dalin/kit` and from `@dalin/kit/helpers`.
 
 ### The close fade
 
@@ -417,9 +795,13 @@ import { TipKey, shortcutLabel } from "@dalin/kit";
 
 That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel` takes `Mod`, `Shift` and `Alt` for the platform's keys and writes every other key as given. `<TipKey>` draws the dot and the key in the muted grey, or in the app's own `className`, and renders nothing without a key. `tipText("Archive", "E")` is the same line as a string. `shortcutLabelFor(mac, keys)` and `isMacPlatform(platform)` are the pure halves. The tooltip itself stays each app's own.
 
-## Not in version 0.2
+## Not in version 0.3
 
-These are still open, so the kit has no value for them: the surface ladder beyond the sidebar, the sidebar's anatomy and its selected row, overlay glass for menus and sheets, type sizes, the focus colour and disabled states, the phone header and bottom bar, the strength of the phone toast's glass, and the command palette.
+These are still open, so the kit has no value for them: type sizes, disabled states, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
+
+These are decided and not built yet. The phone's bottom bar is glass tokens here and still each app's own component. The tooltip and the phone sheets are frosted by the tokens and stay each app's own. The family sheet on Base UI's Drawer is not started.
+
+Five requests from the wave 1 reviews are also waiting: holding a toast until a pill is expected, a hook for the bar's measured footprint, a desktop dock for mail's compose chip, a prop that forces the toast's layout, and a per-part fade in `motion.css`.
 
 ## Working on the kit
 
@@ -431,6 +813,8 @@ npm run build
 ```
 
 Commit `dist/` with the source change that produced it. Apps install from GitHub and never build, so a stale `dist/` ships the old code. `npm run check:dist` rebuilds and fails if the result differs from what is committed.
+
+The component tests run the real Base UI parts in jsdom, on the pinned 1.4.1. `npm run test:base-ui-next` runs them again on 1.9.0, installed beside it as `base-ui-next`. `test/dom.tsx` mounts a tree and sends it clicks and keys, and `test/color.ts` is the colour math behind every contrast claim.
 
 The toast tests run the real `<Toaster>` in jsdom. jsdom has no cascade to trust for `:where()` and `:has()`, so a test that needs to know which of two rules wins weighs their selectors with `test/css.ts`. A test about the docked phone stack that mounts no bar calls `withPill()` from `test/pill.ts`, since the toaster docks only beside a pill.
 

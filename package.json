@@ -1,7 +1,7 @@
 {
   "name": "@dalin/kit",
-  "version": "0.2.0",
-  "description": "The shared design base of the dalin apps: tokens, the toast, the create button, and the helpers each app had copied.",
+  "version": "0.3.0",
+  "description": "The shared design base of the dalin apps: tokens, the toast, the create button, the wordmark and family switcher, frosted menus, the command palette, the phone header and search, and the helpers each app had copied.",
   "type": "module",
   "license": "MIT",
   "author": "Samuel Gomez",
@@ -61,6 +61,8 @@
     "design-tokens",
     "toast",
     "sonner",
+    "base-ui",
+    "command-palette",
     "react"
   ],
   "peerDependencies": {
@@ -68,11 +70,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "sonner": "^2.0.7"
-  },
-  "peerDependenciesMeta": {
-    "@base-ui/react": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@base-ui/react": "1.4.1",
