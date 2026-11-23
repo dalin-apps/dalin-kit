@@ -3,6 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { registerToastDock } from "../toast/toast-dock.js";
+import { pushBackEntry } from "./back-entry.js";
 import { cx } from "./cx.js";
 import { SearchGlyph } from "./icons.js";
 /** A person's circle as a row's lead: 28px, white initials. */
@@ -52,6 +53,13 @@ function Sections({ sections, choose, }) {
  * while it is open announces on the bottom edge and not under it. Nothing
  * else is needed for that.
  *
+ * It owns the system's back while it is open (back-entry.ts): one history
+ * entry, pushed as it opens. The back button or the back swipe closes
+ * search, and Cancel, Escape or a row takes the entry off. A row's action
+ * runs once the entry has gone, a moment after the tap: run first, a row
+ * that opens a page would push its own entry, and that is the one the step
+ * back would take. `systemBack={false}` leaves history alone.
+ *
  *   <PhoneSearch
  *     open={open}
  *     onOpenChange={setOpen}
@@ -62,7 +70,7 @@ function Sections({ sections, choose, }) {
  *     onQueryChange={search}
  *   />
  */
-export function PhoneSearch({ open, onOpenChange, query: queryProp, onQueryChange, onSubmit, placeholder = "Search", cancelLabel = "Cancel", action, sections = NO_SECTIONS, results, children, emptyText, fieldStart, fieldEnd, className, }) {
+export function PhoneSearch({ open, onOpenChange, systemBack = true, query: queryProp, onQueryChange, onSubmit, placeholder = "Search", cancelLabel = "Cancel", action, sections = NO_SECTIONS, results, children, emptyText, fieldStart, fieldEnd, className, }) {
     const [ownQuery, setOwnQuery] = useState("");
     const query = queryProp ?? ownQuery;
     // The sheet's element as state: Base UI mounts it a commit after `open`
@@ -95,10 +103,56 @@ export function PhoneSearch({ open, onOpenChange, query: queryProp, onQueryChang
             return;
         return registerToastDock(sheet, { kind: "cover", rank: COVER_RANK });
     }, [sheet]);
+    // The sheet's history entry. Kept in a ref and not tied to one effect's
+    // cleanup: React's strict mode runs every effect twice as a tree mounts,
+    // and an entry popped and pushed again in one task would lose the second
+    // to the first's traversal.
+    const backEntry = useRef(null);
+    const closeRef = useRef(onOpenChange);
+    closeRef.current = onOpenChange;
+    useEffect(() => {
+        if (open && systemBack) {
+            backEntry.current ??= pushBackEntry(() => {
+                backEntry.current = null;
+                closeRef.current(false);
+            });
+        }
+        else if (backEntry.current) {
+            const entry = backEntry.current;
+            backEntry.current = null;
+            entry.pop();
+        }
+    }, [open, systemBack]);
+    // An app that unmounts the sheet to close it (calendar) leaves no closed
+    // render to pop from, so the entry goes as the sheet does. A microtask
+    // later, so strict mode's unmount and remount in one task takes nothing.
+    const mounted = useRef(false);
+    useEffect(() => {
+        mounted.current = true;
+        return () => {
+            mounted.current = false;
+            queueMicrotask(() => {
+                if (mounted.current)
+                    return;
+                const entry = backEntry.current;
+                backEntry.current = null;
+                entry?.pop();
+            });
+        };
+    }, []);
     const choose = (row) => {
-        if (!row.keepOpen)
-            onOpenChange(false);
-        row.onSelect();
+        if (row.keepOpen) {
+            row.onSelect();
+            return;
+        }
+        const entry = backEntry.current;
+        backEntry.current = null;
+        onOpenChange(false);
+        // With an entry of its own, the row runs once that entry has gone.
+        if (entry)
+            entry.pop(row.onSelect);
+        else
+            row.onSelect();
     };
     const asked = query.trim() !== "";
     const found = results?.some((section) => section.children || (section.rows && section.rows.length > 0)) ?? false;

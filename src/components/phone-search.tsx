@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { registerToastDock } from "../toast/toast-dock.js";
+import { pushBackEntry, type BackEntry } from "./back-entry.js";
 import { cx } from "./cx.js";
 import { SearchGlyph } from "./icons.js";
 
@@ -46,8 +47,20 @@ export type PhoneSearchAction = {
 export type PhoneSearchProps = {
   /** Whether search is open. The app owns this: the header's search icon sets it. */
   open: boolean;
-  /** Called when search closes: Cancel, Escape, the system's back, a row. */
-  onOpenChange: (open: boolean) => void;
+  /**
+   * Called when search closes: Cancel, Escape, the system's back, a row.
+   * Cancel and Escape pass Base UI's details, with the reason. The system's
+   * back passes none.
+   */
+  onOpenChange: (open: boolean, details?: PhoneSearchChangeDetails) => void;
+  /**
+   * Whether the sheet owns the system's back while it is open. On by
+   * default: opening pushes one history entry, the back button or the back
+   * swipe closes search, and closing by Cancel, Escape or a row takes the
+   * entry off again. Pass `false` in an app that already gives search an
+   * entry of its own, or the two would stack.
+   */
+  systemBack?: boolean;
   /** The words in the field, for an app that owns them. Leave it out and the sheet owns them. */
   query?: string;
   /** Called as the words change. */
@@ -79,6 +92,9 @@ export type PhoneSearchProps = {
   /** Extra classes for the sheet, beside `dl-phone-search`. */
   className?: string;
 };
+
+/** What Base UI says about a close: `reason` is `"escape-key"`, `"close-press"` and so on. */
+export type PhoneSearchChangeDetails = Parameters<NonNullable<Dialog.Root.Props["onOpenChange"]>>[1];
 
 export type PhoneSearchAvatarProps = {
   /** One or two letters. */
@@ -171,6 +187,13 @@ function Sections({
  * while it is open announces on the bottom edge and not under it. Nothing
  * else is needed for that.
  *
+ * It owns the system's back while it is open (back-entry.ts): one history
+ * entry, pushed as it opens. The back button or the back swipe closes
+ * search, and Cancel, Escape or a row takes the entry off. A row's action
+ * runs once the entry has gone, a moment after the tap: run first, a row
+ * that opens a page would push its own entry, and that is the one the step
+ * back would take. `systemBack={false}` leaves history alone.
+ *
  *   <PhoneSearch
  *     open={open}
  *     onOpenChange={setOpen}
@@ -184,6 +207,7 @@ function Sections({
 export function PhoneSearch({
   open,
   onOpenChange,
+  systemBack = true,
   query: queryProp,
   onQueryChange,
   onSubmit,
@@ -235,9 +259,53 @@ export function PhoneSearch({
     return registerToastDock(sheet, { kind: "cover", rank: COVER_RANK });
   }, [sheet]);
 
+  // The sheet's history entry. Kept in a ref and not tied to one effect's
+  // cleanup: React's strict mode runs every effect twice as a tree mounts,
+  // and an entry popped and pushed again in one task would lose the second
+  // to the first's traversal.
+  const backEntry = useRef<BackEntry | null>(null);
+  const closeRef = useRef(onOpenChange);
+  closeRef.current = onOpenChange;
+  useEffect(() => {
+    if (open && systemBack) {
+      backEntry.current ??= pushBackEntry(() => {
+        backEntry.current = null;
+        closeRef.current(false);
+      });
+    } else if (backEntry.current) {
+      const entry = backEntry.current;
+      backEntry.current = null;
+      entry.pop();
+    }
+  }, [open, systemBack]);
+  // An app that unmounts the sheet to close it (calendar) leaves no closed
+  // render to pop from, so the entry goes as the sheet does. A microtask
+  // later, so strict mode's unmount and remount in one task takes nothing.
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      queueMicrotask(() => {
+        if (mounted.current) return;
+        const entry = backEntry.current;
+        backEntry.current = null;
+        entry?.pop();
+      });
+    };
+  }, []);
+
   const choose = (row: { keepOpen?: boolean; onSelect: () => void }) => {
-    if (!row.keepOpen) onOpenChange(false);
-    row.onSelect();
+    if (row.keepOpen) {
+      row.onSelect();
+      return;
+    }
+    const entry = backEntry.current;
+    backEntry.current = null;
+    onOpenChange(false);
+    // With an entry of its own, the row runs once that entry has gone.
+    if (entry) entry.pop(row.onSelect);
+    else row.onSelect();
   };
 
   const asked = query.trim() !== "";

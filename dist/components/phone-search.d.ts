@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { Dialog } from "@base-ui/react/dialog";
 /** One row of the phone's search: a suggestion before a query, or a result after one. */
 export type PhoneSearchRow = {
     /** Unique within its section. */
@@ -36,8 +37,20 @@ export type PhoneSearchAction = {
 export type PhoneSearchProps = {
     /** Whether search is open. The app owns this: the header's search icon sets it. */
     open: boolean;
-    /** Called when search closes: Cancel, Escape, the system's back, a row. */
-    onOpenChange: (open: boolean) => void;
+    /**
+     * Called when search closes: Cancel, Escape, the system's back, a row.
+     * Cancel and Escape pass Base UI's details, with the reason. The system's
+     * back passes none.
+     */
+    onOpenChange: (open: boolean, details?: PhoneSearchChangeDetails) => void;
+    /**
+     * Whether the sheet owns the system's back while it is open. On by
+     * default: opening pushes one history entry, the back button or the back
+     * swipe closes search, and closing by Cancel, Escape or a row takes the
+     * entry off again. Pass `false` in an app that already gives search an
+     * entry of its own, or the two would stack.
+     */
+    systemBack?: boolean;
     /** The words in the field, for an app that owns them. Leave it out and the sheet owns them. */
     query?: string;
     /** Called as the words change. */
@@ -69,6 +82,8 @@ export type PhoneSearchProps = {
     /** Extra classes for the sheet, beside `dl-phone-search`. */
     className?: string;
 };
+/** What Base UI says about a close: `reason` is `"escape-key"`, `"close-press"` and so on. */
+export type PhoneSearchChangeDetails = Parameters<NonNullable<Dialog.Root.Props["onOpenChange"]>>[1];
 export type PhoneSearchAvatarProps = {
     /** One or two letters. */
     initials: string;
@@ -98,6 +113,13 @@ export declare function PhoneSearchAvatar({ initials, color, className }: PhoneS
  * while it is open announces on the bottom edge and not under it. Nothing
  * else is needed for that.
  *
+ * It owns the system's back while it is open (back-entry.ts): one history
+ * entry, pushed as it opens. The back button or the back swipe closes
+ * search, and Cancel, Escape or a row takes the entry off. A row's action
+ * runs once the entry has gone, a moment after the tap: run first, a row
+ * that opens a page would push its own entry, and that is the one the step
+ * back would take. `systemBack={false}` leaves history alone.
+ *
  *   <PhoneSearch
  *     open={open}
  *     onOpenChange={setOpen}
@@ -108,5 +130,5 @@ export declare function PhoneSearchAvatar({ initials, color, className }: PhoneS
  *     onQueryChange={search}
  *   />
  */
-export declare function PhoneSearch({ open, onOpenChange, query: queryProp, onQueryChange, onSubmit, placeholder, cancelLabel, action, sections, results, children, emptyText, fieldStart, fieldEnd, className, }: PhoneSearchProps): ReactNode;
+export declare function PhoneSearch({ open, onOpenChange, systemBack, query: queryProp, onQueryChange, onSubmit, placeholder, cancelLabel, action, sections, results, children, emptyText, fieldStart, fieldEnd, className, }: PhoneSearchProps): ReactNode;
 //# sourceMappingURL=phone-search.d.ts.map

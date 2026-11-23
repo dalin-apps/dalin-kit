@@ -61,6 +61,7 @@ export {
   PhoneSearchAvatar,
   type PhoneSearchAction,
   type PhoneSearchAvatarProps,
+  type PhoneSearchChangeDetails,
   type PhoneSearchProps,
   type PhoneSearchRow,
   type PhoneSearchSection,

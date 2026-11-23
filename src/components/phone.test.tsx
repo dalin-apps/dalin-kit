@@ -4,7 +4,7 @@
  * The phone's header and its search sheet: what each renders, where the
  * search icon sits, the caret on opening, and the values in phone.css.
  */
-import { act, useState } from "react";
+import { StrictMode, act, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ACCENTS, RENDER, contrast, hex } from "../../test/color.js";
@@ -405,6 +405,174 @@ describe("<PhoneSearch>", () => {
     await click(one(".dl-phone-search-cancel"));
     await settle(100);
     expect(readToastCovered()).toBe(false);
+  });
+});
+
+/** The kit's layer tokens on the history entry the page is on. */
+const layers = (): unknown[] => ((window.history.state as { dalinKit?: unknown[] } | null)?.dalinKit ?? []);
+/** Lets a traversal land: jsdom fires popstate on a later task. */
+const landed = () => settle(60);
+
+describe("<PhoneSearch>, the system's back", () => {
+  it("pushes one history entry as it opens, over the state that was there", async () => {
+    window.history.replaceState({ __NA: true, tree: "inbox" }, "");
+    const push = vi.spyOn(window.history, "pushState");
+    await mount(<Search />);
+    expect(layers()).toHaveLength(0);
+    await tapSearch();
+    await landed();
+    expect(push).toHaveBeenCalledTimes(1);
+    push.mockRestore();
+    expect(layers()).toHaveLength(1);
+    // A router's own markers ride along: Next reloads on an entry without them.
+    expect(window.history.state).toMatchObject({ __NA: true, tree: "inbox" });
+    await click(one(".dl-phone-search-cancel"));
+    await landed();
+  });
+
+  it("closes on the system's back, and tells the app", async () => {
+    const onOpenChange = vi.fn();
+    function Owned() {
+      const [open, setOpen] = useState(true);
+      return (
+        <PhoneSearch
+          open={open}
+          onOpenChange={(next, details) => {
+            onOpenChange(next, details);
+            setOpen(next);
+          }}
+        />
+      );
+    }
+    await mount(<Owned />);
+    await landed();
+    expect(layers()).toHaveLength(1);
+    await act(async () => {
+      window.history.back();
+    });
+    await landed();
+    expect(onOpenChange).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).toHaveBeenCalledWith(false, undefined);
+    await settle(100);
+    expect(sheet()).toBeNull();
+    expect(layers()).toHaveLength(0);
+  });
+
+  it.each([
+    ["Cancel", () => click(one(".dl-phone-search-cancel"))],
+    ["Escape", () => key("Escape", field())],
+  ])("takes its entry off when %s closes it", async (_how, close) => {
+    await mount(<Search />);
+    await tapSearch();
+    await landed();
+    const here = window.history.state as { dalinKit: unknown[] };
+    expect(here.dalinKit).toHaveLength(1);
+    await close();
+    await landed();
+    await settle(100);
+    expect(sheet()).toBeNull();
+    expect(layers()).toHaveLength(0);
+    // One step forward is the entry that was taken off, so it was a step back.
+    await act(async () => {
+      window.history.forward();
+    });
+    await landed();
+    expect(layers()).toEqual(here.dalinKit);
+    await act(async () => {
+      window.history.back();
+    });
+    await landed();
+  });
+
+  it("runs a row once its entry has gone, so a page the row opens keeps its own", async () => {
+    const seen: number[] = [];
+    const open = vi.fn(() => {
+      seen.push(layers().length);
+      window.history.pushState({ page: "thread" }, "");
+    });
+    await mount(<Search sections={[{ heading: "Recent", rows: [{ id: "t", title: "Thanksgiving plans", onSelect: open }] }]} />);
+    await tapSearch();
+    await landed();
+    await click(rows()[1]);
+    await landed();
+    expect(open).toHaveBeenCalledTimes(1);
+    // The sheet's entry had gone by the time the row ran, and the row's own
+    // entry is the one the page is on.
+    expect(seen).toEqual([0]);
+    expect(window.history.state).toEqual({ page: "thread" });
+    await settle(100);
+    expect(sheet()).toBeNull();
+    await act(async () => {
+      window.history.back();
+    });
+    await landed();
+  });
+
+  it("keeps its entry through a row that leaves search open", async () => {
+    const pick = vi.fn();
+    await mount(<Search sections={[{ heading: "Recent", rows: [{ id: "p", title: "Priya", keepOpen: true, onSelect: pick }] }]} />);
+    await tapSearch();
+    await landed();
+    await click(rows()[1]);
+    await landed();
+    expect(pick).toHaveBeenCalledTimes(1);
+    expect(sheet()).not.toBeNull();
+    expect(layers()).toHaveLength(1);
+    await click(one(".dl-phone-search-cancel"));
+    await landed();
+  });
+
+  it("takes its entry off when the app unmounts the sheet to close it", async () => {
+    function Unmounting() {
+      const [open, setOpen] = useState(true);
+      return open ? <PhoneSearch open onOpenChange={() => setOpen(false)} /> : null;
+    }
+    await mount(<Unmounting />);
+    await landed();
+    expect(layers()).toHaveLength(1);
+    await click(one(".dl-phone-search-cancel"));
+    await landed();
+    expect(sheet()).toBeNull();
+    expect(layers()).toHaveLength(0);
+  });
+
+  it("pushes once under strict mode, which runs every effect twice", async () => {
+    const push = vi.spyOn(window.history, "pushState");
+    const back = vi.spyOn(window.history, "back");
+    await mount(
+      <StrictMode>
+        <Search />
+      </StrictMode>,
+    );
+    await tapSearch();
+    await landed();
+    expect(sheet()).not.toBeNull();
+    expect(layers()).toHaveLength(1);
+    expect(push).toHaveBeenCalledTimes(1);
+    expect(back).not.toHaveBeenCalled();
+    push.mockRestore();
+    back.mockRestore();
+    await click(one(".dl-phone-search-cancel"));
+    await landed();
+    expect(layers()).toHaveLength(0);
+  });
+
+  it("leaves history alone in an app that owns the back layer itself", async () => {
+    const push = vi.spyOn(window.history, "pushState");
+    await mount(<Search systemBack={false} />);
+    await tapSearch();
+    await landed();
+    expect(layers()).toHaveLength(0);
+    expect(push).not.toHaveBeenCalled();
+    push.mockRestore();
+    const compose2 = vi.fn();
+    await mount(<Search systemBack={false} action={{ label: "Compose", onSelect: compose2 }} />);
+    // With no entry to wait for, a row runs inside the tap itself.
+    await act(async () => {
+      rows()[0]!.click();
+      expect(compose2).toHaveBeenCalledTimes(1);
+    });
+    await settle(100);
   });
 });
 

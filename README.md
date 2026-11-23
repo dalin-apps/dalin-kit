@@ -726,7 +726,8 @@ Before a word is typed it shows what calendar's search shows. First comes the ap
 
 | Prop | Default | What it does |
 | --- | --- | --- |
-| `open`, `onOpenChange` | required | The app owns this. The header's search icon opens it; Cancel, Escape and a row close it. |
+| `open`, `onOpenChange` | required | The app owns this. The header's search icon opens it; Cancel, Escape, a row and the system's back close it. |
+| `systemBack` | `true` | Whether the sheet owns the system's back while it is open. `false` leaves history alone. |
 | `placeholder` | `"Search"` | The field's placeholder, and the sheet's accessible name. |
 | `cancelLabel` | `"Cancel"` | The word on the button that closes search. |
 | `action` | none | `{ label, icon, onSelect }`: the row in the accent. |
@@ -742,6 +743,10 @@ Before a word is typed it shows what calendar's search shows. First comes the ap
 The field is a plain box around the input, never a `<label>`, since a label hands every tap to its first control. A tap on a control the app put in `fieldStart` or `fieldEnd` belongs to that control. A tap anywhere else on the field puts the caret in the input.
 
 A section is `{ heading, rows }`, or `{ heading, children }` for rows the kit has no shape for, such as calendar's agenda lines. A row is `{ id, title, subtitle, leading, keepOpen, onSelect }`. `leading` is a 20px glyph or a `<PhoneSearchAvatar initials color>`, a 28px circle. A section with no rows is not drawn.
+
+The sheet owns the system's back while it is open. Opening pushes one history entry over the state that was there, so a router's own markers stay on it. Android's back button or the iOS back swipe then closes search and never leaves the app. Closing by Cancel, Escape or a row takes the entry off again. An app that closes search by unmounting the sheet, as calendar does, gets the same.
+
+A row that closes search runs once that entry has gone, a moment after the tap. Run first, a row that opens a page would push the page's entry, and the step back would take that one. An app that closes search from a row of its own and then pushes a route has the same race to mind. An app that already gives search a history entry passes `systemBack={false}`, or the two stack. Rows then run inside the tap, as in 0.3.
 
 The sheet registers itself as a toast cover, so a toast raised while it is open is drawn over it and not under. An app's `<Toaster cover>` selector need not name it.
 
