@@ -219,6 +219,15 @@
     background: oklch(1 0 0 / 0.07) !important;
   }
 }
+/* The keyboard ring on the action, the family's own. It is drawn inside the
+   segment: the segment runs to the card's edge, top, bottom and right, so a
+   ring outside it would cross the card's rim. It follows the last segment's
+   rounded corners. Sonner's own focus shadow is turned off under it. */
+[data-sonner-toast] [data-button]:focus-visible {
+  outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff)) !important;
+  outline-offset: calc(-1 * var(--dl-focus-w, 2px)) !important;
+  box-shadow: none !important;
+}
 /* An Undo toast's line (toastLine): the item's name first, in the heavier
    weight, then what happened to it. The name is the part
    that gives way when the line is too long for the toast, so the verb and
@@ -992,7 +1001,7 @@
   width: calc(var(--dl-bar-w) + 6px);
   height: calc(var(--dl-bar-h) + 6px);
   box-sizing: border-box;
-  border: 2px solid var(--dl-focus-ring, var(--dl-fg, #fff));
+  border: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff));
   border-radius: 999px;
   pointer-events: none;
 }

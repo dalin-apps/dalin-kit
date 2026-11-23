@@ -141,6 +141,13 @@ html[data-dl-motion="reduce"] :is(.dl-palette, .dl-palette-dim) {
   font: inherit;
   cursor: default;
 }
+/* The Esc cap takes no Tab stop, but a script or an assistive tool can still
+   focus it: the family's keyboard ring, around the cap. */
+.dl-palette-close:focus-visible {
+  outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff));
+  outline-offset: var(--dl-focus-offset, 2px);
+  border-radius: var(--dl-r-control, 7px);
+}
 
 /* Read by a screen reader, drawn for no one. */
 .dl-palette-status {
