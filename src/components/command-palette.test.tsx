@@ -678,8 +678,8 @@ describe("palette.css", () => {
   });
 
   it("stands over the menus and the toaster, the panel one over its dim", () => {
-    expect(ruleFor(css, ".dl-palette-dim")).toContain("z-index: var(--dl-palette-z, 90)");
-    expect(panel).toContain("z-index: calc(var(--dl-palette-z, 90) + 1)");
+    expect(ruleFor(css, ".dl-palette-dim")).toContain("z-index: var(--dl-palette-z, var(--dl-z-palette, 90))");
+    expect(panel).toContain("z-index: calc(var(--dl-palette-z, var(--dl-z-palette, 90)) + 1)");
   });
 
   it("does not animate when the keyboard opened or closed it", () => {

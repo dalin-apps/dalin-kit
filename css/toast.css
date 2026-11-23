@@ -104,8 +104,8 @@
   --dl-bar-w: 320px;
   --dl-bar-h: 58px;
   --dl-bar-inset: 16px;
-  --dl-bar-z: 30;
-  --dl-toast-over-z: 60;
+  --dl-bar-z: var(--dl-z-bar, 30);
+  --dl-toast-over-z: var(--dl-z-toast, 60);
   /* The phone toast's material: the bottom bar's glass (the owner's pick on
      2026-11-22, "same frost as the bar"). The literals are the bar's own
      values, for a page that loads this sheet without tokens.css. */
@@ -827,7 +827,7 @@
   --y: translateY(calc(-1 * var(--notif-floor))) !important;
   opacity: 1 !important;
   animation: none !important;
-  z-index: 60 !important;
+  z-index: var(--dl-toast-over-z, 60) !important;
 }
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)
   [data-sonner-toast].toast-pinned[data-mounted="true"][data-expanded="false"]:not([data-removed="true"])

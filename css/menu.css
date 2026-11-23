@@ -52,7 +52,7 @@
    not indented inside the block, so each line reads as it did before. */
 @layer dalin {
 .dl-menu-positioner {
-  z-index: var(--dl-overlay-z, 70);
+  z-index: var(--dl-overlay-z, var(--dl-z-overlay, 70));
   outline: none;
 }
 

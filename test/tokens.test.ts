@@ -271,3 +271,23 @@ describe("--dl-accent-text", () => {
     expect(Math.max(L, floor)).toBe(L);
   });
 });
+
+describe("the kit's own z-indexes read the ladder", () => {
+  it.each([
+    ["menu", "var(--dl-overlay-z, var(--dl-z-overlay, 70))"],
+    ["palette", "var(--dl-palette-z, var(--dl-z-palette, 90))"],
+    ["phone", "var(--dl-phone-search-z, var(--dl-z-search, 50))"],
+    ["toast", "--dl-bar-z: var(--dl-z-bar, 30)"],
+    ["toast", "--dl-toast-over-z: var(--dl-z-toast, 60)"],
+  ] as const)("%s.css reads %s", (sheet, text) => {
+    expect(readCss(sheet)).toContain(text);
+  });
+
+  it("leaves no bare number as a z-index in a kit sheet, past the small steps inside a part", () => {
+    for (const sheet of ["menu", "palette", "phone", "toast", "create", "wordmark", "empty", "base"] as const) {
+      for (const [, value] of readCss(sheet).matchAll(/z-index:\s*(-?\d+)/g)) {
+        expect(Math.abs(Number(value)), `${sheet}.css z-index ${value}`).toBeLessThan(10);
+      }
+    }
+  });
+});

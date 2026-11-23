@@ -887,10 +887,10 @@ describe("phone.css, search", () => {
   });
 
   it("stands over the bottom bar and under the toaster while it is over a sheet", () => {
-    expect(body).toContain("z-index: var(--dl-phone-search-z, 50)");
+    expect(body).toContain("z-index: var(--dl-phone-search-z, var(--dl-z-search, 50))");
     const toast = readCss("toast");
-    expect(toast).toContain("--dl-bar-z: 30;");
-    expect(toast).toContain("--dl-toast-over-z: 60;");
+    expect(toast).toContain("--dl-bar-z: var(--dl-z-bar, 30);");
+    expect(toast).toContain("--dl-toast-over-z: var(--dl-z-toast, 60);");
   });
 
   it("opens and closes at once: no transition, no animation", () => {

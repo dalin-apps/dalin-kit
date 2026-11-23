@@ -721,6 +721,6 @@ describe("menu.css", () => {
   });
 
   it("stands over the toaster while it is over a sheet", () => {
-    expect(ruleFor(css, ".dl-menu-positioner")).toContain("z-index: var(--dl-overlay-z, 70)");
+    expect(ruleFor(css, ".dl-menu-positioner")).toContain("z-index: var(--dl-overlay-z, var(--dl-z-overlay, 70))");
   });
 });

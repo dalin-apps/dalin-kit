@@ -37,14 +37,14 @@
 .dl-palette-dim {
   position: fixed;
   inset: 0;
-  z-index: var(--dl-palette-z, 90);
+  z-index: var(--dl-palette-z, var(--dl-z-palette, 90));
   background: var(--dl-palette-dim, var(--dl-scrim, rgb(0 0 0 / 0.62)));
   backdrop-filter: blur(3px);
   transition: opacity var(--dl-t-open, 150ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 .dl-palette {
   position: fixed;
-  z-index: calc(var(--dl-palette-z, 90) + 1);
+  z-index: calc(var(--dl-palette-z, var(--dl-z-palette, 90)) + 1);
   top: 12vh;
   left: 50%;
   width: min(600px, calc(100vw - 32px));

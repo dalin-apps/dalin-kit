@@ -152,7 +152,7 @@
   --dl-phone-search-ink: oklch(from var(--dl-accent, #fff) max(l, 0.7) c h);
   position: fixed;
   inset: 0;
-  z-index: var(--dl-phone-search-z, 50);
+  z-index: var(--dl-phone-search-z, var(--dl-z-search, 50));
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
