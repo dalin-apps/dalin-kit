@@ -1,5 +1,6 @@
 export { DALIN_APPS, dalinApp, type DalinApp, type DalinAppInfo } from "./apps.js";
 export { Wordmark, type WordmarkProps } from "./wordmark.js";
+export { FamilySwitcher, type FamilySwitcherProps } from "./family-switcher.js";
 export { Kbd, type KbdProps } from "./kbd.js";
 export {
   Menu,

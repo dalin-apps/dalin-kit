@@ -98,3 +98,39 @@
     animation: none;
   }
 }
+
+/* ---------- the family switcher (<FamilySwitcher>) ----------
+   The wordmark as a button. Nothing shows at rest: no fill, no edge, no
+   chevron, and the pointer stays an arrow, so the sidebar reads as it did
+   when the wordmark was a picture. Pointing at it or pressing it opens the
+   menu below (menu.css draws the surface, the rows and the arrow). The
+   keyboard ring is --dl-focus-ring, the app's accent. */
+.dl-switcher-trigger {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--dl-r-control, 7px);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+.dl-switcher-trigger:focus-visible {
+  outline: 2px solid var(--dl-focus-ring, var(--dl-fg, #fff));
+  outline-offset: 4px;
+}
+/* The menu: each app as its own wordmark at 15px, 10px in, and a white
+   check at the right of the app you are in. */
+.dl-menu.dl-switcher {
+  min-width: 176px;
+}
+.dl-switcher .dl-menu-item {
+  padding: 0 8px 0 10px;
+}
+.dl-switcher .dl-wordmark {
+  font-size: 15px;
+}
