@@ -18,12 +18,15 @@ import { measureToastCover } from "./toast-dock.js";
  * on its cards many times a second while they move.
  *
  * Only while `on`: the phone layout, where a cover hides the bottom bar. A
- * selector the browser can't parse names nothing.
+ * selector the browser can't parse names nothing. `ghosts` is the app's
+ * selector for its own exit copies (`<Toaster coverSkip>`), which cover
+ * nothing.
  */
 export function useLiveCover(
   selector: string | undefined,
   on: boolean,
   skip: RefObject<HTMLElement | null>,
+  ghosts?: string,
 ): boolean {
   const [up, setUp] = useState(false);
 
@@ -32,7 +35,7 @@ export function useLiveCover(
       setUp(false);
       return;
     }
-    const read = () => setUp(coverUp(selector));
+    const read = () => setUp(coverUp(selector, ghosts));
     let frame: number | undefined;
     const later = () => {
       if (frame !== undefined) return;
@@ -58,15 +61,15 @@ export function useLiveCover(
       window.removeEventListener("resize", later);
       if (frame !== undefined) window.cancelAnimationFrame(frame);
     };
-  }, [selector, on, skip]);
+  }, [selector, on, skip, ghosts]);
 
   return up;
 }
 
 /** Whether the selector names a surface on screen. False for one that can't be parsed. */
-export function coverUp(selector: string): boolean {
+export function coverUp(selector: string, ghosts?: string): boolean {
   try {
-    return measureToastCover(selector) !== null;
+    return measureToastCover(selector, ghosts) !== null;
   } catch {
     return false;
   }

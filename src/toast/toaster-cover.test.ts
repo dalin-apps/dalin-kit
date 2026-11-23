@@ -125,6 +125,29 @@ describe("measureToastCover", () => {
   });
 });
 
+describe("measureToastCover, the app's own exit copies", () => {
+  it("ignores a copy the app marks with its own attribute", () => {
+    sheet(300).setAttribute("data-ghost", "");
+    expect(measureToastCover(".sheet")).toEqual({ kind: "cover", line: 500 });
+    expect(measureToastCover(".sheet", "[data-ghost]")).toBeNull();
+  });
+
+  it("ignores a cover inside such a copy, as drive's card sits inside its overlay's copy", () => {
+    const overlay = document.createElement("div");
+    overlay.setAttribute("data-ghost", "");
+    document.body.appendChild(overlay);
+    made.push(overlay);
+    overlay.appendChild(sheet(300));
+    expect(measureToastCover(".sheet", "[data-ghost]")).toBeNull();
+  });
+
+  it("still finds a live cover beside a copy", () => {
+    sheet(300).setAttribute("data-ghost", "");
+    sheet(450);
+    expect(measureToastCover(".sheet", "[data-ghost]")).toEqual({ kind: "cover", line: 350 });
+  });
+});
+
 describe("<Toaster cover>", () => {
   it("announces a toast above a cover that is up when it arrives", async () => {
     await mount({ cover: ".sheet, .dialog" });
@@ -227,6 +250,34 @@ describe("<Toaster cover>, watched live", () => {
     el.remove();
     await frame();
     expect(readToastCovered()).toBe(false);
+  });
+
+  it("does not count the app's own exit copy as a cover (coverSkip)", async () => {
+    await mount({ cover: ".sheet", coverSkip: "[data-ghost]" });
+    await raiseToast();
+    await tucked();
+    const el = sheet(400);
+    await frame();
+    expect(readToastCovered()).toBe(true);
+    // The sheet closes and leaves a copy of itself to fade.
+    el.setAttribute("data-ghost", "");
+    await frame();
+    expect(readToastCovered()).toBe(false);
+  });
+
+  it("announces a toast at the pill while only an exit copy is up", async () => {
+    await mount({ cover: ".sheet", coverSkip: "[data-ghost]" });
+    sheet(400).setAttribute("data-ghost", "");
+    await raiseToast();
+    expect(has("toast-announcing")).toBe(true);
+    expect(has("toast-over")).toBe(false);
+  });
+
+  it("names no copies with a skip selector the browser can't parse, so the cover still counts", async () => {
+    await mount({ cover: ".sheet", coverSkip: "[data-ghost" });
+    sheet(400);
+    await frame();
+    expect(readToastCovered()).toBe(true);
   });
 
   it("follows a cover that is named by an attribute", async () => {

@@ -244,9 +244,9 @@ function useHeldDock(phase, phone, measured) {
     return live ?? held.current ?? (phase !== null ? measured : null);
 }
 /** The cover a selector names, measured now. A selector the browser can't parse names none. */
-function measureNamedCover(selector) {
+function measureNamedCover(selector, skip) {
     try {
-        return measureToastCover(selector);
+        return measureToastCover(selector, skip);
     }
     catch {
         return null;
@@ -456,7 +456,7 @@ const AGAIN_CARD = `[data-sonner-toast][${AGAIN_ATTR}]`;
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover, scrim = false, onScrimTuck, defaultKind, reducedMotionSelector, fullMotionSelector, reducedTransparencySelector, }) {
+export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassName, cover, coverSkip, scrim = false, onScrimTuck, defaultKind, reducedMotionSelector, fullMotionSelector, reducedTransparencySelector, }) {
     // Motion is reduced by the app's own switch, or by the system's setting
     // unless the app's switch says Full: a choice made in the app is the more
     // particular one, and it wins.
@@ -519,12 +519,12 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
     const [measured, setMeasured] = useState(null);
     const onAnnounce = useCallback(() => {
         refreshToastDock();
-        setMeasured(cover && docked ? measureNamedCover(cover) : null);
-    }, [cover, docked]);
+        setMeasured(cover && docked ? measureNamedCover(cover, coverSkip) : null);
+    }, [cover, coverSkip, docked]);
     const root = useRef(null);
     // Between toasts the selector is watched too, so a cover that opens over a
     // fanned stack tucks it, and the band knows to stand down under it.
-    const coverUp = useLiveCover(cover, docked, root);
+    const coverUp = useLiveCover(cover, docked, root, coverSkip);
     useEffect(() => {
         setNamedToastCover(coverUp);
         return () => setNamedToastCover(false);

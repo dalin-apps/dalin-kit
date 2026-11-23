@@ -52,6 +52,15 @@ export type ToasterProps = {
      */
     cover?: string;
     /**
+     * A selector for the app's own exit copies, which cover nothing. A cover
+     * that closes may leave a copy of itself to fade out, and the copy still
+     * matches `cover`. The kit's own copies (`data-dl-leaving`, from
+     * `watchLeaving`) are skipped already; an app that leaves copies under an
+     * attribute of its own names it here, such as drive's `[data-ghost]`. A
+     * surface that matches it, or sits inside one that does, is not a cover.
+     */
+    coverSkip?: string;
+    /**
      * Whether a tap off a fanned phone stack tucks it. With it, the kit lays a
      * layer over the page while the stack is fanned out, one step under the
      * toasts (`.toast-scrim` in toast.css), and a tap on it tucks the stack.
@@ -144,5 +153,5 @@ export type ToasterProps = {
  * Sonner lays the stack out expanded the whole time, so the column is its own
  * fanned layout and the tuck is a sideways shift on top of it.
  */
-export declare function Toaster({ gateOpen, phoneMaxWidth, className: appClassName, cover, scrim, onScrimTuck, defaultKind, reducedMotionSelector, fullMotionSelector, reducedTransparencySelector, }: ToasterProps): import("react").JSX.Element;
+export declare function Toaster({ gateOpen, phoneMaxWidth, className: appClassName, cover, coverSkip, scrim, onScrimTuck, defaultKind, reducedMotionSelector, fullMotionSelector, reducedTransparencySelector, }: ToasterProps): import("react").JSX.Element;
 //# sourceMappingURL=toaster.d.ts.map

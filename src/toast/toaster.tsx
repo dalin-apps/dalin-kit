@@ -293,9 +293,9 @@ function useHeldDock(phase: Phase, phone: boolean, measured: ToastDock | null): 
 }
 
 /** The cover a selector names, measured now. A selector the browser can't parse names none. */
-function measureNamedCover(selector: string): ToastDock | null {
+function measureNamedCover(selector: string, skip?: string): ToastDock | null {
   try {
-    return measureToastCover(selector);
+    return measureToastCover(selector, skip);
   } catch {
     return null;
   }
@@ -492,6 +492,15 @@ export type ToasterProps = {
    */
   cover?: string;
   /**
+   * A selector for the app's own exit copies, which cover nothing. A cover
+   * that closes may leave a copy of itself to fade out, and the copy still
+   * matches `cover`. The kit's own copies (`data-dl-leaving`, from
+   * `watchLeaving`) are skipped already; an app that leaves copies under an
+   * attribute of its own names it here, such as drive's `[data-ghost]`. A
+   * surface that matches it, or sits inside one that does, is not a cover.
+   */
+  coverSkip?: string;
+  /**
    * Whether a tap off a fanned phone stack tucks it. With it, the kit lays a
    * layer over the page while the stack is fanned out, one step under the
    * toasts (`.toast-scrim` in toast.css), and a tap on it tucks the stack.
@@ -590,6 +599,7 @@ export function Toaster({
   phoneMaxWidth,
   className: appClassName,
   cover,
+  coverSkip,
   scrim = false,
   onScrimTuck,
   defaultKind,
@@ -656,12 +666,12 @@ export function Toaster({
   const [measured, setMeasured] = useState<ToastDock | null>(null);
   const onAnnounce = useCallback(() => {
     refreshToastDock();
-    setMeasured(cover && docked ? measureNamedCover(cover) : null);
-  }, [cover, docked]);
+    setMeasured(cover && docked ? measureNamedCover(cover, coverSkip) : null);
+  }, [cover, coverSkip, docked]);
   const root = useRef<HTMLDivElement>(null);
   // Between toasts the selector is watched too, so a cover that opens over a
   // fanned stack tucks it, and the band knows to stand down under it.
-  const coverUp = useLiveCover(cover, docked, root);
+  const coverUp = useLiveCover(cover, docked, root, coverSkip);
   useEffect(() => {
     setNamedToastCover(coverUp);
     return () => setNamedToastCover(false);

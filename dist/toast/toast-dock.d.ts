@@ -63,8 +63,13 @@ export declare function refreshToastDock(): void;
  * `<Toaster cover>` reads as each toast arrives, for an app that would rather
  * name its sheets and dialogs once than register each as a dock. A copy still
  * fading out (`data-dl-leaving`, the kit's close fade) covers nothing.
+ *
+ * `skip` is a selector for the app's own exit copies, for an app that leaves
+ * them with an attribute of its own (drive's `[data-ghost]`,
+ * `<Toaster coverSkip>`). A surface that matches it, or sits inside one that
+ * does, covers nothing either.
  */
-export declare function measureToastCover(selector: string): ToastDock | null;
+export declare function measureToastCover(selector: string, skip?: string): ToastDock | null;
 /** The dock the toaster draws now, or null while it is the pill. */
 export declare function readToastDock(): ToastDock | null;
 /** Counts one pill on the page until the returned function is called. */

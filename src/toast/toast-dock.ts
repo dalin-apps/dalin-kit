@@ -141,17 +141,32 @@ export function refreshToastDock(): void {
  * `<Toaster cover>` reads as each toast arrives, for an app that would rather
  * name its sheets and dialogs once than register each as a dock. A copy still
  * fading out (`data-dl-leaving`, the kit's close fade) covers nothing.
+ *
+ * `skip` is a selector for the app's own exit copies, for an app that leaves
+ * them with an attribute of its own (drive's `[data-ghost]`,
+ * `<Toaster coverSkip>`). A surface that matches it, or sits inside one that
+ * does, covers nothing either.
  */
-export function measureToastCover(selector: string): ToastDock | null {
+export function measureToastCover(selector: string, skip?: string): ToastDock | null {
   if (typeof document === "undefined") return null;
   let top = Number.POSITIVE_INFINITY;
   for (const el of document.querySelectorAll(selector)) {
     if (el.closest("[data-dl-leaving]")) continue;
+    if (skip && inside(el, skip)) continue;
     const rect = el.getBoundingClientRect();
     if (rect.height > 0) top = Math.min(top, rect.top);
   }
   if (top === Number.POSITIVE_INFINITY) return null;
   return { kind: "cover", line: dockLine(window.innerHeight - top, window.innerHeight, barHeight()) };
+}
+
+/** Whether `el` matches the selector or sits inside a match. A selector the browser can't parse names nothing. */
+function inside(el: Element, selector: string): boolean {
+  try {
+    return el.closest(selector) !== null;
+  } catch {
+    return false;
+  }
 }
 
 /** The dock the toaster draws now, or null while it is the pill. */

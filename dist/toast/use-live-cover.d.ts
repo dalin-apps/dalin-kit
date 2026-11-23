@@ -14,9 +14,11 @@ import { type RefObject } from "react";
  * on its cards many times a second while they move.
  *
  * Only while `on`: the phone layout, where a cover hides the bottom bar. A
- * selector the browser can't parse names nothing.
+ * selector the browser can't parse names nothing. `ghosts` is the app's
+ * selector for its own exit copies (`<Toaster coverSkip>`), which cover
+ * nothing.
  */
-export declare function useLiveCover(selector: string | undefined, on: boolean, skip: RefObject<HTMLElement | null>): boolean;
+export declare function useLiveCover(selector: string | undefined, on: boolean, skip: RefObject<HTMLElement | null>, ghosts?: string): boolean;
 /** Whether the selector names a surface on screen. False for one that can't be parsed. */
-export declare function coverUp(selector: string): boolean;
+export declare function coverUp(selector: string, ghosts?: string): boolean;
 //# sourceMappingURL=use-live-cover.d.ts.map
