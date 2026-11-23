@@ -124,6 +124,8 @@ describe("@dalin/kit/components", () => {
     "PhoneHeaderIcon",
     "PhoneSearch",
     "PhoneSearchAvatar",
+    "SOURCE_WAIT_MS",
+    "ariaKeyShortcuts",
   ])("exports %s", (name) => {
     expect((components as Record<string, unknown>)[name]).toBeDefined();
   });

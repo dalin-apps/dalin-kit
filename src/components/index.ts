@@ -31,7 +31,9 @@ export {
   ContextMenuContent,
   ContextMenuTrigger,
   type ContextMenuContentProps,
+  type ContextMenuProps,
 } from "./context-menu.js";
+export { ariaKeyShortcuts } from "./key-names.js";
 export {
   Popover,
   PopoverClose,
@@ -44,6 +46,7 @@ export {
 export { EmptyState, type EmptyStateProps } from "./empty-state.js";
 export {
   CommandPalette,
+  SOURCE_WAIT_MS,
   type CommandPaletteProps,
   type PaletteItem,
   type PaletteSource,
