@@ -32,6 +32,12 @@
    and any colour or filter in the recipe. The glass belongs to the create
    action only; every other committing button stays neutral or solid.
 
+   Cascade. This file stays out of the `dalin` layer the kit's component
+   sheets are in. The class goes on the app's own button, beside the app's
+   utilities, and nothing here is a default for one of them to change: in a
+   layer, a stray shadow, ring or background utility would replace the
+   glass.
+
    The recipe uses relative colour syntax (oklch(from ...)), which needs
    Chrome 119, Safari 16.4 or Firefox 128. */
 .dl-create,

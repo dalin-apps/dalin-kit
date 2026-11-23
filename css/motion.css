@@ -24,7 +24,12 @@
 
    An overlay that must fade its parts instead of itself (one whose surface
    is a pseudo-element with its own blur) overrides the first rule below for
-   its own class. */
+   its own class.
+
+   Cascade. The rules are in the cascade layer `dalin` with the kit's other
+   sheets. Every declaration here is `!important`, and an important
+   declaration in a layer beats an unlayered one, so the fade still wins. */
+@layer dalin {
 [data-dl-leaving] {
   animation: dl-leave var(--dl-t-close, 110ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)) forwards !important;
   pointer-events: none !important;
@@ -41,4 +46,5 @@
   to {
     opacity: 0;
   }
+}
 }

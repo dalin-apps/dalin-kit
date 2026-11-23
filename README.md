@@ -33,6 +33,19 @@ import "@dalin/kit/phone.css";
 
 The last five are new in 0.3, one to a part, so an app adds a sheet as it adopts that part. The family switcher and the command palette also need `menu.css`.
 
+From 0.4 the component sheets (`menu`, `palette`, `phone`, `empty`, `wordmark`, `motion`) put their rules in a cascade layer named `dalin`. State the layer order once, as the first line of the app's own sheet, before Tailwind is imported:
+
+```css
+@layer theme, base, dalin, components, utilities;
+@import "tailwindcss";
+```
+
+That puts the kit after Tailwind's reset and before its utilities. A utility the app passes through `className` then wins over the kit's default, whatever the two selectors weigh: `<MenuContent className="min-w-64">`, `<MenuItem className="whitespace-normal">`. So does a rule in the app's own `components` layer, and so does any rule the app writes outside a layer.
+
+Without that line the `dalin` layer is defined when the kit's first sheet loads, after Tailwind's layers, and the kit's defaults beat utilities as they did in 0.3. An app's unlayered rules win either way, including one lighter than the kit's rule it used to lose to. Check an app's own rules on `.dl-*` classes when it takes 0.4.
+
+Three sheets stay out of the layer. `tokens.css` needs none: its values sit in `:where(:root)` and weigh nothing. `toast.css` has to beat the stylesheet Sonner appends to the page, which is unlayered, and a layered rule can't. `create.css` goes on the app's own button beside the app's utilities, and holds the glass recipe and nothing an app should change, so in a layer a stray shadow or ring utility would replace the glass.
+
 Set three variables on `:root`. The kit supplies everything else.
 
 ```css
@@ -484,7 +497,7 @@ With `dl-create-glass` the app sets the size and the corners, and the glass's tw
 
 Notes uses none of the three today. It keeps its circle, with its own colouring and glass.
 
-Both glass classes ship a `:focus-visible` outline. The stylesheet is not in a cascade layer, so the glass's box-shadow beats a ring an app draws as a shadow from inside one, which is how Tailwind's ring utilities work. An outline can't be covered that way. A glass `<span>` inside a focused button wears the ring for it.
+Both glass classes ship a `:focus-visible` outline. The stylesheet is not in a cascade layer, on purpose (see "Adopt it in an app"), so the glass's box-shadow beats a ring an app draws as a shadow from inside one, which is how Tailwind's ring utilities work. An outline can't be covered that way. A glass `<span>` inside a focused button wears the ring for it.
 
 Where the button draws a ring of its own, that makes two. Add `dl-create-no-ring` to the `<span>` and it draws none:
 

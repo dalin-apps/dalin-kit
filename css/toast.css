@@ -80,7 +80,13 @@
    `toast-phone` on the list for the phone and `toast-tuck` for the desktop,
    so the stylesheet and the component can never disagree. An app whose phone
    shell runs wider passes `phoneMaxWidth` to the <Toaster>, or sets
-   --dl-phone-max on :root. */
+   --dl-phone-max on :root.
+
+   Cascade. This file stays out of the `dalin` layer the kit's component
+   sheets are in. Sonner appends its own stylesheet to the page, unlayered,
+   and an unlayered rule beats every layered one, so a layered toast would
+   lose its shape to Sonner's defaults. Nothing here is a default for an
+   app to change either. */
 :where(:root) {
   --dl-toast-glass: color-mix(
     in oklch,

@@ -19,7 +19,11 @@
    (`data-dl-motion` on <html>), and the system's setting otherwise.
 
    What an app must not override. The typeface, the tracking, the italic,
-   and the muted grey of the app's name. */
+   and the muted grey of the app's name.
+
+   Cascade. Every rule here is in the cascade layer `dalin` (see menu.css),
+   so a utility an app passes through `className` wins over the default. */
+@layer dalin {
 .dl-wordmark {
   display: inline-flex;
   /* Every part is one line of the same size, so centring them is setting
@@ -140,4 +144,5 @@ html[data-dl-motion="reduce"] .dl-wordmark[data-roll] :is(.dl-wordmark-rest, .dl
 }
 .dl-switcher .dl-wordmark {
   font-size: 15px;
+}
 }

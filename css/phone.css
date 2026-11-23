@@ -32,8 +32,11 @@
                           under the toaster while it is over a sheet (60).
 
    What an app must not override. The sizes, the insets, the icons' 44px
-   targets, and search being an icon. */
+   targets, and search being an icon.
 
+   Cascade. Every rule here is in the cascade layer `dalin` (see menu.css),
+   so a utility an app passes through `className` wins over the default. */
+@layer dalin {
 /* ---------- the header ---------- */
 .dl-phone-head {
   box-sizing: border-box;
@@ -338,4 +341,5 @@
 .dl-phone-search-note {
   margin: 14px 0 0;
   color: var(--dl-fg-muted, #b8b8b8);
+}
 }

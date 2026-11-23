@@ -28,7 +28,11 @@
      --dl-palette-dim  The fill over the app behind the palette.
 
    What an app must not override. The width, the glass, the corners, the
-   row's anatomy, the mark, and the headings' case. */
+   row's anatomy, the mark, and the headings' case.
+
+   Cascade. Every rule here is in the cascade layer `dalin` (see menu.css),
+   so a utility an app passes through `className` wins over the default. */
+@layer dalin {
 .dl-palette-dim {
   position: fixed;
   inset: 0;
@@ -297,4 +301,5 @@ html[data-dl-motion="reduce"] :is(.dl-palette, .dl-palette-dim) {
   margin: 0;
   padding: 10px 8px;
   color: var(--dl-fg-muted, #b8b8b8);
+}
 }

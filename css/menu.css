@@ -36,7 +36,21 @@
 
    What an app must not override. The glass, the edge, the corners, the row
    height, the keycap, and the red of a destructive row. Width is the
-   app's: a menu is as wide as its longest row, at least 128px. */
+   app's: a menu is as wide as its longest row, at least 128px.
+
+   Cascade. Every rule here is in the cascade layer `dalin`, as in the kit's
+   other component sheets (palette, phone, empty, wordmark, motion). A
+   layered rule loses to any rule in a later layer and to any unlayered
+   rule, whatever its weight. So a Tailwind utility an app passes through
+   `className` wins over the default here, provided the app orders the
+   layer before Tailwind's utilities, once, at the top of its own sheet:
+
+     @layer theme, base, dalin, components, utilities;
+
+   Without that line the layer is defined when this file loads, after
+   Tailwind's, and the kit's defaults win as they did in 0.3. The rules are
+   not indented inside the block, so each line reads as it did before. */
+@layer dalin {
 .dl-menu-positioner {
   z-index: var(--dl-overlay-z, 70);
   outline: none;
@@ -298,4 +312,5 @@ html[data-dl-motion="reduce"] .dl-menu.dl-context-menu[data-ending-style]:not([d
   .dl-menu .dl-kbd {
     display: none;
   }
+}
 }

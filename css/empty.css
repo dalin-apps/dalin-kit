@@ -14,7 +14,11 @@
    height. A pane with neither gives it its own padding and no more.
 
    What an app must not override. The sizes, the weight, the two colours,
-   and the absence of a subtitle. */
+   and the absence of a subtitle.
+
+   Cascade. Every rule here is in the cascade layer `dalin` (see menu.css),
+   so a utility an app passes through `className` wins over the default. */
+@layer dalin {
 .dl-empty {
   box-sizing: border-box;
   flex: 1;
@@ -50,4 +54,5 @@
 }
 .dl-empty-action {
   margin-top: 8px;
+}
 }
