@@ -159,6 +159,20 @@ html[data-input="keyboard"] :is(.dl-palette, .dl-palette-dim) {
 .dl-palette-list {
   outline: none;
 }
+/* Stale: the rows answer an earlier query while this one's answer is on
+   its way. They take no pointer and show no Enter hint, and they dim, but
+   only after 120ms: an answer that arrives sooner changes the list with no
+   flicker in between. A delay with no duration is a step, not motion. */
+.dl-palette-list[data-stale] {
+  pointer-events: none;
+}
+.dl-palette-list[data-stale] :is(.dl-palette-group, .dl-palette-enter) {
+  opacity: 0.5;
+  transition: opacity 0s linear 120ms;
+}
+.dl-palette-list[data-stale] .dl-palette-enter {
+  opacity: 0;
+}
 /* A group's heading: sentence case as written. */
 .dl-palette-head {
   padding: 6px 8px;

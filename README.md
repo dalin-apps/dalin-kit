@@ -657,7 +657,11 @@ Per the curator's motion rule, opening it from the keyboard does not animate, an
 | `emptyText` | `No results for “query”.` | A function of the query, for the app's own words. |
 | `className` | none | The app's own, beside `dl-palette`. |
 
-A source is `{ id, heading, search }`. `search(query, signal)` returns rows, or a promise of them, and the signal aborts when the query changes or the palette closes. It is called with `""` as the palette opens, for whatever the app shows before a word is typed. A source that answers later keeps its last rows on screen until the new ones arrive.
+A source is `{ id, heading, search }`. `search(query, signal)` returns rows, or a promise of them, and the signal aborts when the query changes or the palette closes. It is called with `""` as the palette opens, for whatever the app shows before a word is typed.
+
+The list on screen always answers one query. Sources that answer at once are in the first frame. Where one answers later, the last list stays as it was until every source has answered the query in the field, and then the whole list changes together, the actions with it. Until then the old list is stale (`data-stale` on the list): its rows run nothing, the arrows move nothing, and it dims if the answer takes longer than 120ms. Enter is held and runs the first row of the answer when it arrives. Typing again lets the held Enter go.
+
+A source slower than 400ms (`SOURCE_WAIT_MS`) no longer holds the list back. The rest is shown, and the slow source's group joins at the end, under the actions, when it answers. No row already on screen moves, so the highlight stays on the row it was on. Answer at once where the rows are in memory, and the groups keep the order the sources were given.
 
 A row, whether a result or an action, is a `PaletteItem`:
 

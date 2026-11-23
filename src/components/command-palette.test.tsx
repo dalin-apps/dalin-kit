@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { readCss, ruleFor, ruleNaming } from "../../test/css.js";
 import { all, click, key, mount, one, press as pressOn, settle, type, withDom, withToast } from "../../test/dom.js";
 import { INPUT_ATTR } from "../helpers/input-modality.js";
-import { CommandPalette, type CommandPaletteProps, type PaletteItem, type PaletteSource } from "./command-palette.js";
+import { CommandPalette, SOURCE_WAIT_MS, type CommandPaletteProps, type PaletteItem, type PaletteSource } from "./command-palette.js";
 
 withDom();
 
@@ -503,6 +503,129 @@ describe("a source that answers later", () => {
   });
 });
 
+describe("a list that answers an earlier query", () => {
+  type Call = { query: string; answer: (rows: PaletteItem[]) => void };
+  function slow(id = "mail", heading = "Messages") {
+    const calls: Call[] = [];
+    const source: PaletteSource = {
+      id,
+      heading,
+      search: (query) => new Promise<PaletteItem[]>((resolve) => calls.push({ query, answer: resolve })),
+    };
+    return { calls, source };
+  }
+  const answer = async (call: Call, found: PaletteItem[]) => {
+    await act(async () => {
+      call.answer(found);
+      await Promise.resolve();
+    });
+    await settle();
+  };
+  const ran = vi.fn();
+  const message = (id: string, title: string): PaletteItem => ({ id, title, onSelect: () => ran(id) });
+  const list = () => one(".dl-palette-list")!;
+
+  it("holds Enter while the answer is out, and runs the answer's first row when it arrives", async () => {
+    ran.mockClear();
+    const { calls, source } = slow();
+    await mount(<CommandPalette open sources={[source]} />);
+    await answer(calls[0]!, [message("old", "Invoice for October")]);
+    await type(field(), "plans");
+    // The row on screen answers the empty query, not "plans".
+    expect(titles()).toEqual(["Invoice for October"]);
+    expect(list().hasAttribute("data-stale")).toBe(true);
+    expect(field()?.getAttribute("aria-busy")).toBe("true");
+    await key("Enter", field());
+    expect(ran).not.toHaveBeenCalled();
+    expect(palette()).not.toBeNull();
+    await answer(calls[1]!, [message("plans", "Thanksgiving plans"), message("other", "Plans for spring")]);
+    expect(ran).toHaveBeenCalledTimes(1);
+    expect(ran).toHaveBeenCalledWith("plans");
+  });
+
+  it("lets a held Enter go when the reader types on", async () => {
+    ran.mockClear();
+    const { calls, source } = slow();
+    await mount(<CommandPalette open sources={[source]} />);
+    await answer(calls[0]!, [message("old", "Invoice for October")]);
+    await type(field(), "plan");
+    await key("Enter", field());
+    await type(field(), "plans");
+    await answer(calls[2]!, [message("plans", "Thanksgiving plans")]);
+    expect(ran).not.toHaveBeenCalled();
+    expect(titles()).toEqual(["Thanksgiving plans"]);
+    expect(list().hasAttribute("data-stale")).toBe(false);
+  });
+
+  it("runs nothing for a press on a stale row, and moves nothing with the arrows", async () => {
+    ran.mockClear();
+    const { calls, source } = slow();
+    await mount(<CommandPalette open sources={[source]} />);
+    await answer(calls[0]!, [message("a", "Invoice for October"), message("b", "Invoice for November")]);
+    await type(field(), "plans");
+    await click(rows()[1]);
+    expect(ran).not.toHaveBeenCalled();
+    await key("ArrowDown", field());
+    expect(focused().map((row) => row.textContent)).toEqual([rows()[0]!.textContent]);
+    await answer(calls[1]!, [message("plans", "Thanksgiving plans"), message("other", "Plans for spring")]);
+    // The answer is in: the rows run again, and the first one is focused.
+    expect(focused()).toEqual([rows()[0]]);
+    await key("ArrowDown", field());
+    expect(focused()).toEqual([rows()[1]]);
+    await click(rows()[1]);
+    expect(ran).toHaveBeenCalledWith("other");
+  });
+
+  it("marks a stale list's words by the query it answers", async () => {
+    const { calls, source } = slow();
+    await mount(<CommandPalette open sources={[source]} />);
+    await type(field(), "invoice");
+    await answer(calls[1]!, [message("a", "Invoice for October")]);
+    expect(all(".dl-palette-mark").map((mark) => mark.textContent)).toEqual(["Invoice"]);
+    await type(field(), "october");
+    expect(all(".dl-palette-mark").map((mark) => mark.textContent)).toEqual(["Invoice"]);
+  });
+
+  it("changes the whole list at once, the actions with it", async () => {
+    const { calls, source } = slow();
+    await mount(<CommandPalette open sources={[source]} actions={ACTIONS} />);
+    await answer(calls[0]!, [message("a", "Invoice for October")]);
+    expect(headings()).toEqual(["Messages", "Actions"]);
+    await type(field(), "week");
+    // "New page" does not match "week", and stays until the answer arrives.
+    expect(titles()).toEqual(["Invoice for October", "New page", "Switch to Week view"]);
+    await answer(calls[1]!, []);
+    expect(titles()).toEqual(["Switch to Week view"]);
+  });
+
+  it("puts a group that arrives after the wait at the end, so the highlight stays on its row", async () => {
+    const { calls, source } = slow();
+    await mount(<CommandPalette open sources={[source, SOURCES[0]!]} actions={ACTIONS} />);
+    // The slow source is listed first. Nothing is shown without it at once.
+    expect(rows()).toHaveLength(0);
+    await settle(SOURCE_WAIT_MS + 60);
+    expect(headings()).toEqual(["Pages", "Actions"]);
+    expect(list().hasAttribute("data-stale")).toBe(false);
+    expect(field()?.getAttribute("aria-busy")).toBe("true");
+    await key("ArrowDown", field());
+    const on = focused()[0]!;
+    expect(on.textContent).toContain("Lisbon offsite");
+    await answer(calls[0]!, [message("late", "Invoice for October")]);
+    expect(headings()).toEqual(["Pages", "Actions", "Messages"]);
+    expect(focused()).toEqual([on]);
+    expect(rows().indexOf(on)).toBe(1);
+    expect(field()?.hasAttribute("aria-busy")).toBe(false);
+  });
+
+  it("keeps the sources' order when every one answers inside the wait", async () => {
+    const { calls, source } = slow();
+    await mount(<CommandPalette open sources={[source, SOURCES[0]!]} actions={ACTIONS} />);
+    await answer(calls[0]!, [message("a", "Invoice for October")]);
+    expect(headings()).toEqual(["Messages", "Pages", "Actions"]);
+    expect(focused()).toEqual([rows()[0]]);
+  });
+});
+
 describe("palette.css", () => {
   const panel = ruleFor(css, ".dl-palette");
 
@@ -530,6 +653,14 @@ describe("palette.css", () => {
     expect(instant).toContain("transition: none");
     expect(ruleNaming(css, 'html[data-input="keyboard"] :is(.dl-palette, .dl-palette-dim)')).toBe(instant);
     expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.dl-palette,\s*\.dl-palette-dim\s*\{\s*transition: none;/);
+  });
+
+  it("stills a stale list: no pointer, no Enter hint, and a dim that waits 120ms for the answer", () => {
+    expect(ruleFor(css, ".dl-palette-list[data-stale]")).toContain("pointer-events: none");
+    const dim = ruleFor(css, ".dl-palette-list[data-stale] :is(.dl-palette-group, .dl-palette-enter)");
+    expect(dim).toContain("opacity: 0.5");
+    expect(dim).toContain("transition: opacity 0s linear 120ms");
+    expect(ruleFor(css, ".dl-palette-list[data-stale] .dl-palette-enter")).toContain("opacity: 0");
   });
 
   it("fades and nothing more: no slide, no scale, no spring", () => {

@@ -56,7 +56,9 @@ export type PaletteSource = {
    * The rows for a query, now or as a promise. It is called with `""` as
    * the palette opens: return what to show before a word is typed (recent
    * items), or nothing. `signal` aborts when the query changes or the
-   * palette closes, for a search that fetches.
+   * palette closes, for a search that fetches. A query's list is shown
+   * once every source has answered it, so answer at once where the rows
+   * are already in memory.
    */
   search: (query: string, signal: AbortSignal) => PaletteItem[] | Promise<PaletteItem[]>;
 };
@@ -96,7 +98,26 @@ export type CommandPaletteProps = {
 
 type Group = { id: string; heading: string; items: PaletteItem[] };
 
+/**
+ * The list on screen: the query it answers, the sources' groups in the
+ * order the sources were given, and the groups of any source that answered
+ * after the list was shown, in the order they arrived.
+ */
+type Shown = { query: string | null; groups: Group[]; late: Group[] };
+
+/** Before the first answer: no list at all, the actions included, so nothing is on screen for a first group to land over. */
+const NOTHING_SHOWN: Shown = { query: null, groups: [], late: [] };
+
 const ACTIONS_ID = "dl:actions";
+
+/**
+ * How long a query's list waits for its slowest source. Past it the list is
+ * shown without that source, whose group joins at the end when it answers.
+ */
+export const SOURCE_WAIT_MS = 400;
+
+/** The keys that move the highlight. They do nothing while the list answers an earlier query. */
+const MOVE_KEYS = new Set(["ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"]);
 
 /**
  * The Enter hint's cap: the return arrow, as the key itself is printed. One
@@ -145,6 +166,16 @@ function Marked({ text, query }: { text: string; query: string }): ReactNode {
  * closes at once after a key. Opened by a press on a search button it
  * fades in over the family's 150ms.
  *
+ * The list on screen always answers one query. A source may answer later,
+ * and until every source has answered the query in the field, the last
+ * list stays where it is, marked stale (`data-stale`): its rows run
+ * nothing, the arrows move nothing, and Enter is held. When the answer
+ * arrives the whole list changes at once and a held Enter runs its first
+ * row. Typing again lets the held Enter go. A source slower than
+ * `SOURCE_WAIT_MS` no longer holds the list back: the rest is shown, and
+ * its group joins at the end, under the actions, so no row on screen moves
+ * and the highlight stays on the row it was on.
+ *
  *   <CommandPalette
  *     appKey="/"
  *     placeholder="Search pages and to-dos"
@@ -168,8 +199,11 @@ export function CommandPalette({
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Record<string, PaletteItem[]>>({});
+  const [shown, setShown] = useState<Shown>(NOTHING_SHOWN);
+  // How many sources have yet to answer the query in the field.
   const [busy, setBusy] = useState(0);
+  // An Enter pressed while the list was stale, waiting for the answer.
+  const heldEnter = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   // The panel's element as state: a toast over the dim keeps its action in
   // reach of Tab while the panel is up (toaster-tab.ts).
@@ -200,7 +234,9 @@ export function CommandPalette({
     } else {
       // The next opening starts from an empty field.
       setQuery("");
-      setResults({});
+      setShown(NOTHING_SHOWN);
+      setBusy(0);
+      heldEnter.current = false;
     }
   }
 
@@ -228,15 +264,39 @@ export function CommandPalette({
     return () => window.removeEventListener("keydown", onKey);
   }, [hotkey, appKeys, setOpen]);
 
-  // Ask every source. A layout effect, so what a source answers at once is
-  // in the first frame the palette paints. A source that answers later
-  // keeps its last rows on screen until the new ones arrive.
+  // Ask every source. A layout effect, so what the sources answer at once
+  // is in the first frame the palette paints. The list is shown whole, once
+  // every source has answered this query, so no group lands over rows that
+  // are already on screen and moves the highlight off its row.
   useLayoutEffect(() => {
     if (!open) return;
     const controller = new AbortController();
-    const settle = (id: string, items: PaletteItem[]) => {
+    const answers = new Map<string, PaletteItem[]>();
+    let out = 0;
+    let shownYet = false;
+    const show = () => {
+      shownYet = true;
+      setShown({
+        query,
+        groups: sources
+          .filter((source) => answers.has(source.id))
+          .map((source) => ({ id: source.id, heading: source.heading, items: answers.get(source.id)! })),
+        late: [],
+      });
+    };
+    const settle = (source: PaletteSource, items: PaletteItem[]) => {
       if (controller.signal.aborted) return;
-      setResults((prev) => ({ ...prev, [id]: items }));
+      out -= 1;
+      setBusy(out);
+      if (!shownYet) {
+        answers.set(source.id, items);
+        if (out === 0) show();
+        return;
+      }
+      // The list went up without this source. Its group joins at the end.
+      setShown((prev) =>
+        prev.query === query ? { ...prev, late: [...prev.late, { id: source.id, heading: source.heading, items }] } : prev,
+      );
     };
     for (const source of sources) {
       let answer: PaletteItem[] | Promise<PaletteItem[]>;
@@ -246,39 +306,66 @@ export function CommandPalette({
         answer = [];
       }
       if (Array.isArray(answer)) {
-        settle(source.id, answer);
+        answers.set(source.id, answer);
         continue;
       }
-      setBusy((n) => n + 1);
-      answer
-        .then(
-          (items) => settle(source.id, items),
-          // A search that failed shows nothing, the same as one that found nothing.
-          () => settle(source.id, []),
-        )
-        .finally(() => setBusy((n) => n - 1));
+      out += 1;
+      answer.then(
+        (items) => settle(source, items),
+        // A search that failed shows nothing, the same as one that found nothing.
+        () => settle(source, []),
+      );
     }
-    return () => controller.abort();
+    setBusy(out);
+    if (out === 0) {
+      show();
+      return () => controller.abort();
+    }
+    const wait = window.setTimeout(() => {
+      if (!shownYet && !controller.signal.aborted) show();
+    }, SOURCE_WAIT_MS);
+    return () => {
+      controller.abort();
+      window.clearTimeout(wait);
+    };
   }, [open, query, sources]);
 
+  // The list answers an earlier query until this one's answer is shown.
+  const stale = shown.query !== query;
+  const staleRef = useRef(stale);
+  staleRef.current = stale;
+
   const groups = useMemo<Group[]>(() => {
-    const found: Group[] = sources.map((source) => ({
-      id: source.id,
-      heading: source.heading,
-      items: results[source.id] ?? [],
-    }));
-    const matched = actions.filter((action) => matchesQuery(`${action.title} ${action.keywords ?? ""}`, query));
-    found.push({ id: ACTIONS_ID, heading: actionsHeading, items: matched });
+    // The actions are matched against the query the list answers, so the
+    // whole list changes together.
+    const answered = shown.query;
+    if (answered === null) return [];
+    const matched = actions.filter((action) => matchesQuery(`${action.title} ${action.keywords ?? ""}`, answered));
+    const found: Group[] = [...shown.groups, { id: ACTIONS_ID, heading: actionsHeading, items: matched }, ...shown.late];
     return found.filter((group) => group.items.length > 0);
-  }, [sources, results, actions, actionsHeading, query]);
+  }, [shown, actions, actionsHeading]);
 
   const select = (item: PaletteItem) => {
+    // A row from an earlier query runs nothing, by a press or by a key.
+    if (staleRef.current) return;
     if (!item.keepOpen) setOpen(false);
     item.onSelect();
   };
 
-  const asked = query.trim() !== "";
-  const nothing = groups.length === 0 && asked && busy === 0;
+  // The answer an Enter was held for has arrived: run its first row.
+  const first = groups[0]?.items[0];
+  useEffect(() => {
+    if (stale || !heldEnter.current) return;
+    heldEnter.current = false;
+    if (first) select(first);
+    // `select` and `first` are read as they stand when the list changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown, stale]);
+
+  const marks = shown.query ?? "";
+  const asked = marks.trim() !== "";
+  const settled = !stale && busy === 0;
+  const nothing = groups.length === 0 && asked && settled;
   const count = groups.reduce((sum, group) => sum + group.items.length, 0);
 
   return (
@@ -298,6 +385,17 @@ export function CommandPalette({
           // handles its own keys and does not always let them bubble.
           onKeyDownCapture={(event: ReactKeyboardEvent) => {
             if (event.key !== "Shift" && event.key !== "Control" && event.key !== "Alt" && event.key !== "Meta") setInstant(true);
+            if (!stale) return;
+            // The rows on screen answer an earlier query. Enter waits for
+            // this one's answer, and the arrows have nothing to move through.
+            if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              event.stopPropagation();
+              heldEnter.current = true;
+            } else if (MOVE_KEYS.has(event.key)) {
+              event.preventDefault();
+              event.stopPropagation();
+            }
           }}
           onPointerDownCapture={() => setInstant(false)}
         >
@@ -309,6 +407,8 @@ export function CommandPalette({
             onValueChange={(value, details) => {
               // Choosing a row would write its title into the field.
               if (details.reason === "item-press") return;
+              // A held Enter was for the words as they stood.
+              heldEnter.current = false;
               setQuery(value);
             }}
             // The sources and the action filter above have matched already.
@@ -325,7 +425,7 @@ export function CommandPalette({
                 placeholder={placeholder}
                 aria-label={placeholder}
                 aria-describedby={hintId}
-                aria-busy={busy > 0 || undefined}
+                aria-busy={stale || busy > 0 || undefined}
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
@@ -340,11 +440,11 @@ export function CommandPalette({
             </span>
             {/* One region that stays mounted, so a change in its words is announced. */}
             <div role="status" aria-live="polite" className="dl-palette-status">
-              {nothing ? "No results." : asked && busy === 0 ? `${count} ${count === 1 ? "result" : "results"}.` : ""}
+              {nothing ? "No results." : asked && settled ? `${count} ${count === 1 ? "result" : "results"}.` : ""}
             </div>
             <div className="dl-palette-scroll" data-empty={groups.length === 0 ? "" : undefined}>
               {nothing ? <p className="dl-palette-note">{emptyText ? emptyText(query.trim()) : `No results for “${query.trim()}”.`}</p> : null}
-              <Autocomplete.List className="dl-palette-list">
+              <Autocomplete.List className="dl-palette-list" data-stale={stale ? "" : undefined}>
                 {(group: Group) => (
                   <Autocomplete.Group key={group.id} items={group.items} className="dl-palette-group">
                     <Autocomplete.GroupLabel className="dl-palette-head">{group.heading}</Autocomplete.GroupLabel>
@@ -364,11 +464,11 @@ export function CommandPalette({
                           ) : null}
                           <span className="dl-palette-text">
                             <span className="dl-palette-title">
-                              <Marked text={item.title} query={query} />
+                              <Marked text={item.title} query={marks} />
                             </span>
                             {item.subtitle ? (
                               <span className="dl-palette-sub">
-                                <Marked text={item.subtitle} query={query} />
+                                <Marked text={item.subtitle} query={marks} />
                               </span>
                             ) : null}
                           </span>

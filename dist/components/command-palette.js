@@ -9,7 +9,16 @@ import { SearchGlyph } from "./icons.js";
 import { Kbd } from "./kbd.js";
 import { matchParts, matchesQuery } from "./palette-match.js";
 import { useToasterTab } from "./toaster-tab.js";
+/** Before the first answer: no list at all, the actions included, so nothing is on screen for a first group to land over. */
+const NOTHING_SHOWN = { query: null, groups: [], late: [] };
 const ACTIONS_ID = "dl:actions";
+/**
+ * How long a query's list waits for its slowest source. Past it the list is
+ * shown without that source, whose group joins at the end when it answers.
+ */
+export const SOURCE_WAIT_MS = 400;
+/** The keys that move the highlight. They do nothing while the list answers an earlier query. */
+const MOVE_KEYS = new Set(["ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"]);
 /**
  * The Enter hint's cap: the return arrow, as the key itself is printed. One
  * 20px cap, so the slot it holds open on every row costs the row's date 30px
@@ -48,6 +57,16 @@ function Marked({ text, query }) {
  * closes at once after a key. Opened by a press on a search button it
  * fades in over the family's 150ms.
  *
+ * The list on screen always answers one query. A source may answer later,
+ * and until every source has answered the query in the field, the last
+ * list stays where it is, marked stale (`data-stale`): its rows run
+ * nothing, the arrows move nothing, and Enter is held. When the answer
+ * arrives the whole list changes at once and a held Enter runs its first
+ * row. Typing again lets the held Enter go. A source slower than
+ * `SOURCE_WAIT_MS` no longer holds the list back: the rest is shown, and
+ * its group joins at the end, under the actions, so no row on screen moves
+ * and the highlight stays on the row it was on.
+ *
  *   <CommandPalette
  *     appKey="/"
  *     placeholder="Search pages and to-dos"
@@ -59,8 +78,11 @@ export function CommandPalette({ open: openProp, onOpenChange, sources = NO_SOUR
     const [ownOpen, setOwnOpen] = useState(false);
     const open = openProp ?? ownOpen;
     const [query, setQuery] = useState("");
-    const [results, setResults] = useState({});
+    const [shown, setShown] = useState(NOTHING_SHOWN);
+    // How many sources have yet to answer the query in the field.
     const [busy, setBusy] = useState(0);
+    // An Enter pressed while the list was stale, waiting for the answer.
+    const heldEnter = useRef(false);
     const inputRef = useRef(null);
     // The panel's element as state: a toast over the dim keeps its action in
     // reach of Tab while the panel is up (toaster-tab.ts).
@@ -88,7 +110,9 @@ export function CommandPalette({ open: openProp, onOpenChange, sources = NO_SOUR
         else {
             // The next opening starts from an empty field.
             setQuery("");
-            setResults({});
+            setShown(NOTHING_SHOWN);
+            setBusy(0);
+            heldEnter.current = false;
         }
     }
     // Ctrl K, and the app's own key.
@@ -117,17 +141,40 @@ export function CommandPalette({ open: openProp, onOpenChange, sources = NO_SOUR
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
     }, [hotkey, appKeys, setOpen]);
-    // Ask every source. A layout effect, so what a source answers at once is
-    // in the first frame the palette paints. A source that answers later
-    // keeps its last rows on screen until the new ones arrive.
+    // Ask every source. A layout effect, so what the sources answer at once
+    // is in the first frame the palette paints. The list is shown whole, once
+    // every source has answered this query, so no group lands over rows that
+    // are already on screen and moves the highlight off its row.
     useLayoutEffect(() => {
         if (!open)
             return;
         const controller = new AbortController();
-        const settle = (id, items) => {
+        const answers = new Map();
+        let out = 0;
+        let shownYet = false;
+        const show = () => {
+            shownYet = true;
+            setShown({
+                query,
+                groups: sources
+                    .filter((source) => answers.has(source.id))
+                    .map((source) => ({ id: source.id, heading: source.heading, items: answers.get(source.id) })),
+                late: [],
+            });
+        };
+        const settle = (source, items) => {
             if (controller.signal.aborted)
                 return;
-            setResults((prev) => ({ ...prev, [id]: items }));
+            out -= 1;
+            setBusy(out);
+            if (!shownYet) {
+                answers.set(source.id, items);
+                if (out === 0)
+                    show();
+                return;
+            }
+            // The list went up without this source. Its group joins at the end.
+            setShown((prev) => prev.query === query ? { ...prev, late: [...prev.late, { id: source.id, heading: source.heading, items }] } : prev);
         };
         for (const source of sources) {
             let answer;
@@ -138,35 +185,65 @@ export function CommandPalette({ open: openProp, onOpenChange, sources = NO_SOUR
                 answer = [];
             }
             if (Array.isArray(answer)) {
-                settle(source.id, answer);
+                answers.set(source.id, answer);
                 continue;
             }
-            setBusy((n) => n + 1);
-            answer
-                .then((items) => settle(source.id, items), 
+            out += 1;
+            answer.then((items) => settle(source, items), 
             // A search that failed shows nothing, the same as one that found nothing.
-            () => settle(source.id, []))
-                .finally(() => setBusy((n) => n - 1));
+            () => settle(source, []));
         }
-        return () => controller.abort();
+        setBusy(out);
+        if (out === 0) {
+            show();
+            return () => controller.abort();
+        }
+        const wait = window.setTimeout(() => {
+            if (!shownYet && !controller.signal.aborted)
+                show();
+        }, SOURCE_WAIT_MS);
+        return () => {
+            controller.abort();
+            window.clearTimeout(wait);
+        };
     }, [open, query, sources]);
+    // The list answers an earlier query until this one's answer is shown.
+    const stale = shown.query !== query;
+    const staleRef = useRef(stale);
+    staleRef.current = stale;
     const groups = useMemo(() => {
-        const found = sources.map((source) => ({
-            id: source.id,
-            heading: source.heading,
-            items: results[source.id] ?? [],
-        }));
-        const matched = actions.filter((action) => matchesQuery(`${action.title} ${action.keywords ?? ""}`, query));
-        found.push({ id: ACTIONS_ID, heading: actionsHeading, items: matched });
+        // The actions are matched against the query the list answers, so the
+        // whole list changes together.
+        const answered = shown.query;
+        if (answered === null)
+            return [];
+        const matched = actions.filter((action) => matchesQuery(`${action.title} ${action.keywords ?? ""}`, answered));
+        const found = [...shown.groups, { id: ACTIONS_ID, heading: actionsHeading, items: matched }, ...shown.late];
         return found.filter((group) => group.items.length > 0);
-    }, [sources, results, actions, actionsHeading, query]);
+    }, [shown, actions, actionsHeading]);
     const select = (item) => {
+        // A row from an earlier query runs nothing, by a press or by a key.
+        if (staleRef.current)
+            return;
         if (!item.keepOpen)
             setOpen(false);
         item.onSelect();
     };
-    const asked = query.trim() !== "";
-    const nothing = groups.length === 0 && asked && busy === 0;
+    // The answer an Enter was held for has arrived: run its first row.
+    const first = groups[0]?.items[0];
+    useEffect(() => {
+        if (stale || !heldEnter.current)
+            return;
+        heldEnter.current = false;
+        if (first)
+            select(first);
+        // `select` and `first` are read as they stand when the list changes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [shown, stale]);
+    const marks = shown.query ?? "";
+    const asked = marks.trim() !== "";
+    const settled = !stale && busy === 0;
+    const nothing = groups.length === 0 && asked && settled;
     const count = groups.reduce((sum, group) => sum + group.items.length, 0);
     return (_jsx(Dialog.Root, { open: open, onOpenChange: setOpen, children: _jsxs(Dialog.Portal, { children: [_jsx(Dialog.Backdrop, { className: "dl-palette-dim", "data-instant": instant ? "" : undefined }), _jsx(Dialog.Popup, { ref: setPanel, "data-slot": "command-palette", className: cx("dl-palette", className), "data-instant": instant ? "" : undefined, "aria-label": label, initialFocus: inputRef, 
                     // A key pressed inside means the keyboard is driving, and what it
@@ -176,14 +253,29 @@ export function CommandPalette({ open: openProp, onOpenChange, sources = NO_SOUR
                     onKeyDownCapture: (event) => {
                         if (event.key !== "Shift" && event.key !== "Control" && event.key !== "Alt" && event.key !== "Meta")
                             setInstant(true);
+                        if (!stale)
+                            return;
+                        // The rows on screen answer an earlier query. Enter waits for
+                        // this one's answer, and the arrows have nothing to move through.
+                        if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            heldEnter.current = true;
+                        }
+                        else if (MOVE_KEYS.has(event.key)) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                        }
                     }, onPointerDownCapture: () => setInstant(false), children: _jsxs(Autocomplete.Root, { open: true, inline: true, items: groups, value: query, onValueChange: (value, details) => {
                             // Choosing a row would write its title into the field.
                             if (details.reason === "item-press")
                                 return;
+                            // A held Enter was for the words as they stood.
+                            heldEnter.current = false;
                             setQuery(value);
                         }, 
                         // The sources and the action filter above have matched already.
-                        filter: null, itemToStringValue: (item) => item.title, autoHighlight: "always", keepHighlight: true, children: [_jsxs("div", { className: "dl-palette-query", children: [_jsx(SearchGlyph, {}), _jsx(Autocomplete.Input, { ref: inputRef, className: "dl-palette-input", placeholder: placeholder, "aria-label": placeholder, "aria-describedby": hintId, "aria-busy": busy > 0 || undefined, autoComplete: "off", autoCorrect: "off", spellCheck: false }), _jsx(Dialog.Close, { className: "dl-palette-close", "aria-label": "Close", tabIndex: -1, children: _jsx(Kbd, { children: "Esc" }) })] }), _jsx("span", { id: hintId, className: "dl-palette-status", children: "Press Enter to open the highlighted result." }), _jsx("div", { role: "status", "aria-live": "polite", className: "dl-palette-status", children: nothing ? "No results." : asked && busy === 0 ? `${count} ${count === 1 ? "result" : "results"}.` : "" }), _jsxs("div", { className: "dl-palette-scroll", "data-empty": groups.length === 0 ? "" : undefined, children: [nothing ? _jsx("p", { className: "dl-palette-note", children: emptyText ? emptyText(query.trim()) : `No results for “${query.trim()}”.` }) : null, _jsx(Autocomplete.List, { className: "dl-palette-list", children: (group) => (_jsxs(Autocomplete.Group, { items: group.items, className: "dl-palette-group", children: [_jsx(Autocomplete.GroupLabel, { className: "dl-palette-head", children: group.heading }), _jsx(Autocomplete.Collection, { children: (item) => (_jsxs(Autocomplete.Item, { value: item, className: "dl-palette-row", "data-done": item.done ? "" : undefined, onClick: () => select(item), children: [item.icon ? (_jsx("span", { className: "dl-palette-icon", "aria-hidden": "true", children: item.icon })) : null, _jsxs("span", { className: "dl-palette-text", children: [_jsx("span", { className: "dl-palette-title", children: _jsx(Marked, { text: item.title, query: query }) }), item.subtitle ? (_jsx("span", { className: "dl-palette-sub", children: _jsx(Marked, { text: item.subtitle, query: query }) })) : null] }), item.meta ? _jsx("span", { className: "dl-palette-meta", children: item.meta }) : null, _jsxs("span", { className: "dl-palette-keys", "aria-hidden": "true", children: [item.keys && item.keys.length > 0 ? _jsx(Kbd, { keys: item.keys, className: "dl-palette-own" }) : null, _jsx(Kbd, { className: "dl-palette-enter", children: ENTER_KEY })] })] }, `${group.id}:${item.id}`)) })] }, group.id)) })] })] }) })] }) }));
+                        filter: null, itemToStringValue: (item) => item.title, autoHighlight: "always", keepHighlight: true, children: [_jsxs("div", { className: "dl-palette-query", children: [_jsx(SearchGlyph, {}), _jsx(Autocomplete.Input, { ref: inputRef, className: "dl-palette-input", placeholder: placeholder, "aria-label": placeholder, "aria-describedby": hintId, "aria-busy": stale || busy > 0 || undefined, autoComplete: "off", autoCorrect: "off", spellCheck: false }), _jsx(Dialog.Close, { className: "dl-palette-close", "aria-label": "Close", tabIndex: -1, children: _jsx(Kbd, { children: "Esc" }) })] }), _jsx("span", { id: hintId, className: "dl-palette-status", children: "Press Enter to open the highlighted result." }), _jsx("div", { role: "status", "aria-live": "polite", className: "dl-palette-status", children: nothing ? "No results." : asked && settled ? `${count} ${count === 1 ? "result" : "results"}.` : "" }), _jsxs("div", { className: "dl-palette-scroll", "data-empty": groups.length === 0 ? "" : undefined, children: [nothing ? _jsx("p", { className: "dl-palette-note", children: emptyText ? emptyText(query.trim()) : `No results for “${query.trim()}”.` }) : null, _jsx(Autocomplete.List, { className: "dl-palette-list", "data-stale": stale ? "" : undefined, children: (group) => (_jsxs(Autocomplete.Group, { items: group.items, className: "dl-palette-group", children: [_jsx(Autocomplete.GroupLabel, { className: "dl-palette-head", children: group.heading }), _jsx(Autocomplete.Collection, { children: (item) => (_jsxs(Autocomplete.Item, { value: item, className: "dl-palette-row", "data-done": item.done ? "" : undefined, onClick: () => select(item), children: [item.icon ? (_jsx("span", { className: "dl-palette-icon", "aria-hidden": "true", children: item.icon })) : null, _jsxs("span", { className: "dl-palette-text", children: [_jsx("span", { className: "dl-palette-title", children: _jsx(Marked, { text: item.title, query: marks }) }), item.subtitle ? (_jsx("span", { className: "dl-palette-sub", children: _jsx(Marked, { text: item.subtitle, query: marks }) })) : null] }), item.meta ? _jsx("span", { className: "dl-palette-meta", children: item.meta }) : null, _jsxs("span", { className: "dl-palette-keys", "aria-hidden": "true", children: [item.keys && item.keys.length > 0 ? _jsx(Kbd, { keys: item.keys, className: "dl-palette-own" }) : null, _jsx(Kbd, { className: "dl-palette-enter", children: ENTER_KEY })] })] }, `${group.id}:${item.id}`)) })] }, group.id)) })] })] }) })] }) }));
 }
 /** One array each for "none", so a palette given neither does not search again on every render. */
 const NO_SOURCES = [];

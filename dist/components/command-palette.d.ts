@@ -34,7 +34,9 @@ export type PaletteSource = {
      * The rows for a query, now or as a promise. It is called with `""` as
      * the palette opens: return what to show before a word is typed (recent
      * items), or nothing. `signal` aborts when the query changes or the
-     * palette closes, for a search that fetches.
+     * palette closes, for a search that fetches. A query's list is shown
+     * once every source has answered it, so answer at once where the rows
+     * are already in memory.
      */
     search: (query: string, signal: AbortSignal) => PaletteItem[] | Promise<PaletteItem[]>;
 };
@@ -71,6 +73,11 @@ export type CommandPaletteProps = {
     className?: string;
 };
 /**
+ * How long a query's list waits for its slowest source. Past it the list is
+ * shown without that source, whose group joins at the end when it answers.
+ */
+export declare const SOURCE_WAIT_MS = 400;
+/**
  * The family's command palette: one field over grouped results, opened with
  * Ctrl K and the app's own key.
  *
@@ -89,6 +96,16 @@ export type CommandPaletteProps = {
  * Opened from the keyboard it lands at once, with no animation, and it
  * closes at once after a key. Opened by a press on a search button it
  * fades in over the family's 150ms.
+ *
+ * The list on screen always answers one query. A source may answer later,
+ * and until every source has answered the query in the field, the last
+ * list stays where it is, marked stale (`data-stale`): its rows run
+ * nothing, the arrows move nothing, and Enter is held. When the answer
+ * arrives the whole list changes at once and a held Enter runs its first
+ * row. Typing again lets the held Enter go. A source slower than
+ * `SOURCE_WAIT_MS` no longer holds the list back: the rest is shown, and
+ * its group joins at the end, under the actions, so no row on screen moves
+ * and the highlight stays on the row it was on.
  *
  *   <CommandPalette
  *     appKey="/"
