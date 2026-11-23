@@ -5,6 +5,7 @@ import { Toaster as SonnerToaster, useSonner } from "sonner";
 import { setToastCount, setToastPinned, setToastsExpanded, useToastsExpanded, } from "./toast-stack.js";
 import { measureToastCover, refreshToastDock, setNamedToastCover, useToastDockState, useToastPill, } from "./toast-dock.js";
 import { holdTabStops } from "./tab-stops.js";
+import { watchCutTitles } from "./title-hint.js";
 import { useToastTags } from "./toast-tags.js";
 import { ToastSpinner } from "./toast-spinner.js";
 import { MOTION_CLASS, scopeSonnerReducedMotion } from "./sonner-motion.js";
@@ -553,6 +554,13 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         setMeasured(cover && docked ? measureNamedCover(cover, coverSkip) : null);
     }, [cover, coverSkip, docked]);
     const root = useRef(null);
+    // A desktop title is one line; a cut one carries its full text as a hint.
+    useEffect(() => {
+        const el = root.current;
+        if (!tucked || !el)
+            return;
+        return watchCutTitles(el);
+    }, [tucked]);
     // Between toasts the selector is watched too, so a cover that opens over a
     // fanned stack tucks it, and the band knows to stand down under it.
     const coverUp = useLiveCover(cover, docked, root, coverSkip);
