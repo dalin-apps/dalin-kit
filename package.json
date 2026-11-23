@@ -38,6 +38,7 @@
       "import": "./dist/components/index.js"
     },
     "./tokens.css": "./css/tokens.css",
+    "./base.css": "./css/base.css",
     "./toast.css": "./css/toast.css",
     "./create.css": "./css/create.css",
     "./motion.css": "./css/motion.css",

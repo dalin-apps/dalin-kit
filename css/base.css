@@ -1,0 +1,21 @@
+/* @dalin/kit base.css: what the kit draws on the page itself, not on a part.
+
+   What it is. Text selection in the family's colours: the accent as the
+   fill and its ink on it (--dl-selection-bg and --dl-selection-fg in
+   tokens.css), the recipe notes and drive drew before the kit had it.
+
+   How an app adopts it. Import this file once, after tokens.css, on every
+   route. Delete the app's own ::selection rule.
+
+   What an app must not override. The selection colours. An app with a
+   reason to differ asks the owner, and the answer lands in tokens.css.
+
+   Cascade. The rule is in the cascade layer `dalin` with the kit's other
+   sheets (see menu.css), so an app's own unlayered ::selection still wins
+   until the app deletes it. */
+@layer dalin {
+::selection {
+  background: var(--dl-selection-bg, var(--dl-accent));
+  color: var(--dl-selection-fg, var(--dl-accent-fg, oklch(0.16 0 0)));
+}
+}
