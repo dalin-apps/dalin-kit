@@ -141,6 +141,55 @@ describe("sidebar rows", () => {
   });
 });
 
+describe("the overlay glass and what is written on it", () => {
+  const parse = (value: string) => value.match(/[\d.]+/g)!.map(Number);
+  /** The glass over a pane, and a highlighted row on it: white at 8% over that. */
+  const glassOver = (pane: string) => over(hex("#202020"), 0.72, hex(pane));
+  const WHITE: Rgb = [1, 1, 1];
+
+  it("is #202020 at 72%, with a highlight of white at 8%", () => {
+    expect(token("--dl-overlay")).toBe("rgb(32 32 32 / 0.72)");
+    expect(token("--dl-overlay-hover")).toBe("oklch(1 0 0 / 0.08)");
+    expect(token("--dl-overlay-edge")).toBe("#3d3d3d");
+  });
+
+  it.each(PANES)("keeps muted words at 4.5:1 on a highlighted row over %s", (pane) => {
+    const highlighted = over(WHITE, 0.08, glassOver(pane));
+    expect(contrast(hex(token("--dl-fg-muted")), highlighted)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(PANES)("keeps the destructive red at 4.5:1 on the glass over %s", (pane) => {
+    const [L, C, H] = parse(token("--dl-danger")) as [number, number, number];
+    for (const draw of Object.values(RENDER)) {
+      expect(contrast(draw(L, C, H), glassOver(pane))).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("needs the text step on a highlighted row: the red itself falls under 4.5:1 there", () => {
+    const [L, C, H] = parse(token("--dl-danger")) as [number, number, number];
+    const highlighted = over(WHITE, 0.08, glassOver("#1c1c1c"));
+    expect(contrast(RENDER.mapped(L, C, H), highlighted)).toBeLessThan(4.5);
+  });
+
+  it.each(PANES)("keeps the destructive text step at 4.5:1 on a highlighted row over %s", (pane) => {
+    const value = /--dl-danger-text:\s*([^;]+);/.exec(css)?.[1] ?? "";
+    expect(value).toBe("oklch(from var(--dl-danger) max(l, 0.74) c h)");
+    const [L, C, H] = parse(token("--dl-danger")) as [number, number, number];
+    const highlighted = over(WHITE, 0.08, glassOver(pane));
+    for (const draw of Object.values(RENDER)) {
+      expect(contrast(draw(Math.max(L, 0.74), C, H), highlighted)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("draws the arrow in the grey the frost comes to over the panes, within two levels", () => {
+    const solid = parseInt(token("--dl-overlay-solid").slice(1, 3), 16);
+    for (const pane of PANES) {
+      const level = Math.round(toSrgb(glassOver(pane)[0]!) * 255);
+      expect(Math.abs(level - solid)).toBeLessThanOrEqual(2);
+    }
+  });
+});
+
 describe("--dl-accent-text", () => {
   const value = /--dl-accent-text:\s*([^;]+);/.exec(css)?.[1] ?? "";
   const floor = Number(/max\(l,\s*([\d.]+)\)/.exec(value)?.[1]);

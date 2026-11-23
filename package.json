@@ -41,7 +41,8 @@
     "./toast.css": "./css/toast.css",
     "./create.css": "./css/create.css",
     "./motion.css": "./css/motion.css",
-    "./wordmark.css": "./css/wordmark.css"
+    "./wordmark.css": "./css/wordmark.css",
+    "./menu.css": "./css/menu.css"
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",

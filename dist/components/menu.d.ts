@@ -1,0 +1,86 @@
+import type { ComponentProps, ReactNode } from "react";
+import { Menu as MenuPrimitive } from "@base-ui/react/menu";
+/**
+ * The family's menu: shadcn's Base UI dropdown menu, restyled once and
+ * shared. The parts and their props are Base UI's; what the kit adds is the
+ * look (menu.css) and four habits:
+ *
+ * - `<MenuContent>` draws an arrow at its control. A menu is anchored, so it
+ *   points at what opened it. Pass `arrow={false}` for one that should not.
+ * - `<MenuItem variant="destructive">` is the red row.
+ * - `<MenuShortcut keys>` puts keycaps at the row's right end.
+ * - `<MenuLabel>` is a group's heading, written in sentence case. Base UI
+ *   needs it inside a `<MenuGroup>`.
+ *
+ *   <Menu>
+ *     <MenuTrigger>More</MenuTrigger>
+ *     <MenuContent>
+ *       <MenuItem onClick={reply}><ReplyIcon /> Reply</MenuItem>
+ *       <MenuItem onClick={star}><StarIcon /> Star <MenuShortcut keys={["S"]} /></MenuItem>
+ *       <MenuSeparator />
+ *       <MenuItem variant="destructive" onClick={archive}><ArchiveIcon /> Archive</MenuItem>
+ *     </MenuContent>
+ *   </Menu>
+ *
+ * The same rows go in a `<ContextMenuContent>` (context-menu.tsx): a context
+ * menu is this menu opened at the pointer, with no arrow.
+ */
+export declare function Menu(props: MenuPrimitive.Root.Props): ReactNode;
+export declare function MenuTrigger(props: MenuPrimitive.Trigger.Props): ReactNode;
+type Placement = Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor" | "collisionPadding">;
+export type MenuContentProps = MenuPrimitive.Popup.Props & Placement & {
+    /**
+     * Whether the menu points at its control with an arrow. On by default:
+     * an anchored menu has one. A submenu and a context menu have none.
+     */
+    arrow?: boolean;
+};
+/** How far an anchored surface stands off its control: the arrow's height and a hair. */
+export declare const ARROW_OFFSET_PX = 10;
+/** The same for a surface with no arrow. */
+export declare const PLAIN_OFFSET_PX = 4;
+/** The menu's surface: portal, positioner, the frosted popup, its arrow and its rows. */
+export declare function MenuContent({ align, alignOffset, side, sideOffset, anchor, collisionPadding, arrow, className, children, ...props }: MenuContentProps): ReactNode;
+export declare function MenuGroup(props: MenuPrimitive.Group.Props): ReactNode;
+export type MenuLabelProps = MenuPrimitive.GroupLabel.Props & {
+    /** Lines the label up with rows that have an icon. */
+    inset?: boolean;
+};
+/** A group's heading. Write it in sentence case; the kit does not change its case. */
+export declare function MenuLabel({ className, inset, ...props }: MenuLabelProps): ReactNode;
+export type MenuItemVariant = "default" | "destructive";
+export type MenuItemProps = MenuPrimitive.Item.Props & {
+    /** `"destructive"` is the red row: delete, archive, remove. */
+    variant?: MenuItemVariant;
+    /** Lines the words up with rows that have an icon, for a row with none. */
+    inset?: boolean;
+};
+export declare function MenuItem({ className, variant, inset, ...props }: MenuItemProps): ReactNode;
+export type MenuLinkItemProps = MenuPrimitive.LinkItem.Props & {
+    variant?: MenuItemVariant;
+    inset?: boolean;
+};
+/** A row that is a link: it navigates, and opens in a new tab on a middle click as a link does. */
+export declare function MenuLinkItem({ className, variant, inset, ...props }: MenuLinkItemProps): ReactNode;
+export declare function MenuCheckboxItem({ className, children, ...props }: MenuPrimitive.CheckboxItem.Props): ReactNode;
+export declare function MenuRadioGroup(props: MenuPrimitive.RadioGroup.Props): ReactNode;
+export declare function MenuRadioItem({ className, children, ...props }: MenuPrimitive.RadioItem.Props): ReactNode;
+export declare function MenuSeparator({ className, ...props }: MenuPrimitive.Separator.Props): ReactNode;
+export type MenuShortcutProps = Omit<ComponentProps<"span">, "children"> & {
+    /** The keys, one cap each: `["Ctrl", "K"]`. */
+    keys?: readonly string[];
+    /** One cap's text, in place of `keys`. */
+    children?: ReactNode;
+};
+/** A row's shortcut: keycaps at its right end. Renders nothing without a key. */
+export declare function MenuShortcut({ keys, children, className, ...props }: MenuShortcutProps): ReactNode;
+export declare function MenuSub(props: MenuPrimitive.SubmenuRoot.Props): ReactNode;
+export type MenuSubTriggerProps = MenuPrimitive.SubmenuTrigger.Props & {
+    inset?: boolean;
+};
+/** A row that opens a submenu: a chevron ends it. */
+export declare function MenuSubTrigger({ className, inset, children, ...props }: MenuSubTriggerProps): ReactNode;
+/** A submenu's surface: beside its row, with no arrow. */
+export declare function MenuSubContent({ align, alignOffset, side, sideOffset, arrow, ...props }: MenuContentProps): ReactNode;
+export {};
+//# sourceMappingURL=menu.d.ts.map

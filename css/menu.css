@@ -1,0 +1,288 @@
+/* @dalin/kit menu.css: the frosted overlays (<Menu>, <ContextMenu>,
+   <Popover>) and the keycap (<Kbd>).
+
+   What it is. One floating surface for every menu and popover in the four
+   apps: the overlay glass (--dl-overlay over --dl-overlay-blur), the strong
+   edge, 10px corners and one shadow. A menu's rows are 32px tall and sit
+   4px in, with a 7px corner that stays concentric with the menu's. A
+   shortcut is a keycap at the row's right end. A destructive row is red. A
+   group's label is sentence case, small and muted. A menu anchored to a
+   control points at it with an arrow; a menu opened at the pointer (a
+   context menu) has none.
+
+   How an app adopts it. Import this file once, after tokens.css, and use
+   the components from @dalin/kit. They are shadcn's Base UI files with the
+   classes below in place of utility classes, so an app that has those files
+   swaps the import. Delete the app's own menu and popover surface rules.
+
+   The settings dialog is not one of these. It stays solid (--dl-dialog).
+
+   Motion. A menu fades and grows a little from its control over
+   --dl-t-open, and fades out over --dl-t-close. It lands at once when it
+   was opened from the keyboard (Base UI marks that `data-instant`, and
+   `watchInputModality` writes `data-input` on <html>), under reduced
+   motion, and always for a context menu, which is used too often to wait
+   on.
+
+   Variables an app may set.
+     --dl-overlay-z   The z-index of every menu and popover: 70, which is
+                      over the toaster while it stands over a sheet (60).
+     --dl-overlay     Point it at --dl-overlay-solid while the app has
+                      transparency turned off, and stop the blur there.
+
+   What an app must not override. The glass, the edge, the corners, the row
+   height, the keycap, and the red of a destructive row. Width is the
+   app's: a menu is as wide as its longest row, at least 128px. */
+.dl-menu-positioner {
+  z-index: var(--dl-overlay-z, 70);
+  outline: none;
+}
+
+/* The surface. */
+.dl-menu,
+.dl-popover {
+  position: relative;
+  box-sizing: border-box;
+  background: var(--dl-overlay, rgb(32 32 32 / 0.72));
+  backdrop-filter: var(--dl-overlay-blur, blur(16px) saturate(1.5));
+  border: 1px solid var(--dl-overlay-edge, #3d3d3d);
+  border-radius: var(--dl-r-card, 10px);
+  box-shadow: var(--dl-overlay-shadow, 0 12px 32px -8px rgb(0 0 0 / 0.55));
+  color: var(--dl-fg, #fff);
+  font-size: 14px;
+  line-height: 20px;
+  outline: none;
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity var(--dl-t-open, 150ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    scale var(--dl-t-open, 150ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+.dl-menu {
+  min-width: 128px;
+}
+.dl-popover {
+  max-width: calc(100vw - 16px);
+  padding: 12px;
+}
+:is(.dl-menu, .dl-popover):is([data-starting-style], [data-ending-style]) {
+  opacity: 0;
+  scale: 0.97;
+}
+:is(.dl-menu, .dl-popover)[data-ending-style] {
+  transition-duration: var(--dl-t-close, 110ms);
+}
+/* Nothing animates when the keyboard opened it. */
+:is(.dl-menu, .dl-popover)[data-instant],
+html[data-input="keyboard"] :is(.dl-menu, .dl-popover) {
+  transition: none;
+}
+/* A context menu opens at once, every time, and still fades as it goes. */
+.dl-menu.dl-context-menu {
+  transition: none;
+}
+.dl-menu.dl-context-menu[data-starting-style] {
+  opacity: 1;
+  scale: 1;
+}
+.dl-menu.dl-context-menu[data-ending-style]:not([data-instant]) {
+  transition: opacity var(--dl-t-close, 110ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+  scale: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dl-menu,
+  .dl-popover,
+  .dl-menu.dl-context-menu[data-ending-style]:not([data-instant]) {
+    transition: none;
+  }
+}
+
+/* The rows scroll inside the surface, and the surface itself never clips:
+   the arrow stands outside its box. */
+.dl-menu-list {
+  box-sizing: border-box;
+  max-height: calc(var(--available-height, 100vh) - 8px);
+  padding: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: inherit;
+}
+
+/* The arrow: drive's and the tooltip's, a square turned 45 degrees and lined
+   on its two outer edges. It is cut to the half that stands outside the
+   surface, plus the 1px that paints over the surface's own edge under its
+   base, so no line crosses it and nothing shows inside the glass. It is the
+   solid grey the frost reads as, since a child of a blurred surface cannot
+   blur the page itself. Base UI places it along the edge and names the
+   side. */
+.dl-menu-arrow {
+  position: absolute;
+  z-index: -1;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border: 0 solid var(--dl-overlay-edge, #3d3d3d);
+  border-radius: 2px;
+  background: var(--dl-overlay-solid, #1f1f1f);
+  transform: rotate(45deg);
+}
+.dl-menu-arrow[data-side="bottom"] {
+  top: -6px;
+  border-top-width: 1px;
+  border-left-width: 1px;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+.dl-menu-arrow[data-side="top"] {
+  bottom: -6px;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+.dl-menu-arrow:is([data-side="right"], [data-side="inline-end"]) {
+  left: -6px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+.dl-menu-arrow:is([data-side="left"], [data-side="inline-start"]) {
+  right: -6px;
+  border-top-width: 1px;
+  border-right-width: 1px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+/* A row: 32px, an icon then the words, and whatever ends it at the right. */
+.dl-menu-item {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: var(--dl-r-control, 7px);
+  color: inherit;
+  font: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+  outline: none;
+}
+.dl-menu-item[data-inset] {
+  padding-left: 34px;
+}
+.dl-menu-item > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--dl-fg-muted, #b8b8b8);
+  pointer-events: none;
+}
+/* Under the pointer or the keys: white at 8%. A solid step reads as a slab
+   over a blur. A row whose submenu is open keeps the highlight. */
+.dl-menu-item:is([data-highlighted], [data-popup-open]) {
+  background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
+}
+.dl-menu-item[data-disabled] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+/* What ends a row at its right: a keycap, a check, a submenu's chevron. It
+   keeps 24px clear of the words. */
+.dl-menu-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding-left: 24px;
+}
+.dl-menu-item > svg.dl-menu-end,
+.dl-menu-end > svg {
+  box-sizing: content-box;
+  width: 16px;
+  height: 16px;
+  color: var(--dl-fg, #fff);
+}
+.dl-menu-item > svg.dl-menu-chevron {
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+
+/* A destructive row: the words and the icon in red. The highlighted row
+   reads the text step, which holds 4.5:1 on the highlight. */
+.dl-menu-item[data-variant="destructive"],
+.dl-menu-item[data-variant="destructive"] > svg {
+  color: var(--dl-danger, oklch(0.68 0.19 25));
+}
+.dl-menu-item[data-variant="destructive"][data-highlighted],
+.dl-menu-item[data-variant="destructive"][data-highlighted] > svg {
+  color: var(--dl-danger-text, oklch(0.74 0.19 25));
+}
+
+/* A group's label: sentence case as written, small and muted. */
+.dl-menu-label {
+  padding: 6px 8px 4px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--dl-fg-muted, #b8b8b8);
+  user-select: none;
+}
+.dl-menu-label[data-inset] {
+  padding-left: 34px;
+}
+/* A rule between groups, from edge to edge of the surface. */
+.dl-menu-separator {
+  height: 1px;
+  margin: 4px -4px;
+  background: var(--dl-overlay-rule, oklch(1 0 0 / 0.09));
+}
+
+/* A popover's words. */
+.dl-popover-title {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.dl-popover-description {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+
+/* The keycap: drive's and notes', one cap to a key, raised by a 3px bottom
+   edge. */
+.dl-kbd {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+.dl-kbd-key {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  min-width: 20px;
+  padding: 0 6px;
+  border: 1px solid var(--dl-kbd-edge, #5c5c5c);
+  border-bottom-width: 3px;
+  border-radius: var(--dl-r-control, 7px);
+  background: var(--dl-kbd-face, #383838);
+  color: var(--dl-fg-muted, #b8b8b8);
+  font-family: var(--dl-font-mono, ui-monospace, "SF Mono", Menlo, Consolas, monospace);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  user-select: none;
+}
+/* A key means nothing on a touch screen. */
+@media (hover: none) {
+  .dl-menu .dl-kbd {
+    display: none;
+  }
+}

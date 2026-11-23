@@ -2,7 +2,7 @@
 
    What it is. Custom properties, named --dl-*, for what the owner has decided
    so far: the typeface, the surfaces by position, the sidebar's rows, the
-   phone bar's glass, the text colours (the accent as text among them), the corners, the motion
+   phone bar's glass, the overlay glass, the text colours (the accent as text among them), the corners, the motion
    timings and the meaning colours. A question that is
    still open has no token here, so a missing value means "not decided", and
    the app keeps its own until it is.
@@ -76,6 +76,41 @@
   --dl-bar-glass: color-mix(in oklch, color-mix(in oklch, #242424 60%, #151515) 45%, transparent);
   --dl-bar-blur: blur(14px);
   --dl-bar-rim: oklch(1 0 0 / 0.09);
+
+  /* Lines: a rule between blocks, and the stronger edge of a floating
+     surface. Mail's, notes' and calendar's own values. */
+  --dl-border: #2f2f2f;
+  --dl-border-strong: #3d3d3d;
+
+  /* Overlay glass (2026-11-22): menus, context menus, popovers, the command
+     palette, tooltips and phone sheets are frosted. The fill is #202020 at
+     72% over a 16px blur, with the strong edge and one shadow. A row under
+     the pointer or the keys is white at 8%, because a solid step reads as a
+     slab over a blur, and a rule inside a menu is white at 9%. Solid is the
+     grey the frost comes to over the family's dark panes: an arrow is drawn
+     in it, and an app with transparency turned off points --dl-overlay at
+     it. The settings dialog is not glass: it stays solid, on --dl-dialog
+     with the same strong edge. */
+  --dl-overlay: rgb(32 32 32 / 0.72);
+  --dl-overlay-blur: blur(16px) saturate(1.5);
+  --dl-overlay-edge: var(--dl-border-strong);
+  --dl-overlay-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.55);
+  --dl-overlay-hover: oklch(1 0 0 / 0.08);
+  --dl-overlay-rule: oklch(1 0 0 / 0.09);
+  --dl-overlay-solid: #1f1f1f;
+  --dl-dialog: #1f1f1f;
+
+  /* A destructive act, mail's red: a menu row that deletes or archives. As
+     14px text it clears 4.5:1 on the overlay glass (5.2:1) but not on a
+     highlighted row (4.2:1), so the row under the pointer reads the text
+     step, the same hue lifted to a lightness of at least 0.74 (4.9:1). */
+  --dl-danger: oklch(0.68 0.19 25);
+  --dl-danger-text: oklch(from var(--dl-danger) max(l, 0.74) c h);
+
+  /* The keycap (drive's and notes' kbd): a face and an edge, raised by a
+     thicker bottom edge. */
+  --dl-kbd-face: #383838;
+  --dl-kbd-edge: #5c5c5c;
 
   /* Text. Faint is the dimmest grey that still holds 4.5:1 on the lightest
      surface it sits on, #2f2f2f (4.53:1 measured; #858d96 gave 3.98:1). */
