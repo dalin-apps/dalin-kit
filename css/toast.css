@@ -55,6 +55,11 @@
      --dl-toast-scrim
          The fill of the layer under a fanned phone stack, for an app that
          asked for one (<Toaster scrim>). Clear unless set.
+     --dl-toast-scrim-over
+         The same fill while the dock is not the pill. Falls back to
+         --dl-toast-scrim.
+     --dl-toast-scrim-fade
+         How long the scrim's fill takes to fade in. 200ms.
 
    What an app must not override. The kinds' tints and rims, the white words,
    the Undo segment, the shapes (Sonner's 8px card, the phone's pill), the
@@ -992,16 +997,37 @@
    bar, or one under --dl-toast-over-z while the dock is not the pill. The
    band and the bar stay over it and keep their own taps. It is clear; an
    app that wants the page dimmed under an open stack sets --dl-toast-scrim
-   (mail used oklch(0 0 0 / 0.28)). */
+   (mail used oklch(0 0 0 / 0.28)).
+
+   The dim may differ while the dock is not the pill: --dl-toast-scrim-over
+   is the fill there, and it falls back to --dl-toast-scrim. Mail dims the
+   page over its parked draft chip and leaves it clear over the pill, so it
+   sets the second variable alone, on :root, and keys on no class of the
+   kit's.
+
+   The fill fades in over --dl-toast-scrim-fade (200ms, mail's own), so a
+   dim does not land in one frame. Nothing fades under reduced motion: the
+   <Toaster> writes `toast-scrim-still` then. A clear scrim fades too, and
+   shows nothing either way. */
 .toast-scrim {
   position: fixed;
   inset: 0;
   z-index: calc(var(--dl-bar-z) - 3);
   background: var(--dl-toast-scrim, transparent);
   -webkit-tap-highlight-color: transparent;
+  animation: toast-scrim-in var(--dl-toast-scrim-fade, 200ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)) both;
 }
 .toast-scrim.toast-scrim-over {
   z-index: calc(var(--dl-toast-over-z) - 1);
+  background: var(--dl-toast-scrim-over, var(--dl-toast-scrim, transparent));
+}
+.toast-scrim.toast-scrim-still {
+  animation: none;
+}
+@keyframes toast-scrim-in {
+  from {
+    opacity: 0;
+  }
 }
 
 /* The existing cards riffle back in behind the new one (opacity only, so each

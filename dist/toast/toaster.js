@@ -634,7 +634,9 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
     return (_jsxs("div", { ref: root, style: { display: "contents" }, children: [scrim && stackOpen ? (
             // A tap anywhere off the fanned stack tucks it. Not a button: the
             // band is the named control for this, and it takes Tab.
-            _jsx("div", { "aria-hidden": "true", className: dock ? "toast-scrim toast-scrim-over" : "toast-scrim", onClick: () => {
+            _jsx("div", { "aria-hidden": "true", className: ["toast-scrim", dock && "toast-scrim-over", still && "toast-scrim-still"]
+                    .filter(Boolean)
+                    .join(" "), onClick: () => {
                     onScrimTuck?.();
                     setToastsExpanded(false);
                 } })) : null, _jsx(SonnerToaster, { theme: "dark", position: "bottom-right", gap: plain ? undefined : 8, className: className, style: dock ? { "--dl-dock-line": `${dock.line}px` } : undefined, expand: stackOpen || tucked, visibleToasts: tucked ? DESKTOP_VISIBLE : undefined, swipeDirections: swipeDirections, icons: TOAST_ICONS, toastOptions: {

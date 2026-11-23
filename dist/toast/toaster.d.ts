@@ -56,7 +56,9 @@ export type ToasterProps = {
      * layer over the page while the stack is fanned out, one step under the
      * toasts (`.toast-scrim` in toast.css), and a tap on it tucks the stack.
      * The layer is clear unless the app gives it a fill with
-     * `--dl-toast-scrim`. Off by default, when only the band and the pill's
+     * `--dl-toast-scrim`, or with `--dl-toast-scrim-over` for the fill while
+     * the dock is not the pill. The fill fades in over 200ms, and lands at
+     * once under reduced motion. Off by default, when only the band and the pill's
      * swipe tuck the stack. Set it where a dock other than the pill is used:
      * the band there is a thin strip while the stack is out.
      */

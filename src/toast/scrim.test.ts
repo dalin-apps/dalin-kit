@@ -113,6 +113,18 @@ describe("<Toaster scrim>", () => {
     expect(scrim()?.classList.contains("toast-scrim-over")).toBe(false);
   });
 
+  it("fades in, and lands at once while the app's motion switch is on", async () => {
+    await tuckedStack({ scrim: true, reducedMotionSelector: 'html[data-motion="reduce"]' });
+    await fan(true);
+    expect(scrim()?.classList.contains("toast-scrim-still")).toBe(false);
+    await act(async () => {
+      document.documentElement.setAttribute("data-motion", "reduce");
+      await Promise.resolve();
+    });
+    expect(scrim()?.classList.contains("toast-scrim-still")).toBe(true);
+    document.documentElement.removeAttribute("data-motion");
+  });
+
   it("is the phone's: the desktop column has no fan to tap off", async () => {
     phone = false;
     await tuckedStack({ scrim: true });
@@ -135,5 +147,20 @@ describe("toast.css, the scrim", () => {
 
   it("draws nothing unless the app gives it a fill", () => {
     expect(ruleFor(css, ".toast-scrim")).toContain("background: var(--dl-toast-scrim, transparent)");
+  });
+
+  it("takes a fill of its own off the pill, from a variable and no class of the kit's", () => {
+    expect(ruleFor(css, ".toast-scrim.toast-scrim-over")).toContain(
+      "background: var(--dl-toast-scrim-over, var(--dl-toast-scrim, transparent))",
+    );
+  });
+
+  it("fades its fill in over mail's 200ms, from clear", () => {
+    expect(ruleFor(css, ".toast-scrim")).toContain("animation: toast-scrim-in var(--dl-toast-scrim-fade, 200ms)");
+    expect(css).toMatch(/@keyframes toast-scrim-in\s*\{\s*from\s*\{\s*opacity: 0;\s*\}\s*\}/);
+  });
+
+  it("does not fade under reduced motion", () => {
+    expect(ruleFor(css, ".toast-scrim.toast-scrim-still")).toContain("animation: none");
   });
 });
