@@ -641,6 +641,7 @@ The kit adds these props to Base UI's own:
 | `modal` | `ContextMenu` | `true` is Base UI's own modal context menu. Off by default. |
 | `finalFocus` | The two menu content parts | Base UI's own: where focus goes as the menu closes. The kit supplies a default, below. |
 | `variant` | `MenuItem`, `MenuLinkItem` | `"destructive"` is the red row. |
+| `closeOnClick` | `MenuLinkItem` | Base UI's own, on by default from 0.5: a click on a link row closes its menu, as on any row. Base UI's default leaves it open. |
 | `inset` | `MenuItem`, `MenuLinkItem`, `MenuLabel`, `MenuSubTrigger` | Lines the words up with rows that have an icon. |
 | `keys` | `MenuShortcut`, `Kbd` | The keys, one cap each: `["Ctrl", "K"]`. A single cap may be the child instead. |
 | `align`, `alignOffset`, `side`, `sideOffset`, `anchor`, `collisionPadding` | The three content parts | Passed to Base UI's positioner. The context menu takes no `anchor`. |

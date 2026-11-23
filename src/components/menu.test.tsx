@@ -62,6 +62,29 @@ const trigger = () => one('[data-slot="menu-trigger"]')!;
 const rows = () => all('.dl-menu [role="menuitem"]');
 
 describe("<Menu>", () => {
+  it("closes on a click on a link row, as on any row, unless told to stay open", async () => {
+    const LinkMenu = ({ stay }: { stay?: boolean }) => (
+      <Menu>
+        <MenuTrigger>More</MenuTrigger>
+        <MenuContent>
+          <MenuLinkItem href="#help" closeOnClick={stay ? false : undefined}>
+            Help
+          </MenuLinkItem>
+        </MenuContent>
+      </Menu>
+    );
+    await mount(<LinkMenu />);
+    await click(trigger());
+    await click(one('[data-slot="menu-link-item"]'));
+    await settle(300);
+    expect(one(".dl-menu")).toBeNull();
+    await mount(<LinkMenu key="stay" stay />);
+    await click(trigger());
+    await click(one('[data-slot="menu-link-item"]'));
+    await settle(300);
+    expect(one(".dl-menu")).not.toBeNull();
+  });
+
   it("shows nothing until its trigger is pressed", async () => {
     await mount(<RowMenu />);
     expect(one(".dl-menu")).toBeNull();
