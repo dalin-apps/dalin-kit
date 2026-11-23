@@ -180,6 +180,20 @@
   --dl-focus-w: 2px;
   --dl-focus-offset: 2px;
 
+  /* A press (the owner's pick on 2026-11-23). On the desktop a pressed
+     control keeps its hover look and goes one step darker: the hover's
+     filter at 0.92 brightness. On the phone it shrinks to 0.97 and
+     brightens to 1.12, calendar's phone press; under reduced motion it
+     only brightens. Nothing is drawn behind a pressed icon. */
+  --dl-press-dim: 0.92;
+  --dl-press-scale: 0.97;
+  --dl-press-bright: 1.12;
+  /* A control that can't be used right now, and a busy one, which looks
+     the same and says its verb ("Creating", "Syncing"): 45% opaque, with the
+     normal cursor and no hover or press look. A busy control keeps its
+     keyboard focus. */
+  --dl-disabled-opacity: 0.45;
+
   /* Corners: controls and tooltips, cards and menus, dialogs and phone
      sheets. The create button has its own. */
   --dl-r-control: 7px;

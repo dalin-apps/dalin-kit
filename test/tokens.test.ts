@@ -30,6 +30,17 @@ describe("tokens.css", () => {
   });
 });
 
+describe("tokens new in 0.7", () => {
+  it.each([
+    ["--dl-press-dim", "0.92"],
+    ["--dl-press-scale", "0.97"],
+    ["--dl-press-bright", "1.12"],
+    ["--dl-disabled-opacity", "0.45"],
+  ])("%s is %s", (name, value) => {
+    expect(token(name)).toBe(value);
+  });
+});
+
 describe("tokens new in 0.6", () => {
   it.each([
     ["--dl-focus-w", "2px"],
