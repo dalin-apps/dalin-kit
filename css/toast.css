@@ -574,6 +574,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The desktop card holds its title to one line too (a toast is one line, in
+   the owner's words), where it used to wrap to four. The words cut off stay
+   in the page, so a screen reader reads the whole title, and the <Toaster>
+   gives a cut title its full text as a `title` hint (title-hint.ts). */
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck [data-sonner-toast] [data-content] {
+  min-width: 0;
+}
+[data-sonner-toaster][data-y-position="bottom"].toast-tuck [data-sonner-toast] [data-title] {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Band-driven expansion ONLY. Sonner also expands on hover (its internal
    `expanded` state, set from the toaster's mouseenter); a toast renders
