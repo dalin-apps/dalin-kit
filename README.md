@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.3 holds the tokens, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, and the helpers each app had copied. A question that is still open has nothing here. What 0.3 changed in the toast is listed under "What changed in 0.3".
+Version 0.4 holds the tokens, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.4 is listed under "Moving an app from 0.3 to 0.4".
 
 ## Install
 
@@ -62,6 +62,19 @@ The toast and the helpers import from `@dalin/kit`, and every component from `@d
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
 
+## Moving an app from 0.3 to 0.4
+
+0.4 fixes what a three-stage review of the four apps found in 0.3. Six things need a change in the app, or a look.
+
+- Components import from `@dalin/kit/components`. The root exports the toast and the helpers and no longer loads Base UI.
+- The component sheets sit in the `dalin` cascade layer. Add the `@layer` line from "Adopt it in an app", then check the app's own rules on `.dl-*` classes: an unlayered rule now beats the kit's whatever it weighs.
+- `<PhoneSearch>` pushes a history entry of its own. An app that already gives search one passes `systemBack={false}` or drops its own. A row that closes search now runs a moment after the tap, once the entry has gone.
+- `<ContextMenu>` is not modal. An app that passed `modal={false}`, which Base UI ignored, can delete it.
+- `<FamilySwitcher>` opens to the right of the wordmark. A sidebar that set `side` or `align` to move the menu off its own controls can drop them.
+- The command palette shows a query's list whole. A source that answers at once is unchanged. One that answers later no longer shows its rows group by group.
+
+Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<PhoneSearch>`, a row's `verb` in the palette, `finalFocus` and `collisionAvoidance` on `<MenuContent>`, `setMotionAttr`, and the keyboard inset, the toaster's tab stop and `aria-keyshortcuts`, which need nothing from the app.
+
 ## Tokens
 
 `tokens.css` defines custom properties and no rules. Every value sits in `:where(:root)`, so the order it loads in never matters.
@@ -111,7 +124,7 @@ Then delete the app's own copy of whatever the kit now covers. Two copies of a t
 
 `--dl-accent-text` is new in 0.1. The accent is a fill colour: as 14px text on a 14% tint of itself it reads 3.5 to 4.4:1 in mail, calendar and drive. The token raises its lightness to at least 0.78 and keeps its hue and chroma, which clears 4.5:1 on that tint over the panes (`#151515` to `#1c1c1c`). Read it for text and keep `--dl-accent` for fills, rings and tints. It needs relative colour syntax.
 
-One rule has no token. Nothing animates when the action started from the keyboard, and `watchInputModality` (below) keeps the attribute a stylesheet reads for that. The kit's own menus, popovers and palette follow it already.
+One rule has no token. Nothing animates when the action started from the keyboard, and `watchInputModality` (below) keeps the attribute a stylesheet reads for that. The kit's own menus, popovers and palette follow it already, and from 0.4 they follow the app's own motion switch too.
 
 Don't override a token. If a screen needs a different value, ask the owner, and the answer goes in this file.
 
@@ -863,7 +876,7 @@ import { TipKey, shortcutLabel } from "@dalin/kit";
 
 That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel` takes `Mod`, `Shift` and `Alt` for the platform's keys and writes every other key as given. `<TipKey>` draws the dot and the key in the muted grey, or in the app's own `className`, and renders nothing without a key. `tipText("Archive", "E")` is the same line as a string. `shortcutLabelFor(mac, keys)` and `isMacPlatform(platform)` are the pure halves. The tooltip itself stays each app's own.
 
-## Not in version 0.3
+## Not in version 0.4
 
 These are still open, so the kit has no value for them: type sizes, disabled states, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
 
@@ -882,7 +895,7 @@ npm run build
 
 Commit `dist/` with the source change that produced it. Apps install from GitHub and never build, so a stale `dist/` ships the old code. `npm run check:dist` rebuilds and fails if the result differs from what is committed.
 
-The component tests run the real Base UI parts in jsdom, on the pinned 1.4.1. `npm run test:base-ui-next` runs them again on 1.9.0, installed beside it as `base-ui-next`. `test/dom.tsx` mounts a tree and sends it clicks and keys, and `test/color.ts` is the colour math behind every contrast claim.
+The component tests run the real Base UI parts in jsdom, on the pinned 1.4.1. `npm run test:base-ui-next` runs them again on 1.9.0, installed beside it as `base-ui-next`. `test/dom.tsx` mounts a tree and sends it clicks and keys, and `withToast()` there puts a toaster on the page as Sonner draws one. `test/color.ts` is the colour math behind every contrast claim. `test/layers.test.ts` pins which sheets sit in the `dalin` layer, and `src/helpers/exports.test.ts` walks the imports of each entry, so the root can't start loading Base UI again unnoticed.
 
 The toast tests run the real `<Toaster>` in jsdom. jsdom has no cascade to trust for `:where()` and `:has()`, so a test that needs to know which of two rules wins weighs their selectors with `test/css.ts`. A test about the docked phone stack that mounts no bar calls `withPill()` from `test/pill.ts`, since the toaster docks only beside a pill.
 

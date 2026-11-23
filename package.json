@@ -1,6 +1,6 @@
 {
   "name": "@dalin/kit",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "The shared design base of the dalin apps: tokens, the toast, the create button, the wordmark and family switcher, frosted menus, the command palette, the phone header and search, and the helpers each app had copied.",
   "type": "module",
   "license": "MIT",
