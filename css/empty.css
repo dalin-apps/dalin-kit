@@ -1,0 +1,53 @@
+/* @dalin/kit empty.css: an empty place (<EmptyState>).
+
+   What it is. A 40px icon over a 16px title in weight 600, centred in the
+   pane, with no sentence under them: drive's values from 2026-11-17, which
+   the owner picked for all four apps on 2026-11-22. The icon is the faint
+   grey and the title is the text colour, so the title leads.
+
+   How an app adopts it. Import this file once and render
+   <EmptyState icon title> where the pane's content would be. Delete the
+   app's own empty-state rules, and its subtitles with them.
+
+   Where it sits. It fills its pane and centres in it. In a flex pane it
+   grows into the free space; in a block pane with a height it takes that
+   height. A pane with neither gives it its own padding and no more.
+
+   What an app must not override. The sizes, the weight, the two colours,
+   and the absence of a subtitle. */
+.dl-empty {
+  box-sizing: border-box;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+.dl-empty-icon {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--dl-fg-faint, #8f97a0);
+  line-height: 0;
+}
+.dl-empty-icon > svg {
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+.dl-empty-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 23px;
+  font-weight: 600;
+  color: var(--dl-fg, #fff);
+  /* A long title breaks into even lines, never one word alone. */
+  text-wrap: balance;
+}
+.dl-empty-action {
+  margin-top: 8px;
+}

@@ -42,7 +42,8 @@
     "./create.css": "./css/create.css",
     "./motion.css": "./css/motion.css",
     "./wordmark.css": "./css/wordmark.css",
-    "./menu.css": "./css/menu.css"
+    "./menu.css": "./css/menu.css",
+    "./empty.css": "./css/empty.css"
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",

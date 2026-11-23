@@ -41,3 +41,4 @@ export {
   PopoverTrigger,
   type PopoverContentProps,
 } from "./popover.js";
+export { EmptyState, type EmptyStateProps } from "./empty-state.js";
