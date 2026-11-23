@@ -38,12 +38,14 @@ describe("the surface ladder", () => {
   });
 
   it.each([
-    ["--dl-hover-sidebar", "--dl-sidebar", "--dl-list"],
-    ["--dl-hover-list", "--dl-list", "--dl-content"],
-    ["--dl-hover-content", "--dl-content", "--dl-raised"],
-  ])("%s is one notch above its pane, and under the selected lift", (hover, pane, notch) => {
-    expect(token(hover)).toBe(token(notch));
-    expect(luminance(hex(token(hover)))).toBeGreaterThan(luminance(hex(token(pane))));
+    ["--dl-hover-sidebar", "--dl-sidebar", "#1e1e1e"],
+    ["--dl-hover-list", "--dl-list", "#202020"],
+    ["--dl-hover-content", "--dl-content", "#242424"],
+  ])("%s plainly lightens its pane and stays under the selected lift", (hover, pane, value) => {
+    expect(token(hover)).toBe(value);
+    const level = (h: string) => parseInt(h.slice(1, 3), 16);
+    // At least 6 levels of grey above its pane, so the hover reads.
+    expect(level(token(hover)) - level(token(pane))).toBeGreaterThanOrEqual(6);
     expect(luminance(hex(token(hover)))).toBeLessThan(luminance(hex(token("--dl-selected"))));
   });
 });

@@ -60,7 +60,7 @@ Then delete the app's own copy of whatever the kit now covers. Two copies of a t
 | `--dl-content` | `#1c1c1c` | The reader, the page, calendar's grid, drive's inspector |
 | `--dl-raised` | `#242424` | A card or a field standing on a pane |
 | `--dl-selected` | `#262626` | The selected lift: the open row, the picked item |
-| `--dl-hover-sidebar`, `--dl-hover-list`, `--dl-hover-content` | `#181818`, `#1c1c1c`, `#242424` | A row under the pointer, by the pane it sits on |
+| `--dl-hover-sidebar`, `--dl-hover-list`, `--dl-hover-content` | `#1e1e1e`, `#202020`, `#242424` | A row under the pointer, by the pane it sits on |
 | `--dl-row-h`, `--dl-row-text` | 32px, 14px | A top navigation row in the sidebar |
 | `--dl-row-dense-h`, `--dl-row-dense-text` | 28px, 13px | A row in a long list under it |
 | `--dl-row-icon` | 17px | A sidebar row's icon |
@@ -104,7 +104,7 @@ Don't override a token. If a screen needs a different value, ask the owner, and 
 
 The owner picked this on 2026-11-22. A pane takes its fill from where it stands, left to right, and never from what it holds: the sidebar, then a second pane, then the content. So drive's file list is the list step under an inspector on the content step, and mail's list is one step up from its sidebar.
 
-A row under the pointer lightens to the next step above its own pane. It shows on every pane that way and never matches the selected lift, which is one grey everywhere. A row in the sidebar reads `--dl-hover-sidebar`, a row in a list `--dl-hover-list`, a row on the content `--dl-hover-content`.
+A row under the pointer lightens about halfway from its own pane to the selected lift. It shows on every pane that way and never matches the selected lift, which is one grey everywhere. A row in the sidebar reads `--dl-hover-sidebar`, a row in a list `--dl-hover-list`, a row on the content `--dl-hover-content`.
 
 The sidebar's hover is the ladder's smallest step, `#151515` to `#181818`. If it reads too faint in the real screen, that is a question for the owner, not a value to override.
 
