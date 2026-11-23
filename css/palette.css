@@ -55,7 +55,10 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--dl-overlay, rgb(32 32 32 / 0.72));
-  backdrop-filter: var(--dl-overlay-blur, blur(16px) saturate(1.5));
+  /* Blurred, then levelled, as the menus are (menu.css): what is behind the
+     glass is brought down first, so the words hold over a white page. */
+  backdrop-filter: var(--dl-overlay-blur, blur(16px) saturate(1.5))
+    var(--dl-overlay-level, contrast(0.709) brightness(0.468));
   border: 1px solid var(--dl-overlay-edge, #3d3d3d);
   border-radius: var(--dl-r-sheet, 14px);
   box-shadow: 0 24px 56px -16px oklch(0 0 0 / 0.65);

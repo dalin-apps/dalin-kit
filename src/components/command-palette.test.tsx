@@ -671,6 +671,12 @@ describe("palette.css", () => {
     expect(panel).toContain("border-radius: var(--dl-r-sheet, 14px)");
   });
 
+  it("levels what is behind its glass, as the menus do, so the words hold over a white page", () => {
+    const filter = (rule: string) => /backdrop-filter:\s*([^;]+);/.exec(rule)?.[1]?.replace(/\s+/g, " ");
+    expect(filter(panel)).toBe("var(--dl-overlay-blur, blur(16px) saturate(1.5)) var(--dl-overlay-level, contrast(0.709) brightness(0.468))");
+    expect(filter(panel)).toBe(filter(ruleFor(readCss("menu"), ".dl-menu, .dl-popover")));
+  });
+
   it("dims the app behind it", () => {
     const dim = ruleFor(css, ".dl-palette-dim");
     expect(dim).toContain("inset: 0");
