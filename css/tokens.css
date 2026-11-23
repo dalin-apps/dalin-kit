@@ -48,7 +48,7 @@
      selected lift, so it plainly lightens on its own pane (the next ladder
      step, 3 levels, did not read) and never matches the selected lift.
      A row in the sidebar reads --dl-hover-sidebar, and so on. */
-  --dl-hover-sidebar: #1e1e1e;
+  --dl-hover-sidebar: #232323;
   --dl-hover-list: #202020;
   --dl-hover-content: var(--dl-raised);
 

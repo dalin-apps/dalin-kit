@@ -104,7 +104,7 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 | `--dl-content` | `#1c1c1c` | The reader, the page, calendar's grid, drive's inspector |
 | `--dl-raised` | `#242424` | A card or a field standing on a pane |
 | `--dl-selected` | `#262626` | The selected lift: the open row, the picked item |
-| `--dl-hover-sidebar`, `--dl-hover-list`, `--dl-hover-content` | `#1e1e1e`, `#202020`, `#242424` | A row under the pointer, by the pane it sits on |
+| `--dl-hover-sidebar`, `--dl-hover-list`, `--dl-hover-content` | `#232323`, `#202020`, `#242424` | A row under the pointer, by the pane it sits on |
 | `--dl-row-h`, `--dl-row-text` | 32px, 14px | A top navigation row in the sidebar |
 | `--dl-row-dense-h`, `--dl-row-dense-text` | 28px, 13px | A row in a long list under it |
 | `--dl-row-icon` | 17px | A sidebar row's icon |
@@ -154,7 +154,7 @@ The owner picked this on 2026-11-22. A pane takes its fill from where it stands,
 
 A row under the pointer lightens about halfway from its own pane to the selected lift. It shows on every pane that way and never matches the selected lift, which is one grey everywhere. A row in the sidebar reads `--dl-hover-sidebar`, a row in a list `--dl-hover-list`, a row on the content `--dl-hover-content`.
 
-The sidebar's hover is the ladder's smallest step, `#151515` to `#181818`. If it reads too faint in the real screen, that is a question for the owner, not a value to override.
+The sidebar's hover is `#232323`, one step brighter than halfway, because the owner found `#1e1e1e` too faint on 2026-11-23. It still sits under the `#262626` selected lift.
 
 ### Sidebar rows
 

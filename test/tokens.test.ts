@@ -38,7 +38,7 @@ describe("the surface ladder", () => {
   });
 
   it.each([
-    ["--dl-hover-sidebar", "--dl-sidebar", "#1e1e1e"],
+    ["--dl-hover-sidebar", "--dl-sidebar", "#232323"],
     ["--dl-hover-list", "--dl-list", "#202020"],
     ["--dl-hover-content", "--dl-content", "#242424"],
   ])("%s plainly lightens its pane and stays under the selected lift", (hover, pane, value) => {
