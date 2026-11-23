@@ -166,13 +166,44 @@ describe("the overlay glass and what is written on it", () => {
   });
 });
 
+describe("the scrim, a sheet's handle and the sidebar's width", () => {
+  it.each([
+    ["--dl-scrim", "rgb(0 0 0 / 0.62)"],
+    ["--dl-sheet-handle", "rgb(255 255 255 / 0.22)"],
+    ["--dl-sheet-handle-w", "40px"],
+    ["--dl-sheet-handle-h", "4px"],
+    ["--dl-sidebar-w", "240px"],
+  ])("%s is %s", (name, value) => {
+    expect(token(name)).toBe(value);
+  });
+});
+
 describe("--dl-accent-text", () => {
   const value = /--dl-accent-text:\s*([^;]+);/.exec(css)?.[1] ?? "";
   const floor = Number(/max\(l,\s*([\d.]+)\)/.exec(value)?.[1]);
 
-  it("is the accent with its lightness raised to at least 0.78, hue and chroma kept", () => {
-    expect(value).toBe("oklch(from var(--dl-accent) max(l, 0.78) c h)");
-    expect(floor).toBe(0.78);
+  it("is the accent with its lightness raised to at least 0.80, hue and chroma kept", () => {
+    expect(value).toBe("oklch(from var(--dl-accent) max(l, 0.8) c h)");
+    expect(floor).toBe(0.8);
+  });
+
+  // #2f2f2f is the lightest surface small text sits on, and the one mail's
+  // violet failed on at the old floor.
+  describe.each(Object.entries(ACCENTS))("%s over #2f2f2f", (_app, [L, C, H]) => {
+    it.each(Object.keys(RENDER) as Array<keyof typeof RENDER>)("clears 4.5:1 on a 14%% accent tint (%s)", (how) => {
+      const draw = RENDER[how];
+      const tint = over(draw(L, C, H), 0.14, hex("#2f2f2f"));
+      expect(contrast(draw(Math.max(L, floor), C, H), tint)).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
+  it("needed the new floor: at 0.78 mail's violet read 4.46:1 on its tint over #2f2f2f", () => {
+    const [L, C, H] = ACCENTS.mail!;
+    const tint = over(RENDER.clipped(L, C, H), 0.14, hex("#2f2f2f"));
+    const old = contrast(RENDER.clipped(Math.max(L, 0.78), C, H), tint);
+    expect(old).toBeLessThan(4.5);
+    expect(old).toBeCloseTo(4.46, 2);
+    expect(contrast(RENDER.clipped(Math.max(L, floor), C, H), tint)).toBeCloseTo(4.77, 2);
   });
 
   describe.each(Object.entries(ACCENTS))("%s", (_app, [L, C, H]) => {

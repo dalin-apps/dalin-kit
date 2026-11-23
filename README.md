@@ -93,6 +93,7 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 | `--dl-row-dense-h`, `--dl-row-dense-text` | 28px, 13px | A row in a long list under it |
 | `--dl-row-icon` | 17px | A sidebar row's icon |
 | `--dl-row-selected`, `--dl-row-selected-icon` | `--dl-selected`, `--dl-fg` | The open plain row, and its filled icon |
+| `--dl-sidebar-w` | 240px | The desktop sidebar's default width. The family switcher's menu opens just past it |
 | `--dl-bar-glass`, `--dl-bar-blur`, `--dl-bar-rim` | a grey at 45%, `blur(14px)`, white at 9% | The phone's bottom bar |
 | `--dl-border`, `--dl-border-strong` | `#2f2f2f`, `#3d3d3d` | A rule between blocks; the edge of a floating surface |
 | `--dl-overlay`, `--dl-overlay-blur` | `#202020` at 72%, `blur(16px) saturate(1.5)` | The overlay glass |
@@ -101,13 +102,16 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 | `--dl-overlay-hover`, `--dl-overlay-rule` | white at 8%, white at 9% | A highlighted row on the glass; a rule inside a menu |
 | `--dl-overlay-solid` | `#1f1f1f` | The grey the frost reads as: an arrow, and the fill with transparency off |
 | `--dl-dialog` | `#1f1f1f` | The settings dialog, which stays solid |
+| `--dl-scrim` | black at 62% | What dims the page under a phone sheet, a dialog or the command palette |
+| `--dl-sheet-handle` | white at 22% | A phone sheet's grab handle |
+| `--dl-sheet-handle-w`, `--dl-sheet-handle-h` | 40px, 4px | The handle's size. Round it with half its height |
 | `--dl-danger` | `oklch(0.68 0.19 25)` | A destructive act, as a fill or a ring |
 | `--dl-danger-text` | `--dl-danger` at a lightness of at least 0.74 | The same red as text |
 | `--dl-kbd-face`, `--dl-kbd-edge` | `#383838`, `#5c5c5c` | The keycap |
 | `--dl-fg` | `#ffffff` | Text |
 | `--dl-fg-muted` | `#b8b8b8` | Secondary text |
 | `--dl-fg-faint` | `#8f97a0` | The dimmest text, 4.53:1 on `#2f2f2f` |
-| `--dl-accent-text` | `--dl-accent` at a lightness of at least 0.78 | The accent as small text |
+| `--dl-accent-text` | `--dl-accent` at a lightness of at least 0.80 | The accent as small text |
 | `--dl-r-control` | 7px | Controls and tooltips |
 | `--dl-r-card` | 10px | Cards and menus |
 | `--dl-r-sheet` | 14px | Dialogs and phone sheets |
@@ -122,7 +126,7 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 | `--dl-meaning-starred` | `oklch(0.75 0.15 80)` | Starred, amber |
 | `--dl-meaning-spam` | `oklch(0.72 0.17 50)` | Spam, orange |
 
-`--dl-accent-text` is new in 0.1. The accent is a fill colour: as 14px text on a 14% tint of itself it reads 3.5 to 4.4:1 in mail, calendar and drive. The token raises its lightness to at least 0.78 and keeps its hue and chroma, which clears 4.5:1 on that tint over the panes (`#151515` to `#1c1c1c`). Read it for text and keep `--dl-accent` for fills, rings and tints. It needs relative colour syntax.
+`--dl-accent-text` is new in 0.1. The accent is a fill colour: as 14px text on a 14% tint of itself it reads 3.5 to 4.4:1 in mail, calendar and drive. The token raises its lightness to at least 0.80 and keeps its hue and chroma, which clears 4.5:1 on that tint over the panes (`#151515` to `#1c1c1c`) and over `#2f2f2f`. The floor was 0.78 until 0.5, where mail's violet read 4.46:1 on its tint over `#2f2f2f`. At 0.80 the four accents read 4.77:1 (mail), 5.48:1 (calendar), 6.13:1 (notes) and 5.95:1 (drive) there, each with its channels clipped, the weaker of the two ways a browser may draw it. Read it for text and keep `--dl-accent` for fills, rings and tints. It needs relative colour syntax.
 
 One rule has no token. Nothing animates when the action started from the keyboard, and `watchInputModality` (below) keeps the attribute a stylesheet reads for that. The kit's own menus, popovers and palette follow it already, and from 0.4 they follow the app's own motion switch too.
 
@@ -733,7 +737,7 @@ A row, whether a result or an action, is a `PaletteItem`:
 
 The action filter needs every word of the query, in any order, in the title or the keywords, and ignores case and accents. `matchesQuery`, `matchParts`, `queryTerms` and `fold` are that rule, exported for a source that wants to match and mark the same way.
 
-`--dl-palette-z` is the dim's z-index (90, over the menus), and `--dl-palette-dim` is its fill.
+`--dl-palette-z` is the dim's z-index (90, over the menus), and `--dl-palette-dim` is its fill, `--dl-scrim` unless set.
 
 ## The phone header and search
 

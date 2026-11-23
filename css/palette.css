@@ -25,7 +25,8 @@
    Variables an app may set.
      --dl-palette-z    The z-index of the dim; the panel is one over it.
                        90, over the menus (70) and the toaster.
-     --dl-palette-dim  The fill over the app behind the palette.
+     --dl-palette-dim  The fill over the app behind the palette. The
+                       family scrim, --dl-scrim, unless set.
 
    What an app must not override. The width, the glass, the corners, the
    row's anatomy, the mark, and the headings' case.
@@ -37,7 +38,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--dl-palette-z, 90);
-  background: var(--dl-palette-dim, oklch(0 0 0 / 0.6));
+  background: var(--dl-palette-dim, var(--dl-scrim, rgb(0 0 0 / 0.62)));
   backdrop-filter: blur(3px);
   transition: opacity var(--dl-t-open, 150ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
 }

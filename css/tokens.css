@@ -2,7 +2,7 @@
 
    What it is. Custom properties, named --dl-*, for what the owner has decided
    so far: the typeface, the surfaces by position, the sidebar's rows, the
-   phone bar's glass, the overlay glass, the text colours (the accent as text among them), the corners, the motion
+   phone bar's glass, the overlay glass, the scrim and a sheet's handle, the text colours (the accent as text among them), the corners, the motion
    timings and the meaning colours. A question that is
    still open has no token here, so a missing value means "not decided", and
    the app keeps its own until it is.
@@ -66,6 +66,9 @@
   --dl-row-icon: 17px;
   --dl-row-selected: var(--dl-selected);
   --dl-row-selected-icon: var(--dl-fg);
+  /* The desktop sidebar's default width, so the four apps stop drifting
+     (calendar's was 252). The family switcher's menu opens just past it. */
+  --dl-sidebar-w: 240px;
 
   /* The phone's bottom bar glass (2026-11-22): calendar's recipe, the
      lighter of the four bars. A grey at 45% over a 14px blur, with a rim of
@@ -110,6 +113,16 @@
   --dl-overlay-solid: #1f1f1f;
   --dl-dialog: #1f1f1f;
 
+  /* What dims the page under a phone sheet or a dialog: black at 62%, the
+     settings sheet's own, which all four apps already share. The app sheets
+     had drifted to 45 and 55%. */
+  --dl-scrim: rgb(0 0 0 / 0.62);
+  /* A phone sheet's grab handle: a 40 by 4 pill of white at 22%, the
+     settings sheet's own. Round it with half its height. */
+  --dl-sheet-handle: rgb(255 255 255 / 0.22);
+  --dl-sheet-handle-w: 40px;
+  --dl-sheet-handle-h: 4px;
+
   /* A destructive act, mail's red: a menu row that deletes or archives. As
      14px text it clears 4.5:1 on the overlay glass over a dark pane (5.2:1)
      but not on a highlighted row (4.2:1), nor over a white page behind the
@@ -134,13 +147,15 @@
      an accent tint. The accent itself is a fill colour, and at its own
      lightness (0.64 in mail, calendar and drive) it reads 3.5 to 4.4:1 as
      14px text on a 14% tint of itself, under the 4.5:1 small text needs. So
-     this is the accent with its lightness raised to at least 0.78 and its
+     this is the accent with its lightness raised to at least 0.80 and its
      hue and chroma kept, which clears 4.5:1 on that tint over the panes
-     (#151515 to #1c1c1c) for all four apps. An accent already lighter
+     (#151515 to #1c1c1c) and over #2f2f2f, the lightest surface text sits
+     on, for all four apps. The floor was 0.78 until 0.5: mail's violet read
+     4.46:1 on the tint over #2f2f2f there, and reads 4.77:1 at 0.80. An accent already lighter
      (notes' yellow, 0.85) passes through unchanged. Read it for text; keep
      --dl-accent for fills, rings and tints. It needs relative colour syntax,
      as create.css does. */
-  --dl-accent-text: oklch(from var(--dl-accent) max(l, 0.78) c h);
+  --dl-accent-text: oklch(from var(--dl-accent) max(l, 0.8) c h);
 
   /* Corners: controls and tooltips, cards and menus, dialogs and phone
      sheets. The create button has its own. */

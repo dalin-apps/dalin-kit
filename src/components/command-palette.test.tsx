@@ -674,7 +674,7 @@ describe("palette.css", () => {
   it("dims the app behind it", () => {
     const dim = ruleFor(css, ".dl-palette-dim");
     expect(dim).toContain("inset: 0");
-    expect(dim).toContain("background: var(--dl-palette-dim, oklch(0 0 0 / 0.6))");
+    expect(dim).toContain("background: var(--dl-palette-dim, var(--dl-scrim, rgb(0 0 0 / 0.62)))");
   });
 
   it("stands over the menus and the toaster, the panel one over its dim", () => {
