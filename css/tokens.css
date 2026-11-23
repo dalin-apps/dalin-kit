@@ -90,9 +90,18 @@
      grey the frost comes to over the family's dark panes: an arrow is drawn
      in it, and an app with transparency turned off points --dl-overlay at
      it. The settings dialog is not glass: it stays solid, on --dl-dialog
-     with the same strong edge. */
+     with the same strong edge.
+
+     Level is the toast's own fix for bright content (--dl-toast-level in
+     toast.css). A menu can open over a white email or a board frame, where
+     the glass turned into a pale wash: muted words fell to 3.2:1 and the
+     destructive red to 2:1. The two filters leave a dark pane where it is
+     and bring white down to a mid grey before the glass goes on, so muted
+     words hold 6.3:1 there. On the family's own panes nothing changes.
+     `contrast(1)` turns it off. */
   --dl-overlay: rgb(32 32 32 / 0.72);
   --dl-overlay-blur: blur(16px) saturate(1.5);
+  --dl-overlay-level: contrast(0.709) brightness(0.468);
   --dl-overlay-edge: var(--dl-border-strong);
   --dl-overlay-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.55);
   --dl-overlay-hover: oklch(1 0 0 / 0.08);
@@ -101,9 +110,11 @@
   --dl-dialog: #1f1f1f;
 
   /* A destructive act, mail's red: a menu row that deletes or archives. As
-     14px text it clears 4.5:1 on the overlay glass (5.2:1) but not on a
-     highlighted row (4.2:1), so the row under the pointer reads the text
-     step, the same hue lifted to a lightness of at least 0.74 (4.9:1). */
+     14px text it clears 4.5:1 on the overlay glass over a dark pane (5.2:1)
+     but not on a highlighted row (4.2:1), nor over a white page behind the
+     glass (4.0:1). So text reads the text step, the same hue lifted to a
+     lightness of at least 0.74: 4.9:1 on a highlighted row, 4.7:1 over a
+     white page. Keep --dl-danger for fills and rings. */
   --dl-danger: oklch(0.68 0.19 25);
   --dl-danger-text: oklch(from var(--dl-danger) max(l, 0.74) c h);
 

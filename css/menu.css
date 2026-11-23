@@ -29,6 +29,9 @@
                       over the toaster while it stands over a sheet (60).
      --dl-overlay     Point it at --dl-overlay-solid while the app has
                       transparency turned off, and stop the blur there.
+     --dl-overlay-level  The filter that levels what is behind the glass, so
+                      the words hold over a white page. `contrast(1)` turns
+                      it off.
 
    What an app must not override. The glass, the edge, the corners, the row
    height, the keycap, and the red of a destructive row. Width is the
@@ -44,7 +47,11 @@
   position: relative;
   box-sizing: border-box;
   background: var(--dl-overlay, rgb(32 32 32 / 0.72));
-  backdrop-filter: var(--dl-overlay-blur, blur(16px) saturate(1.5));
+  /* Blurred, then levelled: what is behind the glass is brought down before
+     the glass goes on, so the words hold over a white email as they do over
+     a dark pane (--dl-overlay-level in tokens.css). */
+  backdrop-filter: var(--dl-overlay-blur, blur(16px) saturate(1.5))
+    var(--dl-overlay-level, contrast(0.709) brightness(0.468));
   border: 1px solid var(--dl-overlay-edge, #3d3d3d);
   border-radius: var(--dl-r-card, 10px);
   box-shadow: var(--dl-overlay-shadow, 0 12px 32px -8px rgb(0 0 0 / 0.55));
@@ -207,14 +214,11 @@ html[data-input="keyboard"] :is(.dl-menu, .dl-popover) {
   color: var(--dl-fg-muted, #b8b8b8);
 }
 
-/* A destructive row: the words and the icon in red. The highlighted row
-   reads the text step, which holds 4.5:1 on the highlight. */
+/* A destructive row: the words and the icon in red. It reads the text
+   step of the red, which holds 4.5:1 on a highlighted row and over a white
+   page behind the glass, where the red itself does not. */
 .dl-menu-item[data-variant="destructive"],
 .dl-menu-item[data-variant="destructive"] > svg {
-  color: var(--dl-danger, oklch(0.68 0.19 25));
-}
-.dl-menu-item[data-variant="destructive"][data-highlighted],
-.dl-menu-item[data-variant="destructive"][data-highlighted] > svg {
   color: var(--dl-danger-text, oklch(0.74 0.19 25));
 }
 

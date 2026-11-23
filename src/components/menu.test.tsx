@@ -307,7 +307,9 @@ describe("menu.css", () => {
 
   it("is the overlay glass: the frosted fill, the strong edge, 10px corners, one shadow", () => {
     expect(surface).toContain("background: var(--dl-overlay, rgb(32 32 32 / 0.72))");
-    expect(surface).toContain("backdrop-filter: var(--dl-overlay-blur, blur(16px) saturate(1.5))");
+    expect(surface.replace(/\s+/g, " ")).toContain(
+      "backdrop-filter: var(--dl-overlay-blur, blur(16px) saturate(1.5)) var(--dl-overlay-level, contrast(0.709) brightness(0.468))",
+    );
     expect(surface).toContain("border: 1px solid var(--dl-overlay-edge, #3d3d3d)");
     expect(surface).toContain("border-radius: var(--dl-r-card, 10px)");
     expect(surface).toContain("box-shadow: var(--dl-overlay-shadow");
@@ -362,13 +364,16 @@ describe("menu.css", () => {
     expect(css).toMatch(/@media \(hover: none\)\s*\{\s*\.dl-menu \.dl-kbd\s*\{\s*display: none;/);
   });
 
-  it("makes the destructive row red, icon and words", () => {
-    expect(ruleNaming(css, '.dl-menu-item[data-variant="destructive"] > svg')).toContain(
-      "color: var(--dl-danger, oklch(0.68 0.19 25))",
-    );
-    expect(ruleNaming(css, '.dl-menu-item[data-variant="destructive"][data-highlighted]')).toContain(
-      "color: var(--dl-danger-text",
-    );
+  it("makes the destructive row red, icon and words, in the red's text step", () => {
+    const body = ruleNaming(css, '.dl-menu-item[data-variant="destructive"] > svg');
+    expect(body).toContain("color: var(--dl-danger-text, oklch(0.74 0.19 25))");
+    expect(ruleNaming(css, '.dl-menu-item[data-variant="destructive"]')).toBe(body);
+  });
+
+  it("levels what is behind the glass with the toast's own filter", () => {
+    const root = ruleFor(tokens, ":where(:root)");
+    expect(root).toContain("--dl-overlay-level: contrast(0.709) brightness(0.468);");
+    expect(readCss("toast")).toContain("--dl-toast-level: contrast(0.709) brightness(0.468);");
   });
 
   it("leaves a group's label in the case it was written in", () => {

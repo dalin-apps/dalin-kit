@@ -126,6 +126,35 @@ describe("the overlay glass and what is written on it", () => {
     }
   });
 
+  /** What `--dl-overlay-level` does to a grey behind the glass: contrast(0.709), then brightness(0.468). */
+  const levelled = (channel: number) => ((channel - 0.5) * 0.709 + 0.5) * 0.468;
+  const greyOf = (channel: number): Rgb => [channel, channel, channel].map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)) as Rgb;
+  const glassOverGrey = (channel: number) => over(hex("#202020"), 0.72, greyOf(channel));
+
+  it("levels what is behind the glass: a white page comes down, a dark pane stays where it is", () => {
+    expect(token("--dl-overlay-level")).toBe("contrast(0.709) brightness(0.468)");
+    expect(Math.round(levelled(1) * 255)).toBe(102);
+    for (const pane of [0x15, 0x18, 0x1c]) expect(Math.abs(Math.round(levelled(pane / 255) * 255) - pane)).toBeLessThanOrEqual(3);
+  });
+
+  it("is needed: over a white page the bare glass drops muted words and the red under 4.5:1", () => {
+    const bare = glassOverGrey(1);
+    expect(contrast(hex(token("--dl-fg-muted")), bare)).toBeLessThan(4.5);
+    const [L, C, H] = parse(token("--dl-danger")) as [number, number, number];
+    expect(contrast(RENDER.mapped(L, C, H), bare)).toBeLessThan(3);
+  });
+
+  it("holds muted words and the destructive text step at 4.5:1 over a white page, once levelled", () => {
+    const glass = glassOverGrey(levelled(1));
+    expect(contrast(hex(token("--dl-fg-muted")), glass)).toBeGreaterThanOrEqual(4.5);
+    const [L, C, H] = parse(token("--dl-danger")) as [number, number, number];
+    for (const draw of Object.values(RENDER)) {
+      expect(contrast(draw(Math.max(L, 0.74), C, H), glass)).toBeGreaterThanOrEqual(4.5);
+    }
+    // The red itself does not, which is why a row's words read the text step.
+    expect(contrast(RENDER.mapped(L, C, H), glass)).toBeLessThan(4.5);
+  });
+
   it("draws the arrow in the grey the frost comes to over the panes, within two levels", () => {
     const solid = parseInt(token("--dl-overlay-solid").slice(1, 3), 16);
     for (const pane of PANES) {
