@@ -14,9 +14,9 @@
 
    Folded and rolling out. A folded sidebar shows "d." (`data-folded`): the
    rest is rolled up to no width. `data-roll` rolls it out on mount, mail's
-   timings. The roll is the one animation here, and it stands down while the
-   system asks for reduced motion; an app with its own motion switch leaves
-   `rollOut` off while that switch is on.
+   timings. The roll is the one animation here, and it stands down under
+   reduced motion: the app's own switch where the kit has been told of it
+   (`data-dl-motion` on <html>), and the system's setting otherwise.
 
    What an app must not override. The typeface, the tracking, the italic,
    and the muted grey of the app's name. */
@@ -93,8 +93,15 @@
     max-width: 10ch;
   }
 }
+/* No roll under reduced motion: the app's own switch where it has spoken
+   (`data-dl-motion` on <html>, which the <Toaster> writes from the app's
+   selectors), the system's setting otherwise. An app's Full keeps the roll
+   on a machine that asks for less. */
+html[data-dl-motion="reduce"] .dl-wordmark[data-roll] :is(.dl-wordmark-rest, .dl-wordmark-product-wrap) {
+  animation: none;
+}
 @media (prefers-reduced-motion: reduce) {
-  .dl-wordmark[data-roll] :is(.dl-wordmark-rest, .dl-wordmark-product-wrap) {
+  html:not([data-dl-motion="full"]) .dl-wordmark[data-roll] :is(.dl-wordmark-rest, .dl-wordmark-product-wrap) {
     animation: none;
   }
 }

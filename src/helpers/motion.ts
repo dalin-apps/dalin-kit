@@ -82,3 +82,36 @@ export function motionReaderFor(reducedSelector: string | undefined, fullSelecto
     return systemReducesMotion() && !matches(fullSelector);
   };
 }
+
+/**
+ * The attribute the kit's own stylesheets read the app's motion choice from,
+ * on `<html>`: `data-dl-motion="reduce"` or `data-dl-motion="full"`.
+ *
+ * A stylesheet cannot be handed a selector, and each app keeps its switch on
+ * an attribute of its own (`data-motion="reduce"`, `data-motion="reduced"`,
+ * `data-reduced-motion`). So the kit writes one of its own, and menu.css,
+ * palette.css and wordmark.css key on that: Reduce stills the menus, the
+ * popovers, the palette and the wordmark's roll, and Full keeps them moving
+ * on a machine that asks for less. With neither, the system's setting
+ * decides.
+ *
+ * It is an attribute and not a class because React owns `<html>`'s class
+ * and never touches an attribute it did not set.
+ */
+export const MOTION_ATTR = "data-dl-motion";
+
+/** What the app's own switch says. `null` is no choice: the system's setting decides. */
+export type MotionChoice = "reduce" | "full" | null;
+
+/**
+ * Writes the app's motion choice on `<html>`. A `<Toaster>` that names the
+ * app's selectors does this itself, as the switch changes, so an app that
+ * told the toast calls nothing. An app whose switch is not a selector (the
+ * one that calls `setMotionReader`) calls this as its switch changes.
+ */
+export function setMotionAttr(choice: MotionChoice): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  if (choice === null) root.removeAttribute(MOTION_ATTR);
+  else if (root.getAttribute(MOTION_ATTR) !== choice) root.setAttribute(MOTION_ATTR, choice);
+}

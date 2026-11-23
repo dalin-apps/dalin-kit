@@ -8,7 +8,7 @@
 import { act } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { outweighs, readCss, ruleFor, ruleNaming, rulesWith } from "../../test/css.js";
+import { outweighs, readCss, ruleFor, ruleNaming, rulesWith, splitList } from "../../test/css.js";
 import { all, click, key, mount, one, settle, withDom } from "../../test/dom.js";
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "./context-menu.js";
 import { Kbd } from "./kbd.js";
@@ -411,8 +411,26 @@ describe("menu.css", () => {
     expect(outweighs(".dl-menu.dl-context-menu[data-starting-style]", ":is(.dl-menu, .dl-popover):is([data-starting-style], [data-ending-style])")).toBe(true);
   });
 
-  it("stops every transition under reduced motion", () => {
-    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\.dl-menu,[^}]*transition: none;/);
+  it("stops every transition while the app's own motion switch says Reduce", () => {
+    const still = ruleNaming(css, 'html[data-dl-motion="reduce"] :is(.dl-menu, .dl-popover)');
+    expect(still).toBe("transition: none;");
+    // The context menu's close fade is the heaviest rule that animates, and
+    // the app's Reduce outweighs it.
+    const fade = ".dl-menu.dl-context-menu[data-ending-style]:not([data-instant])";
+    expect(ruleNaming(css, `html[data-dl-motion="reduce"] ${fade}`)).toBe(still);
+    expect(outweighs(`html[data-dl-motion="reduce"] ${fade}`, fade)).toBe(true);
+    expect(outweighs('html[data-dl-motion="reduce"] :is(.dl-menu, .dl-popover)', ".dl-menu")).toBe(true);
+  });
+
+  it("follows the system's reduced motion, unless the app's switch says Full", () => {
+    const media = /@media \(prefers-reduced-motion: reduce\)\s*\{([^@]*?)\}\s*\}/.exec(css)?.[1] ?? "";
+    expect(media).toContain('html:not([data-dl-motion="full"]) :is(.dl-menu, .dl-popover)');
+    expect(media).toContain('html:not([data-dl-motion="full"]) .dl-menu.dl-context-menu[data-ending-style]:not([data-instant])');
+    expect(media).toContain("transition: none;");
+    // No rule in the media query stills a menu whatever the app says.
+    for (const [list] of rulesWith(`${media}}`, "dl-")) {
+      for (const selector of splitList(list)) expect(selector.startsWith('html:not([data-dl-motion="full"]) ')).toBe(true);
+    }
   });
 
   it("stands over the toaster while it is over a sheet", () => {

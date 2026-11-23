@@ -107,7 +107,10 @@ export type ToasterProps = {
      *
      * This and `fullMotionSelector` are also the one place an app names its
      * motion switch for the kit's script: the `<ToastBand>`, `useStackSwipe`
-     * and `watchLeaving` follow them unless given a reader of their own.
+     * and `watchLeaving` follow them unless given a reader of their own. And
+     * for the kit's other stylesheets: the toaster writes the choice on
+     * `<html>` as `data-dl-motion`, which the menus, the popovers, the
+     * palette and the wordmark's roll follow.
      */
     reducedMotionSelector?: string;
     /**

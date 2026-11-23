@@ -8,7 +8,7 @@ import { holdTabStops } from "./tab-stops.js";
 import { useToastTags } from "./toast-tags.js";
 import { ToastSpinner } from "./toast-spinner.js";
 import { MOTION_CLASS, scopeSonnerReducedMotion } from "./sonner-motion.js";
-import { motionReaderFor, setToasterMotionReader } from "../helpers/motion.js";
+import { motionReaderFor, setMotionAttr, setToasterMotionReader } from "../helpers/motion.js";
 import { COUNTDOWN_CLASS, PINNED_CLASS, PROGRESS_CLASS, announcesUpdate, faceOf, } from "./toast-update.js";
 import { useLiveCover } from "./use-live-cover.js";
 import { useNamedState } from "./use-named-state.js";
@@ -496,6 +496,20 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
             return;
         return setToasterMotionReader(motionReaderFor(reducedMotionSelector, fullMotionSelector));
     }, [reducedMotionSelector, fullMotionSelector]);
+    // The same choice for the kit's other stylesheets, which have no class of
+    // this toaster's to key on: written on <html> (MOTION_ATTR), where
+    // menu.css, palette.css and wordmark.css read it.
+    const named = Boolean(reducedMotionSelector || fullMotionSelector);
+    useEffect(() => {
+        if (!named)
+            return;
+        setMotionAttr(reduced ? "reduce" : full ? "full" : null);
+    }, [named, reduced, full]);
+    useEffect(() => {
+        if (!named)
+            return;
+        return () => setMotionAttr(null);
+    }, [named]);
     const solid = useNamedState(reducedTransparencySelector, undefined);
     // The width is shared, so the band and the app's own `usePhoneLayout`
     // switch at the same pixel as the toaster.

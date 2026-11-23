@@ -9,6 +9,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { outweighs, readCss, ruleFor, ruleNaming, rulesWith } from "../../test/css.js";
+import { MOTION_ATTR } from "../helpers/motion.js";
 import { Toaster, type ToasterProps } from "./toaster.js";
 
 let host: HTMLElement;
@@ -69,6 +70,50 @@ async function set(el: HTMLElement, name: string, value: string | null) {
 }
 
 const has = (name: string) => document.querySelector("[data-sonner-toaster]")?.classList.contains(name) ?? false;
+
+describe("the app's motion choice on <html>, for the kit's other stylesheets", () => {
+  const choice = () => document.documentElement.getAttribute(MOTION_ATTR);
+
+  it("writes nothing for an app that names no switch", async () => {
+    await mount();
+    expect(choice()).toBeNull();
+  });
+
+  it("says reduce while the app's switch does, and takes it back when the switch turns off", async () => {
+    await mount({ reducedMotionSelector: 'html[data-motion="reduce"]' });
+    expect(choice()).toBeNull();
+    await set(document.documentElement, "data-motion", "reduce");
+    expect(choice()).toBe("reduce");
+    await set(document.documentElement, "data-motion", null);
+    expect(choice()).toBeNull();
+  });
+
+  it("says full while the app's switch says Full, so the system's setting stands aside", async () => {
+    systemReducesMotion = true;
+    await mount({ reducedMotionSelector: 'html[data-motion="reduced"]', fullMotionSelector: 'html[data-motion="full"]' });
+    expect(choice()).toBeNull();
+    await set(document.documentElement, "data-motion", "full");
+    expect(choice()).toBe("full");
+    await set(document.documentElement, "data-motion", "reduced");
+    expect(choice()).toBe("reduce");
+  });
+
+  it("lets the app's Reduce win where both selectors match", async () => {
+    document.documentElement.setAttribute("data-motion", "reduce");
+    await mount({ reducedMotionSelector: 'html[data-motion="reduce"]', fullMotionSelector: "html[data-motion]" });
+    expect(choice()).toBe("reduce");
+  });
+
+  it("takes the choice off as the toaster unmounts", async () => {
+    document.documentElement.setAttribute("data-motion", "reduce");
+    await mount({ reducedMotionSelector: 'html[data-motion="reduce"]' });
+    expect(choice()).toBe("reduce");
+    await act(async () => {
+      root.render(null);
+    });
+    expect(choice()).toBeNull();
+  });
+});
 
 describe("<Toaster reducedMotionSelector>", () => {
   it("is off with no switch on and no system setting", async () => {

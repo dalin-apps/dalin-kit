@@ -27,6 +27,8 @@ describe("@dalin/kit", () => {
     "setMotionReader",
     "reducesMotion",
     "systemReducesMotion",
+    "setMotionAttr",
+    "MOTION_ATTR",
     "Toaster",
     "ToastBand",
     "useStackSwipe",

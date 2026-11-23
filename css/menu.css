@@ -22,7 +22,8 @@
    was opened from the keyboard (Base UI marks that `data-instant`, and
    `watchInputModality` writes `data-input` on <html>), under reduced
    motion, and always for a context menu, which is used too often to wait
-   on.
+   on. Reduced motion is the app's own switch where it has one
+   (`data-dl-motion` on <html>), and the system's setting otherwise.
 
    Variables an app may set.
      --dl-overlay-z   The z-index of every menu and popover: 70, which is
@@ -95,10 +96,18 @@ html[data-input="keyboard"] :is(.dl-menu, .dl-popover) {
   transition: opacity var(--dl-t-close, 110ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
   scale: 1;
 }
+/* Reduced motion. The app's own switch decides where it has spoken: the
+   kit writes it on <html> as `data-dl-motion` (the <Toaster> does, from the
+   selectors it is given, or the app calls `setMotionAttr`). Reduce stills
+   every menu and popover. Full keeps them moving on a machine that asks for
+   less. With neither, the system's setting decides. */
+html[data-dl-motion="reduce"] :is(.dl-menu, .dl-popover),
+html[data-dl-motion="reduce"] .dl-menu.dl-context-menu[data-ending-style]:not([data-instant]) {
+  transition: none;
+}
 @media (prefers-reduced-motion: reduce) {
-  .dl-menu,
-  .dl-popover,
-  .dl-menu.dl-context-menu[data-ending-style]:not([data-instant]) {
+  html:not([data-dl-motion="full"]) :is(.dl-menu, .dl-popover),
+  html:not([data-dl-motion="full"]) .dl-menu.dl-context-menu[data-ending-style]:not([data-instant]) {
     transition: none;
   }
 }

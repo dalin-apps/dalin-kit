@@ -390,6 +390,16 @@ useEffect(() => setMotionReader(() => settings.motion === "reduced"), []);
 
 That reader wins over the toaster's selectors, and a `reducedMotion` option passed to one part still wins for that part. `reducesMotion()` returns the answer in force for the app's own code, and `systemReducesMotion()` is the system's setting alone.
 
+From 0.4 the kit's other stylesheets follow the same switch. A `<Toaster>` that names the selectors writes the choice on `<html>` as `data-dl-motion="reduce"` or `data-dl-motion="full"` (`MOTION_ATTR`), and takes it off while neither matches. `menu.css`, `palette.css` and `wordmark.css` read it. The app's Reduce stills menus, popovers, the palette and the wordmark's roll. The app's Full keeps them moving on a machine that asks for less, and with no choice written they follow the system's setting, as in 0.3. The phone's search sheet has no motion to still.
+
+An app whose switch is not a selector writes the attribute itself, beside its reader:
+
+```tsx
+import { setMotionAttr } from "@dalin/kit";
+
+useEffect(() => setMotionAttr(settings.motion === "reduced" ? "reduce" : null), [settings.motion]);
+```
+
 ### Variables an app may set
 
 | Variable | Default | Meaning |
@@ -506,7 +516,7 @@ That is "dalin" in Georgia, the period in the app's accent and the app's name in
 | `rollOut` | `false` | Rolls "alin" and the name out from behind "d." on mount: mail's sidebar animation, 1.1s and then 0.95s. |
 | `className`, `style` | none | The app's own, beside `dl-wordmark`. |
 
-Give the wordmark a `key` that changes to play the roll again, as an app does each time its sidebar unfolds. Nothing rolls while the system asks for reduced motion. An app with its own motion switch leaves `rollOut` off while that switch is on.
+Give the wordmark a `key` that changes to play the roll again, as an app does each time its sidebar unfolds. Nothing rolls under reduced motion. That is the app's own switch where the `<Toaster>` was told of it (see "One place for the motion switch"), and the system's setting otherwise, so an app no longer turns `rollOut` off by hand.
 
 `DALIN_APPS` is the four apps in order, each with its name, its accent and its address. `dalinApp(id)` is one of them.
 
@@ -598,7 +608,7 @@ What the look comes to, from `menu.css`:
 - A shortcut is a keycap at the row's right end. Keycaps are hidden on a touch screen.
 - A destructive row is red, words and icon.
 - A group's label is small and muted, in the case it was written in. Write it in sentence case. Base UI needs `MenuLabel` inside a `MenuGroup`.
-- A menu fades in over 150ms and out over 110ms. It lands at once when the keyboard opened it, and under reduced motion. A context menu always opens at once.
+- A menu fades in over 150ms and out over 110ms. It lands at once when the keyboard opened it, and under reduced motion, which is the app's own switch where it has one. A context menu always opens at once.
 
 `--dl-overlay-z` is the z-index of every menu and popover. It is 70, over the toaster while that stands over a sheet. The settings dialog is not one of these surfaces and stays solid.
 

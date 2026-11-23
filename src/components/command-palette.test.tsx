@@ -648,11 +648,17 @@ describe("palette.css", () => {
     expect(panel).toContain("z-index: calc(var(--dl-palette-z, 90) + 1)");
   });
 
-  it("does not animate when the keyboard opened or closed it, or under reduced motion", () => {
+  it("does not animate when the keyboard opened or closed it", () => {
     const instant = ruleNaming(css, ":is(.dl-palette, .dl-palette-dim)[data-instant]");
     expect(instant).toContain("transition: none");
     expect(ruleNaming(css, 'html[data-input="keyboard"] :is(.dl-palette, .dl-palette-dim)')).toBe(instant);
-    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.dl-palette,\s*\.dl-palette-dim\s*\{\s*transition: none;/);
+  });
+
+  it("does not animate while the app's motion switch says Reduce, and follows the system unless it says Full", () => {
+    expect(ruleFor(css, 'html[data-dl-motion="reduce"] :is(.dl-palette, .dl-palette-dim)')).toBe("transition: none;");
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)\s*\{\s*html:not\(\[data-dl-motion="full"\]\) :is\(\.dl-palette, \.dl-palette-dim\)\s*\{\s*transition: none;/,
+    );
   });
 
   it("stills a stale list: no pointer, no Enter hint, and a dim that waits 120ms for the answer", () => {

@@ -26,8 +26,9 @@ export type WordmarkProps = {
    * Rolls "alin" and the app's name out from behind "d." as it mounts,
    * mail's sidebar animation: 1.1s, then the name half a second behind over
    * 0.95s. Give the wordmark a `key` that changes to play it again, as an
-   * app does each time its sidebar unfolds. Nothing rolls while the system
-   * asks for reduced motion.
+   * app does each time its sidebar unfolds. Nothing rolls under reduced
+   * motion: the app's own switch where the `<Toaster>` was told of it, the
+   * system's setting otherwise.
    */
   rollOut?: boolean;
   /** Extra classes, beside `dl-wordmark`. */

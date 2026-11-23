@@ -102,7 +102,13 @@ describe("wordmark.css", () => {
     expect(ruleFor(css, ".dl-wordmark[data-roll] .dl-wordmark-product-wrap")).toMatch(/dl-wordmark-product 0\.95s .* 0\.5s both/);
   });
 
-  it("does not roll while the system asks for reduced motion", () => {
-    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.dl-wordmark\[data-roll\][^{]*\{\s*animation: none;/);
+  it("does not roll while the app's motion switch says Reduce", () => {
+    expect(css).toMatch(/html\[data-dl-motion="reduce"\] \.dl-wordmark\[data-roll\] :is\([^)]*\)\s*\{\s*animation: none;/);
+  });
+
+  it("does not roll while the system asks for reduced motion, unless the app's switch says Full", () => {
+    expect(css).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)\s*\{\s*html:not\(\[data-dl-motion="full"\]\) \.dl-wordmark\[data-roll\][^{]*\{\s*animation: none;/,
+    );
   });
 });
