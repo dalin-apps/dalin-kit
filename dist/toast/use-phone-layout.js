@@ -6,6 +6,14 @@ import { useSyncExternalStore } from "react";
  * width, with `<Toaster phoneMaxWidth>` or with `--dl-phone-max` on `:root`.
  */
 export const PHONE_MAX_WIDTH_PX = 767;
+/**
+ * A phone held on its side: a touch screen too short for the desktop
+ * layout, whatever its width (the owner's pick on 2026-11-23). It gets the
+ * phone layout in every app. An app joins it to its own width with a comma,
+ * in script and in CSS: `(max-width: 767px), (pointer: coarse) and
+ * (max-height: 500px)`.
+ */
+export const PHONE_SIDEWAYS_QUERY = "(pointer: coarse) and (max-height: 500px)";
 /** The custom property an app may set on `:root` in place of the prop. */
 export const PHONE_MAX_VAR = "--dl-phone-max";
 /** The width `<Toaster phoneMaxWidth>` named, which wins over the stylesheet. */
@@ -33,8 +41,9 @@ export function readPhoneMaxWidth() {
         fromSheet = readSheet();
     return fromSheet ?? PHONE_MAX_WIDTH_PX;
 }
-function query() {
-    return `(max-width: ${readPhoneMaxWidth()}px)`;
+/** The phone layout's media query: the width in force, or a phone on its side. */
+export function phoneLayoutQuery() {
+    return `(max-width: ${readPhoneMaxWidth()}px), ${PHONE_SIDEWAYS_QUERY}`;
 }
 /** Listens to the media query for the width in force, and only while read. */
 function bind() {
@@ -42,7 +51,7 @@ function bind() {
     unbind = null;
     if (typeof window === "undefined" || listeners.size === 0)
         return;
-    const list = window.matchMedia(query());
+    const list = window.matchMedia(phoneLayoutQuery());
     list.addEventListener("change", emit);
     unbind = () => list.removeEventListener("change", emit);
 }
@@ -72,14 +81,15 @@ function subscribe(cb) {
     };
 }
 function readClient() {
-    return window.matchMedia(query()).matches;
+    return window.matchMedia(phoneLayoutQuery()).matches;
 }
 function readServer() {
     return false;
 }
 /**
- * True when the viewport is at or under the phone width. SSR-safe: false on
- * the server, then the real value after hydration.
+ * True when the viewport is at or under the phone width, or is a phone held
+ * on its side (PHONE_SIDEWAYS_QUERY). SSR-safe: false on the server, then
+ * the real value after hydration.
  */
 export function usePhoneLayout() {
     return useSyncExternalStore(subscribe, readClient, readServer);

@@ -6,5 +6,5 @@ export { announcesUpdate, faceOf, textOf, type ToastFace } from "./toast-update.
 export { DEFAULT_PILL_SELECTOR, stackTick, useStackSwipe, type StackSwipe, type StackSwipeHost, type StackSwipeOptions, } from "./use-stack-swipe.js";
 export { readToastCount, readToastsExpanded, setToastsExpanded, toggleToastsExpanded, useToastCount, useToastsExpanded, } from "./toast-stack.js";
 export { dockLine, measureToastCover, readToastCovered, readToastDock, readToastPill, refreshToastDock, registerToastDock, registerToastPill, useToastCovered, useToastDock, useToastDockKind, useToastDockState, useToastPill, type ToastDock, type ToastDockKind, type ToastDockOptions, } from "./toast-dock.js";
-export { PHONE_MAX_VAR, PHONE_MAX_WIDTH_PX, readPhoneMaxWidth, setPhoneMaxWidth, usePhoneLayout, } from "./use-phone-layout.js";
+export { PHONE_MAX_VAR, PHONE_MAX_WIDTH_PX, PHONE_SIDEWAYS_QUERY, phoneLayoutQuery, readPhoneMaxWidth, setPhoneMaxWidth, usePhoneLayout, } from "./use-phone-layout.js";
 //# sourceMappingURL=index.d.ts.map
