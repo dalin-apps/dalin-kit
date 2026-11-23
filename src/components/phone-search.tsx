@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { registerToastDock } from "../toast/toast-dock.js";
 import { cx } from "./cx.js";
@@ -68,9 +68,13 @@ export type PhoneSearchProps = {
   children?: ReactNode;
   /** What to say when a query finds nothing. Defaults to `No results for “query”.` */
   emptyText?: (query: string) => ReactNode;
-  /** Something inside the field before the words, such as calendar's calendar picker. */
+  /**
+   * Something inside the field before the words, such as calendar's calendar
+   * picker. A tap on a control here is that control's own; a tap anywhere
+   * else on the field puts the caret in the input.
+   */
   fieldStart?: ReactNode;
-  /** Something inside the field after the words, such as a filter icon. */
+  /** Something inside the field after the words, such as a filter icon. The same rule holds. */
   fieldEnd?: ReactNode;
   /** Extra classes for the sheet, beside `dl-phone-search`. */
   className?: string;
@@ -95,6 +99,21 @@ export function PhoneSearchAvatar({ initials, color, className }: PhoneSearchAva
       {initials}
     </span>
   );
+}
+
+/**
+ * What a tap on the field leaves alone: a control of the app's own, in
+ * `fieldStart` or `fieldEnd`. Anything else in the field (the glass, the
+ * padding, the app's plain words) gives the caret to the input.
+ */
+const FIELD_CONTROL =
+  "button, a[href], input, select, textarea, summary, label, [role='button'], [role='combobox'], [role='listbox'], [role='switch'], [role='checkbox'], [role='menuitem'], [contenteditable=''], [contenteditable='true'], [tabindex]:not([tabindex='-1'])";
+
+/** Whether a press on the field landed on one of those controls. */
+function onFieldControl(event: ReactMouseEvent<HTMLElement>): boolean {
+  const target = event.target instanceof Element ? event.target : null;
+  const control = target?.closest(FIELD_CONTROL) ?? null;
+  return control !== null && control !== event.currentTarget && event.currentTarget.contains(control);
 }
 
 /** How far a search sheet ranks as a toast dock: over the bar and a parked chip, with the other sheets. */
@@ -242,7 +261,20 @@ export function PhoneSearch({
               onSubmit?.(query);
             }}
           >
-            <label className="dl-phone-search-field">
+            {/* A plain box, never a <label>: a label hands every tap on it to
+                its first control, which would be the app's picker in
+                `fieldStart` and not the input. */}
+            <div
+              className="dl-phone-search-field"
+              // A press on a part that takes no focus would blur the input
+              // first, and a phone would drop its keyboard for a moment.
+              onMouseDown={(event) => {
+                if (!onFieldControl(event)) event.preventDefault();
+              }}
+              onClick={(event) => {
+                if (!onFieldControl(event)) input.current?.focus({ preventScroll: true });
+              }}
+            >
               <SearchGlyph />
               {fieldStart}
               <input
@@ -260,7 +292,7 @@ export function PhoneSearch({
                 spellCheck={false}
               />
               {fieldEnd}
-            </label>
+            </div>
             <Dialog.Close className="dl-phone-search-cancel">{cancelLabel}</Dialog.Close>
           </form>
           <div className="dl-phone-search-body">

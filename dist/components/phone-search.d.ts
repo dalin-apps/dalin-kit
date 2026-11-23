@@ -58,9 +58,13 @@ export type PhoneSearchProps = {
     children?: ReactNode;
     /** What to say when a query finds nothing. Defaults to `No results for “query”.` */
     emptyText?: (query: string) => ReactNode;
-    /** Something inside the field before the words, such as calendar's calendar picker. */
+    /**
+     * Something inside the field before the words, such as calendar's calendar
+     * picker. A tap on a control here is that control's own; a tap anywhere
+     * else on the field puts the caret in the input.
+     */
     fieldStart?: ReactNode;
-    /** Something inside the field after the words, such as a filter icon. */
+    /** Something inside the field after the words, such as a filter icon. The same rule holds. */
     fieldEnd?: ReactNode;
     /** Extra classes for the sheet, beside `dl-phone-search`. */
     className?: string;

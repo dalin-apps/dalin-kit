@@ -9,6 +9,18 @@ import { SearchGlyph } from "./icons.js";
 export function PhoneSearchAvatar({ initials, color, className }) {
     return (_jsx("span", { className: cx("dl-phone-search-avatar", className), style: color ? { background: color } : undefined, "aria-hidden": "true", children: initials }));
 }
+/**
+ * What a tap on the field leaves alone: a control of the app's own, in
+ * `fieldStart` or `fieldEnd`. Anything else in the field (the glass, the
+ * padding, the app's plain words) gives the caret to the input.
+ */
+const FIELD_CONTROL = "button, a[href], input, select, textarea, summary, label, [role='button'], [role='combobox'], [role='listbox'], [role='switch'], [role='checkbox'], [role='menuitem'], [contenteditable=''], [contenteditable='true'], [tabindex]:not([tabindex='-1'])";
+/** Whether a press on the field landed on one of those controls. */
+function onFieldControl(event) {
+    const target = event.target instanceof Element ? event.target : null;
+    const control = target?.closest(FIELD_CONTROL) ?? null;
+    return control !== null && control !== event.currentTarget && event.currentTarget.contains(control);
+}
 /** How far a search sheet ranks as a toast dock: over the bar and a parked chip, with the other sheets. */
 const COVER_RANK = 50;
 function Sections({ sections, choose, }) {
@@ -93,7 +105,16 @@ export function PhoneSearch({ open, onOpenChange, query: queryProp, onQueryChang
     return (_jsx(Dialog.Root, { open: open, onOpenChange: onOpenChange, children: _jsx(Dialog.Portal, { children: _jsxs(Dialog.Popup, { ref: setSheet, "data-slot": "phone-search", className: cx("dl-phone-search", className), "aria-label": placeholder, initialFocus: input, children: [_jsxs("form", { className: "dl-phone-search-head", role: "search", onSubmit: (event) => {
                             event.preventDefault();
                             onSubmit?.(query);
-                        }, children: [_jsxs("label", { className: "dl-phone-search-field", children: [_jsx(SearchGlyph, {}), fieldStart, _jsx("input", { ref: focusField, type: "search", className: "dl-phone-search-input", value: query, onChange: (event) => setQuery(event.target.value), placeholder: placeholder, "aria-label": placeholder, enterKeyHint: "search", autoComplete: "off", autoCorrect: "off", autoCapitalize: "none", spellCheck: false }), fieldEnd] }), _jsx(Dialog.Close, { className: "dl-phone-search-cancel", children: cancelLabel })] }), _jsx("div", { className: "dl-phone-search-body", children: asked ? (children ??
+                        }, children: [_jsxs("div", { className: "dl-phone-search-field", 
+                                // A press on a part that takes no focus would blur the input
+                                // first, and a phone would drop its keyboard for a moment.
+                                onMouseDown: (event) => {
+                                    if (!onFieldControl(event))
+                                        event.preventDefault();
+                                }, onClick: (event) => {
+                                    if (!onFieldControl(event))
+                                        input.current?.focus({ preventScroll: true });
+                                }, children: [_jsx(SearchGlyph, {}), fieldStart, _jsx("input", { ref: focusField, type: "search", className: "dl-phone-search-input", value: query, onChange: (event) => setQuery(event.target.value), placeholder: placeholder, "aria-label": placeholder, enterKeyHint: "search", autoComplete: "off", autoCorrect: "off", autoCapitalize: "none", spellCheck: false }), fieldEnd] }), _jsx(Dialog.Close, { className: "dl-phone-search-cancel", children: cancelLabel })] }), _jsx("div", { className: "dl-phone-search-body", children: asked ? (children ??
                             (found ? (_jsx(Sections, { sections: results, choose: choose })) : results ? (_jsx("p", { className: "dl-phone-search-note", children: emptyText ? emptyText(query.trim()) : `No results for “${query.trim()}”.` })) : null)) : (_jsxs(_Fragment, { children: [action ? (_jsxs("button", { type: "button", className: "dl-phone-search-row dl-phone-search-action", onClick: () => choose(action), children: [action.icon, _jsx("span", { className: "dl-phone-search-one", children: action.label })] })) : null, _jsx(Sections, { sections: sections, choose: choose })] })) })] }) }) }));
 }
 const NO_SECTIONS = [];

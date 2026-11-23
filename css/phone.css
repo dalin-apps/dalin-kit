@@ -181,6 +181,9 @@
   border-radius: var(--dl-r-control, 7px);
   background: var(--dl-raised, #242424);
   color: var(--dl-fg-muted, #b8b8b8);
+  /* The whole box is the field: a tap anywhere on it that is not one of the
+     app's own controls puts the caret in the input. */
+  cursor: text;
 }
 .dl-phone-search-field > svg {
   flex: none;

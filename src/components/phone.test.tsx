@@ -321,6 +321,82 @@ describe("<PhoneSearch>", () => {
     ]);
   });
 
+  it("is a plain field and not a label, so a tap on it never lands on a control inside it", async () => {
+    const picked = vi.fn();
+    await mount(
+      <Search
+        fieldStart={
+          <select className="picker" aria-label="Search in" onClick={picked}>
+            <option>All calendars</option>
+          </select>
+        }
+        fieldEnd={<button type="button" className="filter" aria-label="When" />}
+      />,
+    );
+    await tapSearch();
+    const box = one(".dl-phone-search-field")!;
+    expect(box.tagName).toBe("DIV");
+    // A tap on the field's own padding, and one on the glass: the caret goes
+    // in the input, and the picker hears nothing.
+    field()!.blur();
+    await click(box);
+    expect(document.activeElement).toBe(field());
+    field()!.blur();
+    await act(async () => {
+      box.querySelector(":scope > svg")!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    expect(document.activeElement).toBe(field());
+    expect(picked).not.toHaveBeenCalled();
+  });
+
+  it("leaves a tap on a control in the field to that control", async () => {
+    const picked = vi.fn();
+    const filtered = vi.fn();
+    await mount(
+      <Search
+        fieldStart={
+          <span className="scope">
+            All calendars
+            <select className="picker" aria-label="Search in" onClick={picked}>
+              <option>All calendars</option>
+            </select>
+          </span>
+        }
+        fieldEnd={<button type="button" className="filter" aria-label="When" onClick={filtered} />}
+      />,
+    );
+    await tapSearch();
+    const picker = one<HTMLSelectElement>(".picker")!;
+    picker.focus();
+    await click(picker);
+    expect(picked).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(picker);
+    const filter = one<HTMLButtonElement>(".filter")!;
+    filter.focus();
+    await click(filter);
+    expect(filtered).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(filter);
+    // Words of the app's own that are no control give the caret to the input.
+    await act(async () => {
+      one(".scope")!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    expect(document.activeElement).toBe(field());
+  });
+
+  it("keeps the caret, and the phone's keyboard, through a press on the field's padding", async () => {
+    await mount(<Search fieldEnd={<button type="button" className="filter" aria-label="When" />} />);
+    await tapSearch();
+    const down = (el: Element) => {
+      const event = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      el.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    // A press on a part that takes no focus would blur the input first.
+    expect(down(one(".dl-phone-search-field")!)).toBe(true);
+    expect(down(one(".filter")!)).toBe(false);
+    expect(down(field()!)).toBe(false);
+  });
+
   it("tells the toaster it covers the bottom bar, for as long as it is open", async () => {
     await mount(<Search />);
     expect(readToastCovered()).toBe(false);

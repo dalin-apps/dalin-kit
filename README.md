@@ -739,6 +739,8 @@ Before a word is typed it shows what calendar's search shows. First comes the ap
 | `fieldStart`, `fieldEnd` | none | The app's own pieces inside the field, such as calendar's calendar picker. |
 | `className` | none | The app's own, beside `dl-phone-search`. |
 
+The field is a plain box around the input, never a `<label>`, since a label hands every tap to its first control. A tap on a control the app put in `fieldStart` or `fieldEnd` belongs to that control. A tap anywhere else on the field puts the caret in the input.
+
 A section is `{ heading, rows }`, or `{ heading, children }` for rows the kit has no shape for, such as calendar's agenda lines. A row is `{ id, title, subtitle, leading, keepOpen, onSelect }`. `leading` is a 20px glyph or a `<PhoneSearchAvatar initials color>`, a 28px circle. A section with no rows is not drawn.
 
 The sheet registers itself as a toast cover, so a toast raised while it is open is drawn over it and not under. An app's `<Toaster cover>` selector need not name it.
