@@ -23,7 +23,14 @@ import { useToastTags } from "./toast-tags.js";
 import { ToastSpinner } from "./toast-spinner.js";
 import { MOTION_CLASS, scopeSonnerReducedMotion } from "./sonner-motion.js";
 import { motionReaderFor, setToasterMotionReader } from "../helpers/motion.js";
-import { PINNED_CLASS, PROGRESS_CLASS, announcesUpdate, faceOf, type ToastFace } from "./toast-update.js";
+import {
+  COUNTDOWN_CLASS,
+  PINNED_CLASS,
+  PROGRESS_CLASS,
+  announcesUpdate,
+  faceOf,
+  type ToastFace,
+} from "./toast-update.js";
 import { useLiveCover } from "./use-live-cover.js";
 import { useNamedState } from "./use-named-state.js";
 import { setPhoneMaxWidth, usePhoneLayout } from "./use-phone-layout.js";
@@ -99,6 +106,24 @@ function bareClass(kind: ToastDefaultKind): string {
  * (with `<ToastSpinner>` as its icon). `toast.loading()` needs neither.
  */
 export const PROGRESS_TOAST = PROGRESS_CLASS;
+
+/**
+ * The class of a countdown: a toast that counts seconds down to something
+ * that can still be undone, such as a send.
+ *
+ *   toast("Sending in 5s", {
+ *     id,
+ *     className: `${PINNED_TOAST} ${COUNTDOWN_TOAST}`,
+ *     duration: Infinity,
+ *     action: { label: "Undo", onClick: undo },
+ *   });
+ *
+ * It wears the progress kind's glass, the app's accent, with no spinner and
+ * no sweep bar on the phone: the seconds in its words are the progress. Its
+ * ticks are not announced, as a pinned toast's are not. Raise the result
+ * under the same id with `className: undefined` to let it go.
+ */
+export const COUNTDOWN_TOAST = COUNTDOWN_CLASS;
 
 /** Sonner's own icons stay, but for the progress kind: the family's spinner. */
 const TOAST_ICONS = { loading: <ToastSpinner /> };

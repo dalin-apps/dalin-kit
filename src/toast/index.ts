@@ -1,4 +1,5 @@
 export {
+  COUNTDOWN_TOAST,
   PINNED_TOAST,
   PROGRESS_TOAST,
   Toaster,

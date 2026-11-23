@@ -3,6 +3,8 @@ import { isValidElement } from "react";
 export const PINNED_CLASS = "toast-pinned";
 /** The class of the progress kind (toast.css). Re-exported as PROGRESS_TOAST. */
 export const PROGRESS_CLASS = "toast-progress";
+/** The class of a countdown (toast.css). Re-exported as COUNTDOWN_TOAST. */
+export const COUNTDOWN_CLASS = "toast-countdown";
 /** The plain words of a title: a string, or the text inside the element it is. */
 export function textOf(node) {
     if (node === null || node === undefined || typeof node === "boolean")
@@ -31,7 +33,7 @@ export function faceOf(toast, bare = "default") {
     const pinned = hasClass(toast, PINNED_CLASS);
     return {
         type: toast.type ?? bare,
-        quiet: toast.type === "loading" || hasClass(toast, PROGRESS_CLASS) || pinned,
+        quiet: toast.type === "loading" || hasClass(toast, PROGRESS_CLASS) || hasClass(toast, COUNTDOWN_CLASS) || pinned,
         pinned,
         text: description ? `${title}\n${description}` : title,
     };

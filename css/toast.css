@@ -49,6 +49,9 @@
      --dl-phone-max
          Where the phone layout starts, in px, in place of the <Toaster>'s
          phoneMaxWidth prop.
+     --dl-toast-progress-tint, --dl-toast-progress-rim
+         How strong the accent is in the progress kind's glass and on its
+         rim: 22% and 36%. The countdown kind reads the same two.
      --dl-focus-ring
          The colour of the band's keyboard ring. The family has not picked
          one, so it falls back to the text colour.
@@ -256,16 +259,27 @@
    raises it, and so does a promise toast while it waits; the <Toaster> hands
    Sonner the spinner below as that kind's icon. A plain toast may carry the
    class and <ToastSpinner> itself. The fallback blue is the info kind's, for
-   an app that has set no --dl-accent. */
-.toast-progress {
+   an app that has set no --dl-accent.
+
+   The two strengths are variables: --dl-toast-progress-tint (22%) and
+   --dl-toast-progress-rim (36%). An app whose accent is strong sets them
+   lower, on :root; mail's violet sat at 12% with a 28% rim.
+
+   THE COUNTDOWN (`toast-countdown`, the class COUNTDOWN_TOAST names) wears
+   the same glass: a send counting down with Undo on its end. It is time
+   running out and not work going on, so it draws no spinner and, on the
+   phone, no sweep bar (the rule under THE PROGRESS CARD). */
+.toast-progress,
+.toast-countdown {
   background:
     linear-gradient(
-      color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) 22%, transparent),
-      color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) 22%, transparent)
+      color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) var(--dl-toast-progress-tint, 22%), transparent),
+      color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) var(--dl-toast-progress-tint, 22%), transparent)
     ),
     var(--dl-toast-glass) !important;
   backdrop-filter: var(--dl-toast-blur);
-  border: 1px solid color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) 36%, transparent) !important;
+  border: 1px solid
+    color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) var(--dl-toast-progress-rim, 36%), transparent) !important;
   color: var(--dl-fg, #fff) !important;
 }
 /* The spinner: a ring with one arc in the accent. It says the work is alive
@@ -438,7 +452,8 @@
     var(--dl-toast-glass) !important;
   border-width: 1.5px !important;
 }
-[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast].toast-progress {
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast].toast-progress,
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast].toast-countdown {
   border-width: 1.5px !important;
 }
 
@@ -481,6 +496,13 @@
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)
   [data-sonner-toast].toast-progress-done:not([data-swiping="true"], [data-removed="true"])::before {
   background: oklch(0.62 0.14 155);
+}
+/* A countdown shows no bar, whatever else it carries: a countdown raised
+   with `toast.loading()`, or one that also has the progress class, would
+   otherwise sweep. One class heavier than the three rules above. */
+[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)
+  [data-sonner-toast].toast-countdown:is(.toast-progress, .toast-progress-done):not([data-swiping="true"], [data-removed="true"])::before {
+  content: none;
 }
 
 /* A bare toast under a default kind: the phone's capsule has 20px of

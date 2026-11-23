@@ -15,14 +15,15 @@ import type { ToastT } from "sonner";
  *   became an error).
  * - Between two toasts of the same kind, a change of words does.
  * - A quiet toast does not: one that shows work still going (the progress
- *   kind) or that is pinned in view. Those tick, a percentage or a countdown,
- *   and each tick is not news. Leaving or entering that state is.
+ *   kind), one that counts down (the countdown kind) or one that is pinned
+ *   in view. Those tick, a percentage or a number of seconds, and each tick
+ *   is not news. Leaving or entering that state is.
  * - Raising the same toast again with nothing changed is not an update.
  */
 export type ToastFace = {
   /** Sonner's type: "success", "loading" and so on; "default" for a bare toast. */
   type: string;
-  /** Work still going, or pinned in view: its updates are ticks. */
+  /** Work still going, a countdown, or pinned in view: its updates are ticks. */
   quiet: boolean;
   /** Pinned in view (`toast-pinned`): it holds above the dock by itself. */
   pinned: boolean;
@@ -34,6 +35,8 @@ export type ToastFace = {
 export const PINNED_CLASS = "toast-pinned";
 /** The class of the progress kind (toast.css). Re-exported as PROGRESS_TOAST. */
 export const PROGRESS_CLASS = "toast-progress";
+/** The class of a countdown (toast.css). Re-exported as COUNTDOWN_TOAST. */
+export const COUNTDOWN_CLASS = "toast-countdown";
 
 /** The plain words of a title: a string, or the text inside the element it is. */
 export function textOf(node: ReactNode | (() => ReactNode)): string {
@@ -60,7 +63,8 @@ export function faceOf(toast: ToastT, bare = "default"): ToastFace {
   const pinned = hasClass(toast, PINNED_CLASS);
   return {
     type: toast.type ?? bare,
-    quiet: toast.type === "loading" || hasClass(toast, PROGRESS_CLASS) || pinned,
+    quiet:
+      toast.type === "loading" || hasClass(toast, PROGRESS_CLASS) || hasClass(toast, COUNTDOWN_CLASS) || pinned,
     pinned,
     text: description ? `${title}\n${description}` : title,
   };

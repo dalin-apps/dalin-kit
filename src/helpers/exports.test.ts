@@ -31,6 +31,7 @@ describe("@dalin/kit", () => {
     "useToastDock",
     "PINNED_TOAST",
     "PROGRESS_TOAST",
+    "COUNTDOWN_TOAST",
     "ToastSpinner",
   ])("exports %s from its root", (name) => {
     expect((kit as Record<string, unknown>)[name]).toBeDefined();

@@ -6,6 +6,23 @@ export type ToastDefaultKind = "info" | "success" | "warning" | "error";
  */
 export declare const PROGRESS_TOAST = "toast-progress";
 /**
+ * The class of a countdown: a toast that counts seconds down to something
+ * that can still be undone, such as a send.
+ *
+ *   toast("Sending in 5s", {
+ *     id,
+ *     className: `${PINNED_TOAST} ${COUNTDOWN_TOAST}`,
+ *     duration: Infinity,
+ *     action: { label: "Undo", onClick: undo },
+ *   });
+ *
+ * It wears the progress kind's glass, the app's accent, with no spinner and
+ * no sweep bar on the phone: the seconds in its words are the progress. Its
+ * ticks are not announced, as a pinned toast's are not. Raise the result
+ * under the same id with `className: undefined` to let it go.
+ */
+export declare const COUNTDOWN_TOAST = "toast-countdown";
+/**
  * The class that pins a toast: `toast("Sending in 5s", { className: PINNED_TOAST })`.
  * A pinned toast stays in view until it is dismissed or replaced: out from
  * the desktop's edge instead of tucking to a tab, and above the phone's dock

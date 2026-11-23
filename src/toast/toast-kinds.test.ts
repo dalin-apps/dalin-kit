@@ -10,9 +10,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
-import { readCss, ruleFor, ruleNaming, rulesWith, ruleWith } from "../../test/css.js";
+import { outweighs, readCss, ruleFor, ruleNaming, rulesWith, ruleWith } from "../../test/css.js";
 import { PROGRESS_DONE_TOAST, ToastSpinner } from "./toast-spinner.js";
-import { PROGRESS_TOAST, Toaster, type ToasterProps } from "./toaster.js";
+import { faceOf, announcesUpdate } from "./toast-update.js";
+import { COUNTDOWN_TOAST, PINNED_TOAST, PROGRESS_TOAST, Toaster, type ToasterProps } from "./toaster.js";
 
 const css = readCss("toast");
 const PHONE = '[data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)';
@@ -91,11 +92,24 @@ describe("the progress kind", () => {
   });
 
   it("wears the app's accent in the kinds' recipe: 22% over the glass, a 36% rim, white words", () => {
-    const body = ruleFor(css, ".toast-progress").replace(/\s+/g, " ");
-    expect(body).toContain("color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) 22%, transparent)");
+    const body = ruleNaming(css, ".toast-progress").replace(/\s+/g, " ");
+    expect(body).toContain(
+      "color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) var(--dl-toast-progress-tint, 22%), transparent)",
+    );
     expect(body).toContain("var(--dl-toast-glass) !important");
-    expect(body).toContain("border: 1px solid color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) 36%, transparent) !important");
+    expect(body).toContain(
+      "border: 1px solid color-mix(in oklch, var(--dl-accent, oklch(0.62 0.16 255)) var(--dl-toast-progress-rim, 36%), transparent) !important",
+    );
     expect(body).toContain("color: var(--dl-fg, #fff) !important");
+  });
+
+  it("takes its two strengths from variables, so mail can sit at 12% with a 28% rim", () => {
+    const body = ruleNaming(css, ".toast-progress");
+    // Both layers of the tint read the one variable, or the tint would be uneven.
+    expect(body.match(/var\(--dl-toast-progress-tint, 22%\)/g)).toHaveLength(2);
+    expect(body.match(/var\(--dl-toast-progress-rim, 36%\)/g)).toHaveLength(1);
+    // The literals are gone: nothing else in the rule could hold the old strength.
+    expect(body.replace(/var\(--dl-toast-progress-(tint|rim), \d+%\)/g, "")).not.toMatch(/\b(22|36)%/);
   });
 
   it("spins a ring with one arc in the accent", () => {
@@ -121,9 +135,73 @@ describe("the progress kind", () => {
   });
 
   it("takes the pill's 1.5px rim on the phone, like the other kinds", () => {
-    expect(ruleFor(css, `${PHONE} [data-sonner-toast].toast-progress`)).toContain(
+    expect(ruleNaming(css, `${PHONE} [data-sonner-toast].toast-progress`)).toContain(
       "border-width: 1.5px !important",
     );
+  });
+});
+
+describe("the countdown kind", () => {
+  const countdown = () =>
+    toast("Sending in 5s", { id: "send", className: `${PINNED_TOAST} ${COUNTDOWN_TOAST}`, duration: Infinity });
+
+  it("is a class a toast carries, beside the pin", async () => {
+    await mount();
+    await raise(countdown);
+    expect(COUNTDOWN_TOAST).toBe("toast-countdown");
+    expect(card()?.classList.contains("toast-countdown")).toBe(true);
+    expect(card()?.classList.contains("toast-progress")).toBe(false);
+  });
+
+  it("wears the progress kind's glass: the same rule, so the same two variables", () => {
+    expect(ruleNaming(css, ".toast-countdown")).toBe(ruleNaming(css, ".toast-progress"));
+    expect(ruleNaming(css, `${PHONE} [data-sonner-toast].toast-countdown`)).toContain("border-width: 1.5px !important");
+  });
+
+  it("draws no spinner and no icon of its own", async () => {
+    await mount();
+    await raise(countdown);
+    expect(card()?.querySelector(".toast-spinner")).toBeNull();
+    expect(card()?.querySelector("[data-icon]")).toBeNull();
+  });
+
+  it("shows no sweep bar on the phone: every rule that draws the bar asks for a progress class", () => {
+    const bar = rulesWith(css, "::before").filter(([, body]) => /toast-bar-sweep|top: 6px|oklch\(0\.62 0\.14 155\)/.test(body));
+    expect(bar.length).toBeGreaterThanOrEqual(3);
+    for (const [selector] of bar) {
+      expect(selector, selector).toMatch(/\.toast-progress/);
+      expect(selector, selector).not.toContain(".toast-countdown");
+    }
+  });
+
+  it("takes the bar off a countdown that carries a progress class too, from a heavier rule", () => {
+    const [selector, body] = rulesWith(css, ".toast-countdown:is(.toast-progress, .toast-progress-done)")[0]!;
+    expect(selector.startsWith(PHONE)).toBe(true);
+    expect(body).toContain("content: none");
+    for (const [drawn] of rulesWith(css, "::before").filter(([, rule]) => /toast-bar-sweep|top: 6px/.test(rule))) {
+      expect(outweighs(selector, drawn), drawn).toBe(true);
+    }
+  });
+
+  it("ticks without announcing, and announces when it lets go to its result", async () => {
+    const face = (className: string | undefined, title: string, type?: "success") =>
+      faceOf({ id: "send", title, className, type } as Parameters<typeof faceOf>[0]);
+    const five = face(COUNTDOWN_TOAST, "Sending in 5s");
+    const four = face(COUNTDOWN_TOAST, "Sending in 4s");
+    expect(five.quiet).toBe(true);
+    expect(announcesUpdate(five, four)).toBe(false);
+    expect(announcesUpdate(four, face(undefined, "Sent", "success"))).toBe(true);
+  });
+
+  it("does not run the announce clock as its seconds tick", async () => {
+    await mount();
+    await raise(countdown);
+    await act(async () => {
+      vi.advanceTimersByTime(6000);
+    });
+    expect(list()?.classList.contains("toast-announcing")).toBe(false);
+    await raise(() => toast("Sending in 4s", { id: "send" }));
+    expect(list()?.classList.contains("toast-announcing")).toBe(false);
   });
 });
 
