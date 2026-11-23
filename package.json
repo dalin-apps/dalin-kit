@@ -5,10 +5,17 @@
   "type": "module",
   "license": "MIT",
   "author": "Samuel Gomez",
-  "repository": { "type": "git", "url": "git+https://github.com/gomezsj12/dalin-kit.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gomezsj12/dalin-kit.git"
+  },
   "homepage": "https://github.com/gomezsj12/dalin-kit#readme",
-  "bugs": { "url": "https://github.com/gomezsj12/dalin-kit/issues" },
-  "sideEffects": ["*.css"],
+  "bugs": {
+    "url": "https://github.com/gomezsj12/dalin-kit/issues"
+  },
+  "sideEffects": [
+    "*.css"
+  ],
   "files": [
     "dist",
     "css"
@@ -26,10 +33,15 @@
       "types": "./dist/helpers/index.d.ts",
       "import": "./dist/helpers/index.js"
     },
+    "./components": {
+      "types": "./dist/components/index.d.ts",
+      "import": "./dist/components/index.js"
+    },
     "./tokens.css": "./css/tokens.css",
     "./toast.css": "./css/toast.css",
     "./create.css": "./css/create.css",
-    "./motion.css": "./css/motion.css"
+    "./motion.css": "./css/motion.css",
+    "./wordmark.css": "./css/wordmark.css"
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
@@ -37,6 +49,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.check.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:base-ui-next": "BASE_UI=next vitest run src/components",
     "check:dist": "npm run build && git diff --exit-code -- dist"
   },
   "keywords": [
@@ -58,8 +71,10 @@
     }
   },
   "devDependencies": {
+    "@base-ui/react": "1.4.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "base-ui-next": "npm:@base-ui/react@1.9.0",
     "jsdom": "^29.1.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
