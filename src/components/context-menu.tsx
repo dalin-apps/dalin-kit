@@ -102,6 +102,15 @@ function PlainContextMenu({
 
   const change = useCallback(
     (next: boolean, details: ChangeDetails) => {
+      // Base UI's menu closes on a pointer that leaves it when it was not
+      // opened by a click, and a right click is not one to it. A context
+      // menu stays until a click outside, Escape or a row, like the
+      // family's other menus, so that close is turned away before the app
+      // hears of it.
+      if (!next && details.reason === "trigger-hover") {
+        details.cancel();
+        return;
+      }
       onOpenChange?.(next, details);
       if (details.isCanceled) return;
       if (openProp === undefined) setOwnOpen(next);

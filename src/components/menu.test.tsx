@@ -496,6 +496,26 @@ describe("<ContextMenu>", () => {
     expect(all(".dl-menu")[0]!.getAttribute("aria-label")).toBe("Thanksgiving plans");
   });
 
+  it("stays open when the pointer leaves it, until a click outside, Escape or a row", async () => {
+    const onOpenChange = vi.fn();
+    await mount(<List onOpenChange={onOpenChange} />);
+    await rightClick(all(".row")[0]!);
+    const menu = one(".dl-menu")!;
+    const at = (x: number, y: number) => ({ bubbles: true, cancelable: true, clientX: x, clientY: y });
+    // Into the menu, then away from it and its row, as drive's probe moved.
+    await act(async () => {
+      for (const name of ["pointerenter", "mouseenter", "pointermove", "mousemove"]) menu.dispatchEvent(new MouseEvent(name, at(60, 80)));
+      for (const name of ["pointerleave", "mouseleave"]) menu.dispatchEvent(new MouseEvent(name, at(600, 500)));
+      for (const name of ["pointermove", "mousemove"]) document.body.dispatchEvent(new MouseEvent(name, at(600, 500)));
+    });
+    await settle(300);
+    expect(one(".dl-menu")).not.toBeNull();
+    expect(onOpenChange).not.toHaveBeenCalledWith(false, "trigger-hover");
+    await key("Escape");
+    await settle(200);
+    expect(one(".dl-menu")).toBeNull();
+  });
+
   it("opens on a long press, and not for a finger that scrolls", async () => {
     await mount(<List />);
     const row = all(".row")[0]!;
