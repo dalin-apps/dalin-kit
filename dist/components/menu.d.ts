@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import { type ComponentProps, type ReactNode } from "react";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 /**
  * The family's menu: shadcn's Base UI dropdown menu, restyled once and
@@ -8,7 +8,8 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu";
  * - `<MenuContent>` draws an arrow at its control. A menu is anchored, so it
  *   points at what opened it. Pass `arrow={false}` for one that should not.
  * - `<MenuItem variant="destructive">` is the red row.
- * - `<MenuShortcut keys>` puts keycaps at the row's right end.
+ * - `<MenuShortcut keys>` puts keycaps at the row's right end, and says the
+ *   shortcut on the row as `aria-keyshortcuts`.
  * - `<MenuLabel>` is a group's heading, written in sentence case. Base UI
  *   needs it inside a `<MenuGroup>`.
  *
@@ -71,9 +72,21 @@ export type MenuShortcutProps = Omit<ComponentProps<"span">, "children"> & {
     keys?: readonly string[];
     /** One cap's text, in place of `keys`. */
     children?: ReactNode;
+    /**
+     * The shortcut in ARIA's words, for the row: "Control+K". Left out, it is
+     * read from the caps (key-names.ts). Pass it for a shortcut the caps don't
+     * spell, such as two chords: "Meta+Enter Control+Enter".
+     */
+    "aria-keyshortcuts"?: string;
 };
-/** A row's shortcut: keycaps at its right end. Renders nothing without a key. */
-export declare function MenuShortcut({ keys, children, className, ...props }: MenuShortcutProps): ReactNode;
+/**
+ * A row's shortcut: keycaps at its right end. Renders nothing without a key.
+ *
+ * The caps are a picture, hidden from a screen reader: left in, a row named
+ * "Star" would read "Star S". The shortcut is said on the row instead, as
+ * its `aria-keyshortcuts`, which a screen reader announces as a shortcut.
+ */
+export declare function MenuShortcut({ keys, children, className, "aria-keyshortcuts": said, ...props }: MenuShortcutProps): ReactNode;
 export declare function MenuSub(props: MenuPrimitive.SubmenuRoot.Props): ReactNode;
 export type MenuSubTriggerProps = MenuPrimitive.SubmenuTrigger.Props & {
     inset?: boolean;

@@ -103,6 +103,46 @@ describe("<Menu>", () => {
     expect(rows()[3]!.querySelector("kbd")?.textContent).toBe("E");
   });
 
+  it("keeps the keycaps out of the row's name, and gives the shortcut as aria-keyshortcuts", async () => {
+    await mount(
+      <Menu>
+        <MenuTrigger>More</MenuTrigger>
+        <MenuContent>
+          <MenuItem>
+            Star <MenuShortcut keys={["S"]} />
+          </MenuItem>
+          <MenuItem>
+            Search <MenuShortcut keys={["Ctrl", "K"]} />
+          </MenuItem>
+          <MenuItem>
+            Delete <MenuShortcut keys={["⌘", "⌫"]} />
+          </MenuItem>
+          <MenuItem>
+            Archive <MenuShortcut>E</MenuShortcut>
+          </MenuItem>
+          <MenuItem>
+            Send <MenuShortcut keys={["⌘", "↵"]} aria-keyshortcuts="Meta+Enter Control+Enter" />
+          </MenuItem>
+          <MenuItem>Reply</MenuItem>
+        </MenuContent>
+      </Menu>,
+    );
+    await click(trigger());
+    const caps = all('[data-slot="menu-shortcut"]');
+    expect(caps).toHaveLength(5);
+    // Hidden from a screen reader, so a row reads "Star" and not "Star S".
+    expect(caps.every((cap) => cap.getAttribute("aria-hidden") === "true")).toBe(true);
+    expect(caps.every((cap) => !cap.hasAttribute("aria-keyshortcuts"))).toBe(true);
+    expect(rows().map((row) => row.getAttribute("aria-keyshortcuts"))).toEqual([
+      "S",
+      "Control+K",
+      "Meta+Backspace",
+      "E",
+      "Meta+Enter Control+Enter",
+      null,
+    ]);
+  });
+
   it("writes a group's label as the app wrote it, and names the group by it", async () => {
     await mount(<RowMenu />);
     await click(trigger());

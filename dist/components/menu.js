@@ -1,9 +1,11 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useLayoutEffect, useRef } from "react";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cx, withClass } from "./cx.js";
 import { CheckGlyph, ChevronRightGlyph } from "./icons.js";
 import { Kbd } from "./kbd.js";
+import { ariaKeyShortcuts } from "./key-names.js";
 /**
  * The family's menu: shadcn's Base UI dropdown menu, restyled once and
  * shared. The parts and their props are Base UI's; what the kit adds is the
@@ -12,7 +14,8 @@ import { Kbd } from "./kbd.js";
  * - `<MenuContent>` draws an arrow at its control. A menu is anchored, so it
  *   points at what opened it. Pass `arrow={false}` for one that should not.
  * - `<MenuItem variant="destructive">` is the red row.
- * - `<MenuShortcut keys>` puts keycaps at the row's right end.
+ * - `<MenuShortcut keys>` puts keycaps at the row's right end, and says the
+ *   shortcut on the row as `aria-keyshortcuts`.
  * - `<MenuLabel>` is a group's heading, written in sentence case. Base UI
  *   needs it inside a `<MenuGroup>`.
  *
@@ -69,12 +72,30 @@ export function MenuRadioItem({ className, children, ...props }) {
 export function MenuSeparator({ className, ...props }) {
     return _jsx(MenuPrimitive.Separator, { "data-slot": "menu-separator", className: withClass("dl-menu-separator", className), ...props });
 }
-/** A row's shortcut: keycaps at its right end. Renders nothing without a key. */
-export function MenuShortcut({ keys, children, className, ...props }) {
+/**
+ * A row's shortcut: keycaps at its right end. Renders nothing without a key.
+ *
+ * The caps are a picture, hidden from a screen reader: left in, a row named
+ * "Star" would read "Star S". The shortcut is said on the row instead, as
+ * its `aria-keyshortcuts`, which a screen reader announces as a shortcut.
+ */
+export function MenuShortcut({ keys, children, className, "aria-keyshortcuts": said, ...props }) {
+    const caps = useRef(null);
     const none = (!keys || keys.length === 0) && (children === null || children === undefined || children === false);
+    const drawn = keys && keys.length > 0 ? keys : typeof children === "string" || typeof children === "number" ? [String(children)] : [];
+    const shortcut = none ? "" : (said ?? ariaKeyShortcuts(drawn));
+    // The attribute belongs on the row, which is this part's ancestor and not
+    // its own element, so it is written there as the caps mount.
+    useLayoutEffect(() => {
+        const row = caps.current?.closest('[role^="menuitem"]');
+        if (!row || !shortcut)
+            return;
+        row.setAttribute("aria-keyshortcuts", shortcut);
+        return () => row.removeAttribute("aria-keyshortcuts");
+    }, [shortcut]);
     if (none)
         return null;
-    return (_jsx("span", { "data-slot": "menu-shortcut", className: cx("dl-menu-end", className), ...props, children: _jsx(Kbd, { keys: keys, children: children }) }));
+    return (_jsx("span", { ref: caps, "data-slot": "menu-shortcut", "aria-hidden": "true", className: cx("dl-menu-end", className), ...props, children: _jsx(Kbd, { keys: keys, children: children }) }));
 }
 export function MenuSub(props) {
     return _jsx(MenuPrimitive.SubmenuRoot, { ...props });

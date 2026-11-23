@@ -599,7 +599,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@dalin/kit/
 | `MenuItem`, `MenuLinkItem` | A row, and a row that is a link. |
 | `MenuCheckboxItem`, `MenuRadioGroup`, `MenuRadioItem` | Rows that hold a choice. The chosen one ends in a check. |
 | `MenuGroup`, `MenuLabel`, `MenuSeparator` | A group, its heading, and a rule between groups. |
-| `MenuShortcut` | A row's shortcut, as keycaps at its right end. |
+| `MenuShortcut` | A row's shortcut, as keycaps at its right end. The caps are hidden from a screen reader and the row carries the shortcut as `aria-keyshortcuts`. |
 | `MenuSub`, `MenuSubTrigger`, `MenuSubContent` | A submenu. Its row ends in a chevron. |
 | `ContextMenu`, `ContextMenuTrigger`, `ContextMenuContent` | The menu at the pointer, on a right click or a long press. |
 | `Popover`, `PopoverTrigger`, `PopoverContent` | The same surface for anything else, 12px in. The width is the app's. |
@@ -620,7 +620,7 @@ What the look comes to, from `menu.css`:
 
 - The surface is the overlay glass with 10px corners. Rows are 32px tall and sit 4px in, with a 7px corner.
 - A menu or popover anchored to a control has an arrow: drive's, a square turned 45 degrees and lined on its outer edges. A context menu has none, and neither has a submenu.
-- A shortcut is a keycap at the row's right end. Keycaps are hidden on a touch screen.
+- A shortcut is a keycap at the row's right end. Keycaps are hidden on a touch screen. They are a picture, so a screen reader hears the row's own name and then the shortcut: `<MenuShortcut keys={["Ctrl", "K"]} />` writes `aria-keyshortcuts="Control+K"` on its row. Pass `aria-keyshortcuts` to say one the caps don't spell.
 - A destructive row is red, words and icon.
 - A group's label is small and muted, in the case it was written in. Write it in sentence case. Base UI needs `MenuLabel` inside a `MenuGroup`.
 - A menu fades in over 150ms and out over 110ms. It lands at once when the keyboard opened it, and under reduced motion, which is the app's own switch where it has one. A context menu always opens at once.
