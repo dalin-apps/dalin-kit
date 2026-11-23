@@ -44,7 +44,8 @@
     "./wordmark.css": "./css/wordmark.css",
     "./menu.css": "./css/menu.css",
     "./empty.css": "./css/empty.css",
-    "./palette.css": "./css/palette.css"
+    "./palette.css": "./css/palette.css",
+    "./phone.css": "./css/phone.css"
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",

@@ -1,0 +1,338 @@
+/* @dalin/kit phone.css: the phone's header and its search (<PhoneHeader>,
+   <PhoneSearch>).
+
+   What it is. One phone layout for the four apps, on mail's numbers.
+
+   The header is a 48px title row, 6px under the safe area and 16px in from
+   each side. The title is a large one (28px, weight 700) or the app's
+   wordmark at 32px. Under a large title sits one muted line, 13px on an
+   18px line with 10px below it. At the right of the row are at most two
+   plain icons: a 20px glyph in a 44px target, muted, with no box at rest
+   or when pressed. The far-right target overhangs the inset by 12px, so its
+   glyph ends on the inset, and two glyphs stand 24px apart. Search is one
+   of those icons and never a field: the owner's pick on 2026-11-22.
+
+   Search is a sheet over the whole screen, bottom bar included, on the
+   list's fill. Its field takes the title row's place, 40px tall with 7px
+   corners, with Cancel at its right. Under it, before a word is typed: the
+   app's create action as a row in the accent, then sections under small
+   muted headings, in 48px rows with a 20px glyph or a 28px circle leading.
+
+   How an app adopts it. Import this file once, after tokens.css (and
+   wordmark.css, for a wordmark title), render <PhoneHeader> at the top of
+   each phone screen and mount one <PhoneSearch>. Delete the app's own phone
+   header, search field and search screen rules.
+
+   Variables an app may set.
+     --dl-phone-inset     Where the header, the field and the rows start and
+                          end: 16px.
+     --dl-phone-fill      The search sheet's fill, the phone list's own:
+                          #151515.
+     --dl-phone-search-z  The sheet's z-index: 50, over the bottom bar and
+                          under the toaster while it is over a sheet (60).
+
+   What an app must not override. The sizes, the insets, the icons' 44px
+   targets, and search being an icon. */
+
+/* ---------- the header ---------- */
+.dl-phone-head {
+  box-sizing: border-box;
+  flex: none;
+  padding: calc(env(safe-area-inset-top, 0px) + 6px) var(--dl-phone-inset, 16px) 0;
+  color: var(--dl-fg, #fff);
+}
+.dl-phone-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+}
+/* The title gives way before the icons do, and stops 8px short of them. */
+.dl-phone-title,
+.dl-phone-mark {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0 8px 0 0;
+  padding: 0;
+}
+.dl-phone-title {
+  overflow: hidden;
+  font-size: 28px;
+  line-height: 34px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* A title that does something (mail's folder button) is the app's own
+   button, set in the title's type with nothing drawn behind it. */
+.dl-phone-title > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.dl-phone-mark {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1;
+}
+.dl-phone-line {
+  margin: 0;
+  padding: 0 0 10px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--dl-fg-muted, #b8b8b8);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The icons: target beside target, the last one overhanging the inset. */
+.dl-phone-head-icons {
+  flex: none;
+  display: flex;
+  align-items: center;
+  margin-right: -12px;
+}
+.dl-phone-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--dl-fg-muted, #b8b8b8);
+  -webkit-tap-highlight-color: transparent;
+}
+.dl-phone-icon > svg {
+  width: 20px;
+  height: 20px;
+}
+/* Pressed: the family's icon press. The glyph turns white, and the
+   magnifying glass fills its lens. No box behind either. */
+.dl-phone-icon:active {
+  background: none;
+  color: var(--dl-fg, #fff);
+}
+.dl-phone-search-icon:active circle {
+  fill: currentColor;
+}
+.dl-phone-icon:focus-visible {
+  outline: 2px solid var(--dl-focus-ring, var(--dl-fg, #fff));
+  outline-offset: -8px;
+  border-radius: 12px;
+}
+
+/* ---------- search ---------- */
+.dl-phone-search {
+  /* The action row's words and the caret: the accent, lifted to a
+     lightness of at least 0.7 so a 16px word clears 4.5:1 on the fill in
+     all four apps. */
+  --dl-phone-search-ink: oklch(from var(--dl-accent, #fff) max(l, 0.7) c h);
+  position: fixed;
+  inset: 0;
+  z-index: var(--dl-phone-search-z, 50);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: var(--dl-phone-fill, #151515);
+  color: var(--dl-fg, #fff);
+  font-size: 16px;
+  text-align: left;
+  outline: none;
+}
+/* The field in the title row's place: 6px under the safe area, the 48px
+   row, then 10px, so the suggestions start where calendar's do. */
+.dl-phone-search-head {
+  box-sizing: border-box;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: calc(env(safe-area-inset-top, 0px) + 6px + 48px + 10px);
+  margin: 0;
+  padding: calc(env(safe-area-inset-top, 0px) + 6px) var(--dl-phone-inset, 16px) 10px;
+}
+.dl-phone-search-field {
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 4px 0 12px;
+  border: 0;
+  border-radius: var(--dl-r-control, 7px);
+  background: var(--dl-raised, #242424);
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+.dl-phone-search-field > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.dl-phone-search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  box-shadow: none;
+  appearance: none;
+  color: var(--dl-fg, #fff);
+  caret-color: var(--dl-phone-search-ink);
+  font: inherit;
+  /* 16px or more, or iOS zooms the page when the field takes focus. */
+  font-size: 16px;
+  letter-spacing: 0;
+}
+.dl-phone-search-input::placeholder {
+  color: var(--dl-fg-muted, #b8b8b8);
+  opacity: 1;
+}
+.dl-phone-search-input::-webkit-search-cancel-button,
+.dl-phone-search-input::-webkit-search-decoration {
+  display: none;
+}
+/* Cancel: its word 12px after the field, ending on the inset. */
+.dl-phone-search-cancel {
+  flex: none;
+  height: 44px;
+  margin: 0 -4px 0 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--dl-fg, #fff);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.dl-phone-search-cancel:focus-visible,
+.dl-phone-search-row:focus-visible {
+  outline: 2px solid var(--dl-focus-ring, var(--dl-fg, #fff));
+  outline-offset: 2px;
+  border-radius: var(--dl-r-control, 7px);
+}
+
+/* The suggestions and the results scroll under the field. */
+.dl-phone-search-body {
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 0;
+  padding: 0 var(--dl-phone-inset, 16px) calc(env(safe-area-inset-bottom, 0px) + 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.dl-phone-search-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--dl-fg, #fff);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+/* A row's leading glyph: 20px, muted. */
+.dl-phone-search-row > svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+/* The action row: the app's create action, in the accent. */
+.dl-phone-search-action {
+  font-weight: 600;
+  color: var(--dl-phone-search-ink);
+}
+.dl-phone-search-action > svg {
+  color: inherit;
+}
+.dl-phone-search-one,
+.dl-phone-search-two {
+  flex: 1;
+  min-width: 0;
+}
+.dl-phone-search-one,
+.dl-phone-search-two > b,
+.dl-phone-search-two > small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.dl-phone-search-two {
+  display: flex;
+  flex-direction: column;
+}
+.dl-phone-search-two > b {
+  font-weight: 500;
+  line-height: 1.45;
+}
+.dl-phone-search-two > small {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--dl-fg-faint, #8f97a0);
+}
+/* A section's heading: sentence case as written. */
+.dl-phone-search-heading {
+  margin: 14px 0 4px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+/* A person's circle: 28px, white initials. */
+.dl-phone-search-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #2f2f2f;
+  color: var(--dl-fg, #fff);
+  font-size: 11px;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 600;
+}
+.dl-phone-search-note {
+  margin: 14px 0 0;
+  color: var(--dl-fg-muted, #b8b8b8);
+}
