@@ -21,6 +21,10 @@
    What an app must not override. Any value below. A screen that needs a
    different one is a question for the owner, and the answer lands here. */
 :where(:root) {
+  /* The family is dark only, so the browser's own parts (scrollbars, date
+     pickers, autofill, a form control's default face) draw dark too. */
+  color-scheme: dark;
+
   /* Typeface: Inter in all four apps. The emoji and symbol tail matters: a
      custom family replaces the browser's default chain, and without the tail
      emoji fall to the last resort font. The colour emoji fonts come before
@@ -30,6 +34,9 @@
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
   /* The `dalin.` wordmark stays in Georgia, which ships on macOS and Windows. */
   --dl-font-wordmark: Georgia, "Times New Roman", serif;
+  /* Monospace: a keycap's symbols in menu.css, and any code an app shows.
+     The system's own, as no app loads one. */
+  --dl-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   /* Surfaces, by position (the owner's pick on 2026-11-22). A pane takes its
      fill from where it stands, left to right, and never from what it holds:
@@ -157,6 +164,22 @@
      as create.css does. */
   --dl-accent-text: oklch(from var(--dl-accent) max(l, 0.8) c h);
 
+  /* Ink on an accent fill: a near black, notes' and drive's own
+     --accent-fg. Every app's accent is light enough to carry it. */
+  --dl-accent-fg: oklch(0.16 0 0);
+
+  /* Text selection: the accent with its own ink, the recipe notes and
+     drive already draw. base.css reads them in one ::selection rule. */
+  --dl-selection-bg: var(--dl-accent);
+  --dl-selection-fg: var(--dl-accent-fg);
+
+  /* The keyboard focus ring: the accent (the owner's pick on 2026-11-22),
+     2px wide and 2px off the control's edge, the values all four apps
+     drew before the kit had them. The kit's own parts read these. */
+  --dl-focus-ring: var(--dl-accent);
+  --dl-focus-w: 2px;
+  --dl-focus-offset: 2px;
+
   /* Corners: controls and tooltips, cards and menus, dialogs and phone
      sheets. The create button has its own. */
   --dl-r-control: 7px;
@@ -175,6 +198,10 @@
   --dl-t-open: 150ms;
   --dl-t-close: 110ms;
   --dl-t-sheet: 260ms;
+  /* A state change that is not an open or a close: a fold, a fade between
+     two faces. Calendar, notes and drive each wrote 180ms as their own
+     --t-base. */
+  --dl-t-base: 180ms;
 
   /* Meaning colours, mail's hues, the same in every app: a row or icon whose
      place has a meaning shows its filled icon in this colour on hover and
@@ -182,4 +209,19 @@
   --dl-meaning-archive: oklch(0.68 0.19 25);
   --dl-meaning-starred: oklch(0.75 0.15 80);
   --dl-meaning-spam: oklch(0.72 0.17 50);
+
+  /* The z ladder, low to high, at the numbers the kit and the apps already
+     use, so nothing moves. The phone bar; the phone search sheet over it;
+     the toaster while it stands over a sheet; menus and popovers; a dialog
+     and its scrim (the panel one over the scrim); the command palette (its
+     panel one over its dim); a tooltip, over everything it can label. The
+     kit's own sheets read these with the old number as the fallback, and an
+     app's own --dl-bar-z, --dl-overlay-z and the rest still win. */
+  --dl-z-bar: 30;
+  --dl-z-search: 50;
+  --dl-z-toast: 60;
+  --dl-z-overlay: 70;
+  --dl-z-dialog: 80;
+  --dl-z-palette: 90;
+  --dl-z-tooltip: 95;
 }

@@ -16,12 +16,53 @@ function token(name: string): string {
 }
 
 describe("tokens.css", () => {
-  it("defines custom properties and nothing else", () => {
+  it("defines custom properties and the page's colour scheme, and nothing else", () => {
     const rules = rulesWith(css, "");
     expect(rules.map(([selector]) => selector)).toEqual([":where(:root)"]);
     for (const line of rules[0]![1].split(";").map((d) => d.trim()).filter(Boolean)) {
+      if (line.startsWith("color-scheme")) continue;
       expect(line.startsWith("--dl-"), line).toBe(true);
     }
+  });
+
+  it("draws the browser's own parts dark: the family is dark only", () => {
+    expect(rulesWith(css, "")[0]![1]).toMatch(/(^|;)\s*color-scheme:\s*dark;/);
+  });
+});
+
+describe("tokens new in 0.6", () => {
+  it.each([
+    ["--dl-focus-w", "2px"],
+    ["--dl-focus-offset", "2px"],
+    ["--dl-t-base", "180ms"],
+    ["--dl-accent-fg", "oklch(0.16 0 0)"],
+  ])("%s is %s", (name, value) => {
+    expect(token(name)).toBe(value);
+  });
+
+  it.each([
+    ["--dl-focus-ring", "var(--dl-accent)"],
+    ["--dl-selection-bg", "var(--dl-accent)"],
+    ["--dl-selection-fg", "var(--dl-accent-fg)"],
+  ])("%s is %s", (name, value) => {
+    expect(new RegExp(`${name}:\\s*([^;]+);`).exec(css)?.[1]?.trim()).toBe(value);
+  });
+
+  it("names a system monospace stack, ending in the generic family", () => {
+    expect(token("--dl-font-mono")).toMatch(/^ui-monospace,.*monospace$/);
+  });
+
+  it("keeps the z ladder at today's numbers, low to high", () => {
+    const ladder = ["bar", "search", "toast", "overlay", "dialog", "palette", "tooltip"].map((step) => Number(token(`--dl-z-${step}`)));
+    expect(ladder).toEqual([30, 50, 60, 70, 80, 90, 95]);
+  });
+
+  // The selection's ink on the selection's fill, on each app's accent.
+  describe.each(Object.entries(ACCENTS))("selected text in %s", (_app, [L, C, H]) => {
+    it.each(Object.keys(RENDER) as Array<keyof typeof RENDER>)("clears 4.5:1 (%s)", (how) => {
+      const draw = RENDER[how];
+      expect(contrast(draw(L, C, H), draw(0.16, 0, 0))).toBeGreaterThanOrEqual(4.5);
+    });
   });
 });
 
