@@ -92,8 +92,8 @@ describe("the keyboard ring", () => {
   const [list, ring] = rulesWith(css, ":focus-visible")[0]!;
 
   it("is an outline, which the glass's box-shadow cannot cover", () => {
-    expect(ring).toContain("outline: 2px solid var(--dl-focus-ring, var(--dl-fg, #fff))");
-    expect(ring).toContain("outline-offset: 2px");
+    expect(ring).toContain("outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff))");
+    expect(ring).toContain("outline-offset: var(--dl-focus-offset, 2px)");
     expect(ring).not.toContain("box-shadow");
   });
 

@@ -286,6 +286,6 @@ describe("the band's keyboard ring", () => {
     const ring = ruleFor(css, ".toast-band:focus-visible::after");
     expect(ring).toContain("width: calc(var(--dl-bar-w) + 6px)");
     expect(ring).toContain("height: calc(var(--dl-bar-h) + 6px)");
-    expect(ring).toContain("border: 2px solid var(--dl-focus-ring, var(--dl-fg, #fff))");
+    expect(ring).toContain("border: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff))");
   });
 });

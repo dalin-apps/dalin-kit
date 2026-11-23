@@ -86,8 +86,8 @@
 .dl-create:focus-visible,
 .dl-create-glass:focus-visible,
 :focus-visible > .dl-create-glass:where(:not(.dl-create-no-ring)) {
-  outline: 2px solid var(--dl-focus-ring, var(--dl-fg, #fff));
-  outline-offset: 2px;
+  outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff));
+  outline-offset: var(--dl-focus-offset, 2px);
 }
 
 /* The highlight: a soft light from the top right corner. */

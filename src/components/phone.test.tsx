@@ -953,6 +953,6 @@ describe("phone.css, search", () => {
     expect(cancel).toContain("height: 44px");
     expect(cancel).toContain("margin: 0 -4px 0 0");
     expect(cancel).toContain("padding: 0 4px");
-    expect(ruleNaming(css, ".dl-phone-search-cancel:focus-visible")).toContain("outline: 2px solid");
+    expect(ruleNaming(css, ".dl-phone-search-cancel:focus-visible")).toContain("outline: var(--dl-focus-w, 2px) solid");
   });
 });

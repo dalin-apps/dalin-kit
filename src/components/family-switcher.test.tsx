@@ -329,7 +329,7 @@ describe("wordmark.css, the switcher", () => {
 
   it("rings the trigger for the keyboard in the app's focus colour", () => {
     expect(ruleFor(css, ".dl-switcher-trigger:focus-visible")).toContain(
-      "outline: 2px solid var(--dl-focus-ring, var(--dl-fg, #fff))",
+      "outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff))",
     );
   });
 
