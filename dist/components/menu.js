@@ -57,7 +57,7 @@ function showsOnPage(el) {
  * sent there is lost. So where the trigger does not show, focus goes back
  * to whatever had it before the menu opened. `finalFocus` wins over both.
  */
-export function MenuContent({ align = "start", alignOffset = 0, side = "bottom", sideOffset, anchor, collisionPadding = 8, arrow = true, className, children, finalFocus, ...props }) {
+export function MenuContent({ align = "start", alignOffset = 0, side = "bottom", sideOffset, anchor, collisionPadding = 8, collisionAvoidance, arrow = true, className, children, finalFocus, ...props }) {
     // Read as the rows mount, which is as the menu opens and before Base UI
     // moves focus into it.
     const opened = useRef(null);
@@ -78,7 +78,7 @@ export function MenuContent({ align = "start", alignOffset = 0, side = "bottom",
             return true;
         return from.before && from.before.isConnected ? from.before : false;
     }, []);
-    return (_jsx(MenuPrimitive.Portal, { children: _jsx(MenuPrimitive.Positioner, { className: "dl-menu-positioner", align: align, alignOffset: alignOffset, side: side, sideOffset: sideOffset ?? (arrow ? ARROW_OFFSET_PX : PLAIN_OFFSET_PX), anchor: anchor, collisionPadding: collisionPadding, children: _jsxs(MenuPrimitive.Popup, { "data-slot": "menu-content", className: withClass("dl-menu", className), finalFocus: finalFocus ?? returnFocus, ...props, children: [arrow ? _jsx(MenuPrimitive.Arrow, { className: "dl-menu-arrow" }) : null, _jsx("div", { ref: markOpened, className: "dl-menu-list", children: children })] }) }) }));
+    return (_jsx(MenuPrimitive.Portal, { children: _jsx(MenuPrimitive.Positioner, { className: "dl-menu-positioner", align: align, alignOffset: alignOffset, side: side, sideOffset: sideOffset ?? (arrow ? ARROW_OFFSET_PX : PLAIN_OFFSET_PX), anchor: anchor, collisionPadding: collisionPadding, collisionAvoidance: collisionAvoidance, children: _jsxs(MenuPrimitive.Popup, { "data-slot": "menu-content", className: withClass("dl-menu", className), finalFocus: finalFocus ?? returnFocus, ...props, children: [arrow ? _jsx(MenuPrimitive.Arrow, { className: "dl-menu-arrow" }) : null, _jsx("div", { ref: markOpened, className: "dl-menu-list", children: children })] }) }) }));
 }
 export function MenuGroup(props) {
     return _jsx(MenuPrimitive.Group, { "data-slot": "menu-group", ...props });

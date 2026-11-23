@@ -28,7 +28,7 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu";
  */
 export declare function Menu(props: MenuPrimitive.Root.Props): ReactNode;
 export declare function MenuTrigger(props: MenuPrimitive.Trigger.Props): ReactNode;
-type Placement = Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor" | "collisionPadding">;
+type Placement = Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset" | "anchor" | "collisionPadding" | "collisionAvoidance">;
 export type MenuContentProps = MenuPrimitive.Popup.Props & Placement & {
     /**
      * Whether the menu points at its control with an arrow. On by default:
@@ -49,7 +49,7 @@ export declare const PLAIN_OFFSET_PX = 4;
  * sent there is lost. So where the trigger does not show, focus goes back
  * to whatever had it before the menu opened. `finalFocus` wins over both.
  */
-export declare function MenuContent({ align, alignOffset, side, sideOffset, anchor, collisionPadding, arrow, className, children, finalFocus, ...props }: MenuContentProps): ReactNode;
+export declare function MenuContent({ align, alignOffset, side, sideOffset, anchor, collisionPadding, collisionAvoidance, arrow, className, children, finalFocus, ...props }: MenuContentProps): ReactNode;
 export declare function MenuGroup(props: MenuPrimitive.Group.Props): ReactNode;
 export type MenuLabelProps = MenuPrimitive.GroupLabel.Props & {
     /** Lines the label up with rows that have an icon. */

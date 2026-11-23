@@ -43,7 +43,7 @@ export function MenuTrigger(props: MenuPrimitive.Trigger.Props): ReactNode {
 
 type Placement = Pick<
   MenuPrimitive.Positioner.Props,
-  "align" | "alignOffset" | "side" | "sideOffset" | "anchor" | "collisionPadding"
+  "align" | "alignOffset" | "side" | "sideOffset" | "anchor" | "collisionPadding" | "collisionAvoidance"
 >;
 
 export type MenuContentProps = MenuPrimitive.Popup.Props &
@@ -82,6 +82,7 @@ export function MenuContent({
   sideOffset,
   anchor,
   collisionPadding = 8,
+  collisionAvoidance,
   arrow = true,
   className,
   children,
@@ -115,6 +116,7 @@ export function MenuContent({
         sideOffset={sideOffset ?? (arrow ? ARROW_OFFSET_PX : PLAIN_OFFSET_PX)}
         anchor={anchor}
         collisionPadding={collisionPadding}
+        collisionAvoidance={collisionAvoidance}
       >
         <MenuPrimitive.Popup
           data-slot="menu-content"

@@ -36,13 +36,22 @@ describe("<FamilySwitcher>", () => {
     expect(trigger().getAttribute("aria-label")).toBe("dalin. drive. Cambiar de app");
   });
 
-  it("opens the frosted menu, with its arrow, when pressed", async () => {
+  it("opens the frosted menu to the RIGHT of the wordmark, from its top, with its arrow", async () => {
     await mount(<FamilySwitcher app="mail" />);
     await click(trigger());
     expect(menu()).not.toBeNull();
     expect(menu()?.querySelector(":scope > .dl-menu-arrow")).not.toBeNull();
-    expect(menu()?.getAttribute("data-side")).toBe("bottom");
+    // Beside the wordmark, over the next column: never under it, where it
+    // covered the create button and the sidebar's search.
+    expect(menu()?.getAttribute("data-side")).toBe("right");
     expect(menu()?.getAttribute("data-align")).toBe("start");
+    expect(menu()?.querySelector(".dl-menu-arrow")?.getAttribute("data-side")).toBe("right");
+  });
+
+  it("takes another side where the app asks, as the phone's header does", async () => {
+    await mount(<FamilySwitcher app="mail" side="bottom" />);
+    await click(trigger());
+    expect(menu()?.getAttribute("data-side")).toBe("bottom");
   });
 
   it("opens when the pointer rests on the wordmark, and not the moment it passes", async () => {
@@ -55,6 +64,79 @@ describe("<FamilySwitcher>", () => {
     expect(menu()).toBeNull();
     await settle(400);
     expect(menu()).not.toBeNull();
+    expect(menu()?.getAttribute("data-side")).toBe("right");
+  });
+
+  const hover = async () => {
+    await act(async () => {
+      for (const type of ["pointerenter", "mouseenter", "mouseover", "mousemove"]) {
+        trigger().dispatchEvent(new MouseEvent(type, { bubbles: type !== "mouseenter" && type !== "pointerenter", clientX: 5, clientY: 5 }));
+      }
+    });
+    await settle(400);
+  };
+
+  it("leaves focus, and so the app's single-key shortcuts, alone while a resting pointer holds it open", async () => {
+    const heard: Array<{ key: string; inMenu: boolean; prevented: boolean }> = [];
+    const onKey = (event: KeyboardEvent) =>
+      heard.push({ key: event.key, inMenu: (event.target as Element).closest(".dl-menu") !== null, prevented: event.defaultPrevented });
+    document.addEventListener("keydown", onKey);
+    try {
+      await mount(
+        <>
+          <FamilySwitcher app="mail" />
+          <ul className="list" tabIndex={0} />
+        </>,
+      );
+      const list = one<HTMLElement>(".list")!;
+      list.focus();
+      await hover();
+      expect(menu()).not.toBeNull();
+      // The list keeps the focus it had: a key pressed now is the app's.
+      expect(document.activeElement).toBe(list);
+      await key("e");
+      expect(heard).toEqual([{ key: "e", inMenu: false, prevented: false }]);
+      expect(menu()).not.toBeNull();
+    } finally {
+      document.removeEventListener("keydown", onKey);
+    }
+  });
+
+  it("takes no focus on hover with nothing focused either", async () => {
+    await mount(<FamilySwitcher app="mail" />);
+    await hover();
+    expect(menu()).not.toBeNull();
+    expect(menu()?.contains(document.activeElement)).toBe(false);
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  it("leaves focus where it was when Escape closes a menu the pointer opened", async () => {
+    await mount(
+      <>
+        <FamilySwitcher app="mail" />
+        <ul className="list" tabIndex={0} />
+      </>,
+    );
+    const list = one<HTMLElement>(".list")!;
+    list.focus();
+    await hover();
+    await key("Escape");
+    await settle(300);
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(list);
+  });
+
+  it("takes focus as before when a press or a key opens it", async () => {
+    await mount(
+      <>
+        <FamilySwitcher app="mail" />
+        <ul className="list" tabIndex={0} />
+      </>,
+    );
+    one<HTMLElement>(".list")!.focus();
+    await click(trigger());
+    await settle(100);
+    expect(menu()?.contains(document.activeElement)).toBe(true);
   });
 
   it("lists the four apps as their own wordmarks, each period in that app's accent", async () => {

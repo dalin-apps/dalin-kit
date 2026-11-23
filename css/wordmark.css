@@ -114,7 +114,8 @@ html[data-dl-motion="reduce"] .dl-wordmark[data-roll] :is(.dl-wordmark-rest, .dl
    The wordmark as a button. Nothing shows at rest: no fill, no edge, no
    chevron, and the pointer stays an arrow, so the sidebar reads as it did
    when the wordmark was a picture. Pointing at it or pressing it opens the
-   menu below (menu.css draws the surface, the rows and the arrow). The
+   menu to its right, from its top (menu.css draws the surface, the rows and
+   the arrow), over the next column and never under the wordmark. The
    keyboard ring is --dl-focus-ring, the app's accent. */
 .dl-switcher-trigger {
   display: inline-flex;

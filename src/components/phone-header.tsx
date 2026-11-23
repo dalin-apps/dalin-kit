@@ -40,7 +40,7 @@ export type PhoneHeaderProps = {
    * Home and notes' main list. Drawn at 32px.
    */
   wordmark?: DalinApp;
-  /** Makes that wordmark the family switcher: a press opens the menu of the four apps. */
+  /** Makes that wordmark the family switcher: a press opens the menu of the four apps, under the title. */
   switcher?: boolean;
   /**
    * One muted line under a large title: "All mailboxes · 44 unread",
@@ -92,7 +92,12 @@ export function PhoneHeader({
       <div className="dl-phone-head-row">
         {wordmark ? (
           <h1 className="dl-phone-mark">
-            {switcher ? <FamilySwitcher app={wordmark} size={PHONE_MARK_PX} /> : <Wordmark app={wordmark} size={PHONE_MARK_PX} />}
+            {switcher ? (
+              // Under the title: a phone has no column beside it for the menu to open over.
+              <FamilySwitcher app={wordmark} size={PHONE_MARK_PX} side="bottom" />
+            ) : (
+              <Wordmark app={wordmark} size={PHONE_MARK_PX} />
+            )}
           </h1>
         ) : (
           <h1 className="dl-phone-title">{title}</h1>

@@ -543,11 +543,13 @@ import { FamilySwitcher } from "@dalin/kit/components";
 <FamilySwitcher app="mail" size={32} folded={folded} />
 ```
 
-It goes where the sidebar's `<Wordmark>` was. Nothing shows at rest. Pointing at the wordmark for 150ms, or pressing it, opens the frosted menu under it, with an arrow. The menu lists the four apps as their own wordmarks, each period in that app's accent, with a check on the app you are in.
+It goes where the sidebar's `<Wordmark>` was. Nothing shows at rest. Pointing at the wordmark for 150ms, or pressing it, opens the frosted menu to the right of the wordmark, from its top, with an arrow. That is the owner's pick on 2026-11-22: the menu stands over the top of the next column and never under the wordmark, where it covered mail's Compose and notes' search. With no room on the right it flips to the left, and it never drops to the other axis. The menu lists the four apps as their own wordmarks, each period in that app's accent, with a check on the app you are in.
 
 Every row is a link: `https://mail.dalin.pro`, `https://calendar.dalin.pro`, `https://notes.dalin.pro` and `https://drive.dalin.pro`. A middle click or a long press does what it does on any link.
 
 The wordmark is a button, so a keyboard reaches it. Enter or Space opens the menu, the arrows move through it, Enter follows a row, and Escape closes it and gives focus back. The menu is not modal: one that a resting pointer opened must not lock the page's scroll.
+
+A menu the resting pointer opened is shown and not yet in use. It takes no focus, so the app's single-key shortcuts keep working under it, and Escape closes it with focus left where it was. In 0.3 it took focus as it opened, and a key pressed with the pointer resting on the wordmark went to the menu. It is in use once the pointer moves into it or the wordmark is pressed, and then it has the keys as any menu does.
 
 | Prop | Default | What it does |
 | --- | --- | --- |
@@ -555,7 +557,7 @@ The wordmark is a button, so a keyboard reaches it. Enter or Space opens the men
 | `size`, `folded`, `rollOut` | as `<Wordmark>` | Passed to the trigger's wordmark. |
 | `label` | `"Switch app"` | What the control does. Its accessible name reads "dalin. mail. Switch app". |
 | `hrefs` | none | Another address for an app, for a build that is not on dalin.pro: `{ mail: "http://localhost:3000" }`. |
-| `side`, `align` | `"bottom"`, `"start"` | Where the menu opens against the wordmark. |
+| `side`, `align` | `"right"`, `"start"` | Where the menu opens against the wordmark. The phone's header passes `"bottom"`, since a phone has no column beside its title. |
 | `className` | none | The app's own class on the trigger, beside `dl-switcher-trigger`. |
 
 It needs `wordmark.css` and `menu.css`.
@@ -623,6 +625,7 @@ The kit adds these props to Base UI's own:
 | `inset` | `MenuItem`, `MenuLinkItem`, `MenuLabel`, `MenuSubTrigger` | Lines the words up with rows that have an icon. |
 | `keys` | `MenuShortcut`, `Kbd` | The keys, one cap each: `["Ctrl", "K"]`. A single cap may be the child instead. |
 | `align`, `alignOffset`, `side`, `sideOffset`, `anchor`, `collisionPadding` | The three content parts | Passed to Base UI's positioner. The context menu takes no `anchor`. |
+| `collisionAvoidance` | `MenuContent` | Base UI's own: where the menu may go when its side has no room. |
 
 What the look comes to, from `menu.css`:
 
@@ -739,7 +742,7 @@ At the right are at most two plain icons, each a 20px glyph in a 44px target wit
 | --- | --- | --- |
 | `title` | none | A large title. A string, or the app's own node for a title that does something, such as mail's folder button. |
 | `wordmark` | none | The app's wordmark in place of a title. |
-| `switcher` | `false` | Makes that wordmark the family switcher. |
+| `switcher` | `false` | Makes that wordmark the family switcher. Its menu opens under the title. |
 | `line` | none | One muted line under a large title. A wordmark takes none, since it reads as a tagline there. |
 | `onSearch` | none | Opens the app's search. With it, the header draws the magnifying glass. |
 | `searchLabel` | `"Search"` | The search icon's accessible name. |

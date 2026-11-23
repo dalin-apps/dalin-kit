@@ -24,7 +24,7 @@ export type PhoneHeaderProps = {
      * Home and notes' main list. Drawn at 32px.
      */
     wordmark?: DalinApp;
-    /** Makes that wordmark the family switcher: a press opens the menu of the four apps. */
+    /** Makes that wordmark the family switcher: a press opens the menu of the four apps, under the title. */
     switcher?: boolean;
     /**
      * One muted line under a large title: "All mailboxes · 44 unread",
