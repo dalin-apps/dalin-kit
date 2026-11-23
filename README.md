@@ -593,6 +593,10 @@ import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@dalin/kit/
 </ContextMenu>
 ```
 
+A context menu is not modal, from 0.4. Base UI's context menu always is: it lays a layer over the page, so a second right click or a click on another row only closed the menu, and the page could not scroll under it. Base UI takes no `modal` prop for it. So the kit's `<ContextMenu>` is Base UI's Menu opened at the point of the click, with the same parts, keys and submenus. A right click on another row opens that row's menu, the page scrolls, and Escape gives focus back to whatever had it. `<ContextMenu modal>` is Base UI's own, as in 0.3. `<Menu>` is unchanged and stays modal unless told otherwise.
+
+The trigger still renders a `<div>`, or the element passed as `render`, and carries `data-popup-open` while its menu is open. Nothing else is added to the app's markup: the menu's hidden anchor and its focus guards are drawn in `<body>`.
+
 | Component | What it is |
 | --- | --- |
 | `Menu`, `MenuTrigger`, `MenuContent` | The root, the control and the frosted surface. |
@@ -601,7 +605,7 @@ import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@dalin/kit/
 | `MenuGroup`, `MenuLabel`, `MenuSeparator` | A group, its heading, and a rule between groups. |
 | `MenuShortcut` | A row's shortcut, as keycaps at its right end. The caps are hidden from a screen reader and the row carries the shortcut as `aria-keyshortcuts`. |
 | `MenuSub`, `MenuSubTrigger`, `MenuSubContent` | A submenu. Its row ends in a chevron. |
-| `ContextMenu`, `ContextMenuTrigger`, `ContextMenuContent` | The menu at the pointer, on a right click or a long press. |
+| `ContextMenu`, `ContextMenuTrigger`, `ContextMenuContent` | The menu at the pointer, on a right click or a long press. Not modal. |
 | `Popover`, `PopoverTrigger`, `PopoverContent` | The same surface for anything else, 12px in. The width is the app's. |
 | `PopoverTitle`, `PopoverDescription`, `PopoverClose` | A popover's heading, its muted line, and a control that closes it. |
 | `Kbd` | A keycap: drive's and notes', one cap to a key. |
@@ -611,6 +615,7 @@ The kit adds these props to Base UI's own:
 | Prop | On | What it does |
 | --- | --- | --- |
 | `arrow` | `MenuContent`, `PopoverContent` | Whether the surface points at its control. On by default. |
+| `modal` | `ContextMenu` | `true` is Base UI's own modal context menu. Off by default. |
 | `variant` | `MenuItem`, `MenuLinkItem` | `"destructive"` is the red row. |
 | `inset` | `MenuItem`, `MenuLinkItem`, `MenuLabel`, `MenuSubTrigger` | Lines the words up with rows that have an icon. |
 | `keys` | `MenuShortcut`, `Kbd` | The keys, one cap each: `["Ctrl", "K"]`. A single cap may be the child instead. |

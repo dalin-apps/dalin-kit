@@ -292,6 +292,145 @@ describe("<ContextMenu>", () => {
     });
     expect(event.defaultPrevented).toBe(true);
   });
+
+  const rightClick = async (el: Element, at = { clientX: 40, clientY: 60 }) => {
+    await act(async () => {
+      for (const name of ["pointerdown", "mousedown"]) el.dispatchEvent(new MouseEvent(name, { bubbles: true, cancelable: true, button: 2, ...at }));
+      el.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2, ...at }));
+      for (const name of ["pointerup", "mouseup"]) el.dispatchEvent(new MouseEvent(name, { bubbles: true, cancelable: true, button: 2, ...at }));
+    });
+    await settle(60);
+  };
+  /** What a modal menu does to the page: a layer over it that takes every press, and no scroll. */
+  const pageLocked = () =>
+    document.querySelector('[role="presentation"][data-base-ui-inert]') !== null || /hidden/.test(document.documentElement.getAttribute("style") ?? "");
+
+  function List({ modal, onOpenChange }: { modal?: boolean; onOpenChange?: (open: boolean, reason: string) => void }) {
+    return (
+      <ul className="list">
+        {["Thanksgiving plans", "Invoice for October"].map((subject) => (
+          <ContextMenu key={subject} modal={modal} onOpenChange={(open, details) => onOpenChange?.(open, details.reason)}>
+            <ContextMenuTrigger render={<li className="row" />}>{subject}</ContextMenuTrigger>
+            <ContextMenuContent aria-label={subject}>
+              <MenuItem>Reply to {subject}</MenuItem>
+              <MenuSub>
+                <MenuSubTrigger>Move to</MenuSubTrigger>
+                <MenuSubContent>
+                  <MenuItem>Archive</MenuItem>
+                </MenuSubContent>
+              </MenuSub>
+            </ContextMenuContent>
+          </ContextMenu>
+        ))}
+      </ul>
+    );
+  }
+
+  it("is not modal: the page under it is not covered and still scrolls", async () => {
+    await mount(<List />);
+    await rightClick(all(".row")[0]!);
+    expect(one(".dl-menu")).not.toBeNull();
+    expect(pageLocked()).toBe(false);
+  });
+
+  it("is Base UI's own modal menu when asked", async () => {
+    await mount(<List modal />);
+    await rightClick(all(".row")[0]!);
+    expect(one(".dl-menu.dl-context-menu")).not.toBeNull();
+    expect(pageLocked()).toBe(true);
+  });
+
+  it("opens the other row's menu on a right click there, where a modal one only closed", async () => {
+    await mount(<List />);
+    const [first, second] = all(".row");
+    await rightClick(first!);
+    expect(one(".dl-menu")?.getAttribute("aria-label")).toBe("Thanksgiving plans");
+    await rightClick(second!, { clientX: 40, clientY: 120 });
+    await settle(300);
+    expect(all(".dl-menu").map((menu) => menu.getAttribute("aria-label"))).toEqual(["Invoice for October"]);
+    expect(rows()[0]?.textContent).toBe("Reply to Invoice for October");
+  });
+
+  it("puts nothing of its own in the app's markup", async () => {
+    await mount(<List />);
+    expect([...one(".list")!.children].map((child) => child.tagName)).toEqual(["LI", "LI"]);
+    await rightClick(all(".row")[0]!);
+    expect([...one(".list")!.children].map((child) => child.tagName)).toEqual(["LI", "LI"]);
+    expect(all(".row")[0]!.getAttribute("data-slot")).toBe("context-menu-trigger");
+    expect(all(".row")[0]!.hasAttribute("data-popup-open")).toBe(true);
+    expect(all(".row")[1]!.hasAttribute("data-popup-open")).toBe(false);
+  });
+
+  it("tells the app as it opens and closes, with the reason", async () => {
+    const onOpenChange = vi.fn();
+    await mount(<List onOpenChange={onOpenChange} />);
+    await rightClick(all(".row")[0]!);
+    expect(onOpenChange).toHaveBeenLastCalledWith(true, "trigger-press");
+    await key("Escape");
+    await settle(200);
+    expect(onOpenChange).toHaveBeenLastCalledWith(false, "escape-key");
+    expect(one(".dl-menu")).toBeNull();
+  });
+
+  it("gives focus back to what had it, never to a hidden element", async () => {
+    await mount(
+      <>
+        <button type="button" className="before">
+          Inbox
+        </button>
+        <List />
+      </>,
+    );
+    const before = one<HTMLButtonElement>(".before")!;
+    before.focus();
+    await rightClick(all(".row")[0]!);
+    expect(one(".dl-menu")).not.toBeNull();
+    await key("Escape");
+    await settle(300);
+    expect(one(".dl-menu")).toBeNull();
+    expect(document.activeElement).toBe(before);
+    // And with nothing focused before, focus does not land on the anchor.
+    before.blur();
+    await rightClick(all(".row")[0]!);
+    await key("Escape");
+    await settle(300);
+    expect((document.activeElement as HTMLElement).hidden).toBe(false);
+    expect(document.activeElement?.getAttribute("data-slot")).not.toBe("context-menu-anchor");
+  });
+
+  it("keeps the menu open while its submenu is", async () => {
+    await mount(<List />);
+    await rightClick(all(".row")[0]!);
+    const sub = one('[data-slot="menu-sub-trigger"]')!;
+    await click(sub);
+    await settle(300);
+    expect(all(".dl-menu")).toHaveLength(2);
+    expect(all(".dl-menu")[0]!.getAttribute("aria-label")).toBe("Thanksgiving plans");
+  });
+
+  it("opens on a long press, and not for a finger that scrolls", async () => {
+    await mount(<List />);
+    const row = all(".row")[0]!;
+    const touch = (name: string, x: number, y: number) => {
+      const event = new Event(name, { bubbles: true, cancelable: true });
+      Object.assign(event, { touches: name === "touchend" ? [] : [{ clientX: x, clientY: y }] });
+      row.dispatchEvent(event);
+    };
+    await act(async () => {
+      touch("touchstart", 40, 60);
+      touch("touchmove", 40, 90);
+    });
+    await settle(560);
+    expect(one(".dl-menu")).toBeNull();
+    await act(async () => {
+      touch("touchend", 40, 90);
+      touch("touchstart", 40, 60);
+    });
+    await settle(300);
+    expect(one(".dl-menu")).toBeNull();
+    await settle(260);
+    expect(one(".dl-menu")).not.toBeNull();
+  });
 });
 
 describe("<Popover>", () => {
