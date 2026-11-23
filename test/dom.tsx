@@ -77,3 +77,14 @@ export async function key(name: string, on?: Element | null, init: KeyboardEvent
 
 export const one = <T extends Element = HTMLElement>(selector: string): T | null => document.querySelector<T>(selector);
 export const all = <T extends Element = HTMLElement>(selector: string): T[] => [...document.querySelectorAll<T>(selector)];
+
+/** Types into a field the way React hears it: the native setter, then an input event. */
+export async function type(input: HTMLInputElement | null | undefined, value: string): Promise<void> {
+  if (!input) throw new Error("no field to type in");
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  await act(async () => {
+    setter.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await settle();
+}

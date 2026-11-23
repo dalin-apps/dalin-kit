@@ -1,0 +1,279 @@
+/* @dalin/kit palette.css: the command palette (<CommandPalette>).
+
+   What it is. A 600px frosted panel 12vh down the window, with the app
+   dimmed behind it: mail's search palette, drawn for all four apps. A
+   query row with a magnifying glass and an Esc keycap, then grouped
+   results. A group's heading is sentence case, small and muted. A row is an
+   icon, a title with an optional muted second line, and at its right a
+   date or a count and then the row's own shortcut. The words of the query
+   are marked in the title and the second line. The focused row wears the
+   overlay's highlight and shows an Enter keycap in the shortcut's slot.
+
+   How an app adopts it. Import this file once, after tokens.css and
+   menu.css (the keycap is menu.css's), and mount <CommandPalette> at the
+   app's root with its sources and actions. Delete the app's own palette or
+   search-palette rules.
+
+   Motion. Opened by a press, the panel and the dim fade in over
+   --dl-t-open and out over --dl-t-close. Opened from the keyboard, which is
+   nearly always, nothing animates: the <CommandPalette> writes
+   `data-instant`, and `watchInputModality` writes `data-input` on <html>.
+   Nothing animates under reduced motion either.
+
+   Variables an app may set.
+     --dl-palette-z    The z-index of the dim; the panel is one over it.
+                       90, over the menus (70) and the toaster.
+     --dl-palette-dim  The fill over the app behind the palette.
+
+   What an app must not override. The width, the glass, the corners, the
+   row's anatomy, the mark, and the headings' case. */
+.dl-palette-dim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--dl-palette-z, 90);
+  background: var(--dl-palette-dim, oklch(0 0 0 / 0.6));
+  backdrop-filter: blur(3px);
+  transition: opacity var(--dl-t-open, 150ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+.dl-palette {
+  position: fixed;
+  z-index: calc(var(--dl-palette-z, 90) + 1);
+  top: 12vh;
+  left: 50%;
+  width: min(600px, calc(100vw - 32px));
+  max-height: min(72vh, calc(100dvh - 12vh - 16px));
+  translate: -50% 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--dl-overlay, rgb(32 32 32 / 0.72));
+  backdrop-filter: var(--dl-overlay-blur, blur(16px) saturate(1.5));
+  border: 1px solid var(--dl-overlay-edge, #3d3d3d);
+  border-radius: var(--dl-r-sheet, 14px);
+  box-shadow: 0 24px 56px -16px oklch(0 0 0 / 0.65);
+  color: var(--dl-fg, #fff);
+  font-size: 14px;
+  line-height: 20px;
+  outline: none;
+  transition: opacity var(--dl-t-open, 150ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+:is(.dl-palette, .dl-palette-dim):is([data-starting-style], [data-ending-style]) {
+  opacity: 0;
+}
+:is(.dl-palette, .dl-palette-dim)[data-ending-style] {
+  transition-duration: var(--dl-t-close, 110ms);
+}
+/* Nothing animates when the keyboard opened it, or closed it. */
+:is(.dl-palette, .dl-palette-dim)[data-instant],
+html[data-input="keyboard"] :is(.dl-palette, .dl-palette-dim) {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dl-palette,
+  .dl-palette-dim {
+    transition: none;
+  }
+}
+
+/* The query row. */
+.dl-palette-query {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--dl-border, #2f2f2f);
+}
+.dl-palette-query > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+.dl-palette-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  box-shadow: none;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: 0;
+}
+.dl-palette-input::placeholder {
+  color: var(--dl-fg-muted, #b8b8b8);
+  opacity: 1;
+}
+.dl-palette-input::-webkit-search-cancel-button {
+  display: none;
+}
+/* 16px or more on a touch screen, or iOS zooms the page as the field takes
+   focus. */
+@media (hover: none) and (pointer: coarse) {
+  .dl-palette-input {
+    font-size: 16px;
+  }
+}
+.dl-palette-close {
+  flex: none;
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: default;
+}
+
+/* Read by a screen reader, drawn for no one. */
+.dl-palette-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The results scroll under the query row. */
+.dl-palette-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 8px;
+}
+.dl-palette-scroll[data-empty]:not(:has(.dl-palette-note)) {
+  display: none;
+}
+.dl-palette-list {
+  outline: none;
+}
+/* A group's heading: sentence case as written. */
+.dl-palette-head {
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--dl-fg-muted, #b8b8b8);
+  user-select: none;
+}
+.dl-palette-group:not(:first-child) > .dl-palette-head {
+  margin-top: 6px;
+}
+
+/* A row. Its parts line up on the first line, so a row with a second line
+   keeps its icon and its date beside the title. */
+.dl-palette-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--dl-r-control, 7px);
+  cursor: default;
+  user-select: none;
+  outline: none;
+  scroll-margin-block: 8px;
+}
+.dl-palette-row[data-highlighted] {
+  background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
+}
+.dl-palette-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 20px;
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+.dl-palette-icon > svg {
+  width: 16px;
+  height: 16px;
+}
+.dl-palette-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dl-palette-title,
+.dl-palette-sub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.dl-palette-sub {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+.dl-palette-meta {
+  flex: none;
+  padding-left: 2px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--dl-fg-muted, #b8b8b8);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* The words the query matched. */
+.dl-palette-mark {
+  margin: 0 -2px;
+  padding: 1px 2px;
+  border-radius: 4px;
+  background: oklch(1 0 0 / 0.12);
+  color: inherit;
+  font-weight: 500;
+}
+/* A to-do that is done. */
+.dl-palette-row[data-done] .dl-palette-title {
+  color: var(--dl-fg-muted, #b8b8b8);
+  text-decoration: line-through;
+  text-decoration-color: var(--dl-fg-faint, #8f97a0);
+}
+
+/* The shortcut slot. The row's own keys and the Enter hint share one grid
+   cell, right aligned, so the slot is as wide as the wider of the two and
+   stays that wide: the focus moving from row to row moves nothing. */
+.dl-palette-keys {
+  flex: none;
+  display: grid;
+  justify-items: end;
+  align-items: center;
+  height: 20px;
+}
+.dl-palette-keys > * {
+  grid-area: 1 / 1;
+}
+.dl-palette-enter,
+.dl-palette-row[data-highlighted] .dl-palette-own {
+  visibility: hidden;
+}
+.dl-palette-row[data-highlighted] .dl-palette-enter {
+  visibility: visible;
+}
+/* A key means nothing on a touch screen. */
+@media (hover: none) {
+  .dl-palette-keys,
+  .dl-palette-close {
+    display: none;
+  }
+}
+
+/* Nothing found. */
+.dl-palette-note {
+  margin: 0;
+  padding: 10px 8px;
+  color: var(--dl-fg-muted, #b8b8b8);
+}

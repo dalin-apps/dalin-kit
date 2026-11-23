@@ -6,4 +6,6 @@ export { Menu, MenuCheckboxItem, MenuContent, MenuGroup, MenuItem, MenuLabel, Me
 export { ContextMenu, ContextMenuContent, ContextMenuTrigger, type ContextMenuContentProps, } from "./context-menu.js";
 export { Popover, PopoverClose, PopoverContent, PopoverDescription, PopoverTitle, PopoverTrigger, type PopoverContentProps, } from "./popover.js";
 export { EmptyState, type EmptyStateProps } from "./empty-state.js";
+export { CommandPalette, type CommandPaletteProps, type PaletteItem, type PaletteSource, } from "./command-palette.js";
+export { fold, matchParts, matchesQuery, queryTerms, type MatchPart } from "./palette-match.js";
 //# sourceMappingURL=index.d.ts.map
