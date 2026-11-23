@@ -25,14 +25,38 @@ export type FamilySwitcherProps = Pick<WordmarkProps, "size" | "folded" | "rollO
      */
     side?: MenuPrimitive.Positioner.Props["side"];
     align?: MenuPrimitive.Positioner.Props["align"];
+    /**
+     * The column the menu opens past. Opened to the right, the menu's left
+     * edge stands `boundaryOffset` past this element's right edge, so it lands
+     * at the same x in every app and covers nothing in the sidebar: not the
+     * search glass, not refresh, not the create button. Left out, it is the
+     * closest sidebar around the wordmark (`<aside>` or `[data-sidebar]`).
+     * Pass `false` to open just past the wordmark instead.
+     */
+    boundary?: Element | null | false;
+    /**
+     * How far past the boundary's right edge the menu's left edge stands. The
+     * arrow's height by default, so the arrow's tip meets the sidebar's edge.
+     */
+    boundaryOffset?: number;
 };
+/** The sidebar the menu opens past, when the app names none. */
+export declare const SWITCHER_BOUNDARY = "aside, [data-sidebar]";
+/**
+ * How far the menu stands off the wordmark's right edge so its left edge
+ * sits `gap` past the boundary's right edge. Never nearer the wordmark than
+ * the gap itself, for a boundary that ends before the wordmark does.
+ */
+export declare function offsetPastBoundary(trigger: DOMRect, boundary: DOMRect | null, gap: number): number;
 /**
  * The family switcher: the app's wordmark as the way to the other three.
  *
  * Nothing shows at rest; the wordmark is the wordmark. Pointing at it, or
  * pressing it, opens the family's frosted menu to its right, from its top,
- * with an arrow: over the top of the next column, and never under the
- * wordmark, where it covered mail's Compose and notes' search. The menu
+ * with an arrow at the wordmark: just past the sidebar's right edge, over
+ * the top of the next column, at the same x in every app. Never under the
+ * wordmark, where it covered mail's Compose and notes' search, and never
+ * over the sidebar's search glass or refresh beside it. The menu
  * lists the four apps as their own wordmarks, each period in that app's
  * accent, with a check on the app you are in. Every row is a link to the
  * app, so a middle click or a long press does what it does on a link.
@@ -49,5 +73,5 @@ export type FamilySwitcherProps = Pick<WordmarkProps, "size" | "folded" | "rollO
  * It takes the wordmark's own `size`, `folded` and `rollOut`, so it goes
  * where the sidebar's `<Wordmark>` was. It needs menu.css and wordmark.css.
  */
-export declare function FamilySwitcher({ app, size, folded, rollOut, label, hrefs, className, side, align, }: FamilySwitcherProps): ReactNode;
+export declare function FamilySwitcher({ app, size, folded, rollOut, label, hrefs, className, side, align, boundary, boundaryOffset, }: FamilySwitcherProps): ReactNode;
 //# sourceMappingURL=family-switcher.d.ts.map

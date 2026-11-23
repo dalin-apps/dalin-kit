@@ -3,11 +3,12 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 /**
  * The family's menu: shadcn's Base UI dropdown menu, restyled once and
  * shared. The parts and their props are Base UI's; what the kit adds is the
- * look (menu.css) and four habits:
+ * look (menu.css) and five habits:
  *
  * - `<MenuContent>` draws an arrow at its control. A menu is anchored, so it
  *   points at what opened it. Pass `arrow={false}` for one that should not.
  * - `<MenuItem variant="destructive">` is the red row.
+ * - `<MenuLinkItem>` closes its menu on a click, as a plain row does.
  * - `<MenuShortcut keys>` puts keycaps at the row's right end, and says the
  *   shortcut on the row as `aria-keyshortcuts`.
  * - `<MenuLabel>` is a group's heading, written in sentence case. Base UI
@@ -69,8 +70,14 @@ export type MenuLinkItemProps = MenuPrimitive.LinkItem.Props & {
     variant?: MenuItemVariant;
     inset?: boolean;
 };
-/** A row that is a link: it navigates, and opens in a new tab on a middle click as a link does. */
-export declare function MenuLinkItem({ className, variant, inset, ...props }: MenuLinkItemProps): ReactNode;
+/**
+ * A row that is a link: it navigates, and opens in a new tab on a middle
+ * click as a link does. A click closes the menu, as every other row's does:
+ * Base UI leaves a link row's menu open, which stays on screen over a link
+ * the app handles itself (an in-app route, a new tab). Pass
+ * `closeOnClick={false}` to keep it open.
+ */
+export declare function MenuLinkItem({ className, variant, inset, closeOnClick, ...props }: MenuLinkItemProps): ReactNode;
 export declare function MenuCheckboxItem({ className, children, ...props }: MenuPrimitive.CheckboxItem.Props): ReactNode;
 export declare function MenuRadioGroup(props: MenuPrimitive.RadioGroup.Props): ReactNode;
 export declare function MenuRadioItem({ className, children, ...props }: MenuPrimitive.RadioItem.Props): ReactNode;

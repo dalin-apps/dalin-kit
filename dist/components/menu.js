@@ -9,11 +9,12 @@ import { ariaKeyShortcuts } from "./key-names.js";
 /**
  * The family's menu: shadcn's Base UI dropdown menu, restyled once and
  * shared. The parts and their props are Base UI's; what the kit adds is the
- * look (menu.css) and four habits:
+ * look (menu.css) and five habits:
  *
  * - `<MenuContent>` draws an arrow at its control. A menu is anchored, so it
  *   points at what opened it. Pass `arrow={false}` for one that should not.
  * - `<MenuItem variant="destructive">` is the red row.
+ * - `<MenuLinkItem>` closes its menu on a click, as a plain row does.
  * - `<MenuShortcut keys>` puts keycaps at the row's right end, and says the
  *   shortcut on the row as `aria-keyshortcuts`.
  * - `<MenuLabel>` is a group's heading, written in sentence case. Base UI
@@ -90,9 +91,15 @@ export function MenuLabel({ className, inset, ...props }) {
 export function MenuItem({ className, variant = "default", inset, ...props }) {
     return (_jsx(MenuPrimitive.Item, { "data-slot": "menu-item", "data-variant": variant, "data-inset": inset ? "" : undefined, className: withClass("dl-menu-item", className), ...props }));
 }
-/** A row that is a link: it navigates, and opens in a new tab on a middle click as a link does. */
-export function MenuLinkItem({ className, variant = "default", inset, ...props }) {
-    return (_jsx(MenuPrimitive.LinkItem, { "data-slot": "menu-link-item", "data-variant": variant, "data-inset": inset ? "" : undefined, className: withClass("dl-menu-item", className), ...props }));
+/**
+ * A row that is a link: it navigates, and opens in a new tab on a middle
+ * click as a link does. A click closes the menu, as every other row's does:
+ * Base UI leaves a link row's menu open, which stays on screen over a link
+ * the app handles itself (an in-app route, a new tab). Pass
+ * `closeOnClick={false}` to keep it open.
+ */
+export function MenuLinkItem({ className, variant = "default", inset, closeOnClick = true, ...props }) {
+    return (_jsx(MenuPrimitive.LinkItem, { closeOnClick: closeOnClick, "data-slot": "menu-link-item", "data-variant": variant, "data-inset": inset ? "" : undefined, className: withClass("dl-menu-item", className), ...props }));
 }
 export function MenuCheckboxItem({ className, children, ...props }) {
     return (_jsxs(MenuPrimitive.CheckboxItem, { "data-slot": "menu-checkbox-item", className: withClass("dl-menu-item", className), ...props, children: [children, _jsx(MenuPrimitive.CheckboxItemIndicator, { className: "dl-menu-end", children: _jsx(CheckGlyph, {}) })] }));

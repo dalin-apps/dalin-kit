@@ -5,11 +5,23 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { DALIN_APPS, dalinApp } from "./apps.js";
 import { withClass } from "./cx.js";
 import { CheckGlyph } from "./icons.js";
-import { MenuContent, MenuLinkItem } from "./menu.js";
+import { ARROW_OFFSET_PX, MenuContent, MenuLinkItem } from "./menu.js";
 import { Wordmark } from "./wordmark.js";
 /** How long the pointer rests on the wordmark before the menu opens, and how long it may leave before it closes. */
 const HOVER_OPEN_MS = 150;
 const HOVER_CLOSE_MS = 150;
+/** The sidebar the menu opens past, when the app names none. */
+export const SWITCHER_BOUNDARY = "aside, [data-sidebar]";
+/**
+ * How far the menu stands off the wordmark's right edge so its left edge
+ * sits `gap` past the boundary's right edge. Never nearer the wordmark than
+ * the gap itself, for a boundary that ends before the wordmark does.
+ */
+export function offsetPastBoundary(trigger, boundary, gap) {
+    if (!boundary)
+        return gap;
+    return Math.max(gap, boundary.right + gap - trigger.right);
+}
 /**
  * Where the menu may go when its side has no room: the opposite side, and
  * along its own edge. Never the other axis, so a menu asked to stand beside
@@ -21,8 +33,10 @@ const STAY_BESIDE = { side: "flip", align: "shift", fallbackAxisSide: "none" };
  *
  * Nothing shows at rest; the wordmark is the wordmark. Pointing at it, or
  * pressing it, opens the family's frosted menu to its right, from its top,
- * with an arrow: over the top of the next column, and never under the
- * wordmark, where it covered mail's Compose and notes' search. The menu
+ * with an arrow at the wordmark: just past the sidebar's right edge, over
+ * the top of the next column, at the same x in every app. Never under the
+ * wordmark, where it covered mail's Compose and notes' search, and never
+ * over the sidebar's search glass or refresh beside it. The menu
  * lists the four apps as their own wordmarks, each period in that app's
  * accent, with a check on the app you are in. Every row is a link to the
  * app, so a middle click or a long press does what it does on a link.
@@ -39,8 +53,19 @@ const STAY_BESIDE = { side: "flip", align: "shift", fallbackAxisSide: "none" };
  * It takes the wordmark's own `size`, `folded` and `rollOut`, so it goes
  * where the sidebar's `<Wordmark>` was. It needs menu.css and wordmark.css.
  */
-export function FamilySwitcher({ app, size, folded, rollOut, label = "Switch app", hrefs, className, side = "right", align = "start", }) {
+export function FamilySwitcher({ app, size, folded, rollOut, label = "Switch app", hrefs, className, side = "right", align = "start", boundary, boundaryOffset = ARROW_OFFSET_PX, }) {
     const [open, setOpen] = useState(false);
+    const triggerRef = useRef(null);
+    // Measured each time the menu is placed, so a sidebar that was resized or
+    // folded since is read as it is now. Only a menu beside the wordmark opens
+    // past the sidebar; one below it (the phone's) stands off as any menu does.
+    const sideOffset = ({ side: placed }) => {
+        const el = triggerRef.current;
+        if (!el || (placed !== "right" && placed !== "inline-end") || boundary === false)
+            return ARROW_OFFSET_PX;
+        const column = boundary ?? el.closest(SWITCHER_BOUNDARY);
+        return offsetPastBoundary(el.getBoundingClientRect(), column ? column.getBoundingClientRect() : null, boundaryOffset);
+    };
     // Whether a resting pointer opened the menu and nothing has been done in
     // it since. While so, the menu is shown and not in use.
     const shown = useRef(false);
@@ -57,7 +82,7 @@ export function FamilySwitcher({ app, size, folded, rollOut, label = "Switch app
                 before.current = document.activeElement;
             }
             setOpen(next);
-        }, children: [_jsx(MenuPrimitive.Trigger, { "data-slot": "family-switcher", className: withClass("dl-switcher-trigger", className), "aria-label": `dalin. ${dalinApp(app).name}. ${label}`, openOnHover: true, delay: HOVER_OPEN_MS, closeDelay: HOVER_CLOSE_MS, onClick: use, onKeyDown: use, children: _jsx(Wordmark, { app: app, size: size, folded: folded, rollOut: rollOut }) }), _jsx(MenuContent, { className: "dl-switcher", side: side, align: align, collisionAvoidance: STAY_BESIDE, "aria-label": "dalin apps", 
+        }, children: [_jsx(MenuPrimitive.Trigger, { ref: triggerRef, "data-slot": "family-switcher", className: withClass("dl-switcher-trigger", className), "aria-label": `dalin. ${dalinApp(app).name}. ${label}`, openOnHover: true, delay: HOVER_OPEN_MS, closeDelay: HOVER_CLOSE_MS, onClick: use, onKeyDown: use, children: _jsx(Wordmark, { app: app, size: size, folded: folded, rollOut: rollOut }) }), _jsx(MenuContent, { className: "dl-switcher", side: side, align: align, sideOffset: sideOffset, collisionAvoidance: STAY_BESIDE, "aria-label": "dalin apps", 
                 // Base UI moves focus into every menu as it opens. For one a
                 // resting pointer opened, that takes the keys from the app: focus
                 // goes straight back to what had it, which Base UI reads as focus
