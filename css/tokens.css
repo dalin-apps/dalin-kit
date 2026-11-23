@@ -1,9 +1,9 @@
 /* @dalin/kit tokens.css: the values the four dalin apps share.
 
    What it is. Custom properties, named --dl-*, for what the owner has decided
-   so far: the typeface, the surfaces by position, the text colours (the
-   accent as text among them), the corners, the motion timings and the
-   meaning colours. A question that is
+   so far: the typeface, the surfaces by position, the sidebar's rows, the
+   text colours (the accent as text among them), the corners, the motion
+   timings and the meaning colours. A question that is
    still open has no token here, so a missing value means "not decided", and
    the app keeps its own until it is.
 
@@ -51,6 +51,21 @@
   --dl-hover-list: var(--dl-content);
   --dl-hover-content: var(--dl-raised);
 
+  /* Sidebar rows (2026-11-22). Top navigation (Inbox, Home, the views) is a
+     32px row at 14px. A long list under it (calendars, folders, pinned
+     pages) is a 28px row at 13px, so it shows more names and cuts fewer.
+     Icons are 17px in both. The open plain row is the selected lift with
+     its icon filled and white. A row whose place has a meaning (Archive,
+     Starred, Spam) shows its filled icon in that meaning's colour instead,
+     on hover and while open: the --dl-meaning-* tokens below. */
+  --dl-row-h: 32px;
+  --dl-row-text: 14px;
+  --dl-row-dense-h: 28px;
+  --dl-row-dense-text: 13px;
+  --dl-row-icon: 17px;
+  --dl-row-selected: var(--dl-selected);
+  --dl-row-selected-icon: var(--dl-fg);
+
   /* Text. Faint is the dimmest grey that still holds 4.5:1 on the lightest
      surface it sits on, #2f2f2f (4.53:1 measured; #858d96 gave 3.98:1). */
   --dl-fg: #ffffff;
@@ -88,7 +103,9 @@
   --dl-t-close: 110ms;
   --dl-t-sheet: 260ms;
 
-  /* Meaning colours, mail's hues: a row or icon whose place has a meaning shows its filled icon in this colour on hover and when open. */
+  /* Meaning colours, mail's hues, the same in every app: a row or icon whose
+     place has a meaning shows its filled icon in this colour on hover and
+     when open. */
   --dl-meaning-archive: oklch(0.68 0.19 25);
   --dl-meaning-starred: oklch(0.75 0.15 80);
   --dl-meaning-spam: oklch(0.72 0.17 50);

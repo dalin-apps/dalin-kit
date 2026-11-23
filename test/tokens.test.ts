@@ -103,6 +103,44 @@ describe("the surface ladder", () => {
   });
 });
 
+describe("sidebar rows", () => {
+  it.each([
+    ["--dl-row-h", "32px"],
+    ["--dl-row-text", "14px"],
+    ["--dl-row-dense-h", "28px"],
+    ["--dl-row-dense-text", "13px"],
+    ["--dl-row-icon", "17px"],
+  ])("%s is %s", (name, value) => {
+    expect(token(name)).toBe(value);
+  });
+
+  it("selects a plain row with the lift and a white icon", () => {
+    expect(token("--dl-row-selected")).toBe("#262626");
+    expect(token("--dl-row-selected-icon")).toBe("#ffffff");
+  });
+
+  it("keeps a long list denser than the navigation over it", () => {
+    expect(parseFloat(token("--dl-row-dense-h"))).toBeLessThan(parseFloat(token("--dl-row-h")));
+    expect(parseFloat(token("--dl-row-dense-text"))).toBeLessThan(parseFloat(token("--dl-row-text")));
+  });
+
+  it("keeps a meaning colour for each place that has one", () => {
+    for (const place of ["archive", "starred", "spam"]) {
+      expect(token(`--dl-meaning-${place}`)).toMatch(/^oklch\(/);
+    }
+  });
+
+  it("holds each meaning colour at 3:1 or better as an icon on the selected lift", () => {
+    const parse = (value: string) => value.match(/[\d.]+/g)!.map(Number) as [number, number, number];
+    for (const place of ["archive", "starred", "spam"]) {
+      const [L, C, H] = parse(token(`--dl-meaning-${place}`));
+      for (const draw of Object.values(RENDER)) {
+        expect(contrast(draw(L, C, H), hex("#262626"))).toBeGreaterThanOrEqual(3);
+      }
+    }
+  });
+});
+
 describe("--dl-accent-text", () => {
   const value = /--dl-accent-text:\s*([^;]+);/.exec(css)?.[1] ?? "";
   const floor = Number(/max\(l,\s*([\d.]+)\)/.exec(value)?.[1]);
