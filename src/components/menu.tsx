@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, type ComponentProps, type ReactNode } from "react";
+import { useCallback, useLayoutEffect, useRef, type ComponentProps, type ReactNode } from "react";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cx, withClass } from "./cx.js";
 import { CheckGlyph, ChevronRightGlyph } from "./icons.js";
@@ -60,7 +60,21 @@ export const ARROW_OFFSET_PX = 10;
 /** The same for a surface with no arrow. */
 export const PLAIN_OFFSET_PX = 4;
 
-/** The menu's surface: portal, positioner, the frosted popup, its arrow and its rows. */
+/** Whether focus can go back to a menu's trigger: it is on the page and something draws it. */
+function showsOnPage(el: HTMLElement): boolean {
+  if (!el.isConnected || el.getAttribute("aria-hidden") === "true" || el.closest("[hidden], [inert]")) return false;
+  return typeof el.checkVisibility !== "function" || el.checkVisibility();
+}
+
+/**
+ * The menu's surface: portal, positioner, the frosted popup, its arrow and its rows.
+ *
+ * Focus goes back to the trigger as the menu closes, which is Base UI's own
+ * rule. A menu the app opens itself, anchored to something else, has a
+ * trigger nothing draws (Base UI needs one to place a submenu), and focus
+ * sent there is lost. So where the trigger does not show, focus goes back
+ * to whatever had it before the menu opened. `finalFocus` wins over both.
+ */
 export function MenuContent({
   align = "start",
   alignOffset = 0,
@@ -71,8 +85,26 @@ export function MenuContent({
   arrow = true,
   className,
   children,
+  finalFocus,
   ...props
 }: MenuContentProps): ReactNode {
+  // Read as the rows mount, which is as the menu opens and before Base UI
+  // moves focus into it.
+  const opened = useRef<{ list: HTMLElement; before: HTMLElement | null } | null>(null);
+  const markOpened = useCallback((list: HTMLDivElement | null) => {
+    if (!list) return;
+    const active = document.activeElement;
+    opened.current = { list, before: active instanceof HTMLElement && active !== document.body ? active : null };
+  }, []);
+  const returnFocus = useCallback((): HTMLElement | boolean => {
+    const from = opened.current;
+    if (!from) return true;
+    // The popup names its trigger, and stays whole as it leaves the page.
+    const id = from.list.closest('[role="menu"]')?.getAttribute("aria-labelledby");
+    const trigger = id ? document.getElementById(id) : null;
+    if (trigger && showsOnPage(trigger)) return true;
+    return from.before && from.before.isConnected ? from.before : false;
+  }, []);
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
@@ -84,9 +116,16 @@ export function MenuContent({
         anchor={anchor}
         collisionPadding={collisionPadding}
       >
-        <MenuPrimitive.Popup data-slot="menu-content" className={withClass("dl-menu", className)} {...props}>
+        <MenuPrimitive.Popup
+          data-slot="menu-content"
+          className={withClass("dl-menu", className)}
+          finalFocus={finalFocus ?? returnFocus}
+          {...props}
+        >
           {arrow ? <MenuPrimitive.Arrow className="dl-menu-arrow" /> : null}
-          <div className="dl-menu-list">{children}</div>
+          <div ref={markOpened} className="dl-menu-list">
+            {children}
+          </div>
         </MenuPrimitive.Popup>
       </MenuPrimitive.Positioner>
     </MenuPrimitive.Portal>

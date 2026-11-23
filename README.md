@@ -595,7 +595,9 @@ import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from "@dalin/kit/
 
 A context menu is not modal, from 0.4. Base UI's context menu always is: it lays a layer over the page, so a second right click or a click on another row only closed the menu, and the page could not scroll under it. Base UI takes no `modal` prop for it. So the kit's `<ContextMenu>` is Base UI's Menu opened at the point of the click, with the same parts, keys and submenus. A right click on another row opens that row's menu, the page scrolls, and Escape gives focus back to whatever had it. `<ContextMenu modal>` is Base UI's own, as in 0.3. `<Menu>` is unchanged and stays modal unless told otherwise.
 
-The trigger still renders a `<div>`, or the element passed as `render`, and carries `data-popup-open` while its menu is open. Nothing else is added to the app's markup: the menu's hidden anchor and its focus guards are drawn in `<body>`.
+Focus goes back to the trigger as a menu closes, which is Base UI's rule. A menu the app opens itself, anchored to a control of its own through `anchor`, has a trigger nothing draws: Base UI needs one to place a submenu, so drive passes a hidden `<span>`. Focus sent there was lost. Where the trigger doesn't show, the kit now gives focus back to whatever had it before the menu opened, such as the kebab that was pressed. A `finalFocus` the app passes wins.
+
+The context menu's trigger still renders a `<div>`, or the element passed as `render`, and carries `data-popup-open` while its menu is open. Nothing else is added to the app's markup: the menu's hidden anchor and its focus guards are drawn in `<body>`.
 
 | Component | What it is |
 | --- | --- |
@@ -616,6 +618,7 @@ The kit adds these props to Base UI's own:
 | --- | --- | --- |
 | `arrow` | `MenuContent`, `PopoverContent` | Whether the surface points at its control. On by default. |
 | `modal` | `ContextMenu` | `true` is Base UI's own modal context menu. Off by default. |
+| `finalFocus` | The two menu content parts | Base UI's own: where focus goes as the menu closes. The kit supplies a default, below. |
 | `variant` | `MenuItem`, `MenuLinkItem` | `"destructive"` is the red row. |
 | `inset` | `MenuItem`, `MenuLinkItem`, `MenuLabel`, `MenuSubTrigger` | Lines the words up with rows that have an icon. |
 | `keys` | `MenuShortcut`, `Kbd` | The keys, one cap each: `["Ctrl", "K"]`. A single cap may be the child instead. |

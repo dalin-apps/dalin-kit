@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cx, withClass } from "./cx.js";
 import { CheckGlyph, ChevronRightGlyph } from "./icons.js";
@@ -42,9 +42,43 @@ export function MenuTrigger(props) {
 export const ARROW_OFFSET_PX = 10;
 /** The same for a surface with no arrow. */
 export const PLAIN_OFFSET_PX = 4;
-/** The menu's surface: portal, positioner, the frosted popup, its arrow and its rows. */
-export function MenuContent({ align = "start", alignOffset = 0, side = "bottom", sideOffset, anchor, collisionPadding = 8, arrow = true, className, children, ...props }) {
-    return (_jsx(MenuPrimitive.Portal, { children: _jsx(MenuPrimitive.Positioner, { className: "dl-menu-positioner", align: align, alignOffset: alignOffset, side: side, sideOffset: sideOffset ?? (arrow ? ARROW_OFFSET_PX : PLAIN_OFFSET_PX), anchor: anchor, collisionPadding: collisionPadding, children: _jsxs(MenuPrimitive.Popup, { "data-slot": "menu-content", className: withClass("dl-menu", className), ...props, children: [arrow ? _jsx(MenuPrimitive.Arrow, { className: "dl-menu-arrow" }) : null, _jsx("div", { className: "dl-menu-list", children: children })] }) }) }));
+/** Whether focus can go back to a menu's trigger: it is on the page and something draws it. */
+function showsOnPage(el) {
+    if (!el.isConnected || el.getAttribute("aria-hidden") === "true" || el.closest("[hidden], [inert]"))
+        return false;
+    return typeof el.checkVisibility !== "function" || el.checkVisibility();
+}
+/**
+ * The menu's surface: portal, positioner, the frosted popup, its arrow and its rows.
+ *
+ * Focus goes back to the trigger as the menu closes, which is Base UI's own
+ * rule. A menu the app opens itself, anchored to something else, has a
+ * trigger nothing draws (Base UI needs one to place a submenu), and focus
+ * sent there is lost. So where the trigger does not show, focus goes back
+ * to whatever had it before the menu opened. `finalFocus` wins over both.
+ */
+export function MenuContent({ align = "start", alignOffset = 0, side = "bottom", sideOffset, anchor, collisionPadding = 8, arrow = true, className, children, finalFocus, ...props }) {
+    // Read as the rows mount, which is as the menu opens and before Base UI
+    // moves focus into it.
+    const opened = useRef(null);
+    const markOpened = useCallback((list) => {
+        if (!list)
+            return;
+        const active = document.activeElement;
+        opened.current = { list, before: active instanceof HTMLElement && active !== document.body ? active : null };
+    }, []);
+    const returnFocus = useCallback(() => {
+        const from = opened.current;
+        if (!from)
+            return true;
+        // The popup names its trigger, and stays whole as it leaves the page.
+        const id = from.list.closest('[role="menu"]')?.getAttribute("aria-labelledby");
+        const trigger = id ? document.getElementById(id) : null;
+        if (trigger && showsOnPage(trigger))
+            return true;
+        return from.before && from.before.isConnected ? from.before : false;
+    }, []);
+    return (_jsx(MenuPrimitive.Portal, { children: _jsx(MenuPrimitive.Positioner, { className: "dl-menu-positioner", align: align, alignOffset: alignOffset, side: side, sideOffset: sideOffset ?? (arrow ? ARROW_OFFSET_PX : PLAIN_OFFSET_PX), anchor: anchor, collisionPadding: collisionPadding, children: _jsxs(MenuPrimitive.Popup, { "data-slot": "menu-content", className: withClass("dl-menu", className), finalFocus: finalFocus ?? returnFocus, ...props, children: [arrow ? _jsx(MenuPrimitive.Arrow, { className: "dl-menu-arrow" }) : null, _jsx("div", { ref: markOpened, className: "dl-menu-list", children: children })] }) }) }));
 }
 export function MenuGroup(props) {
     return _jsx(MenuPrimitive.Group, { "data-slot": "menu-group", ...props });

@@ -40,8 +40,16 @@ export type MenuContentProps = MenuPrimitive.Popup.Props & Placement & {
 export declare const ARROW_OFFSET_PX = 10;
 /** The same for a surface with no arrow. */
 export declare const PLAIN_OFFSET_PX = 4;
-/** The menu's surface: portal, positioner, the frosted popup, its arrow and its rows. */
-export declare function MenuContent({ align, alignOffset, side, sideOffset, anchor, collisionPadding, arrow, className, children, ...props }: MenuContentProps): ReactNode;
+/**
+ * The menu's surface: portal, positioner, the frosted popup, its arrow and its rows.
+ *
+ * Focus goes back to the trigger as the menu closes, which is Base UI's own
+ * rule. A menu the app opens itself, anchored to something else, has a
+ * trigger nothing draws (Base UI needs one to place a submenu), and focus
+ * sent there is lost. So where the trigger does not show, focus goes back
+ * to whatever had it before the menu opened. `finalFocus` wins over both.
+ */
+export declare function MenuContent({ align, alignOffset, side, sideOffset, anchor, collisionPadding, arrow, className, children, finalFocus, ...props }: MenuContentProps): ReactNode;
 export declare function MenuGroup(props: MenuPrimitive.Group.Props): ReactNode;
 export type MenuLabelProps = MenuPrimitive.GroupLabel.Props & {
     /** Lines the label up with rows that have an icon. */

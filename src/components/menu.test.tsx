@@ -5,7 +5,7 @@
  * keycap. Runs the real Base UI parts in jsdom for the structure and the
  * keys, and reads menu.css for the look.
  */
-import { act } from "react";
+import { act, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { outweighs, readCss, ruleFor, ruleNaming, rulesWith, splitList } from "../../test/css.js";
@@ -252,6 +252,71 @@ describe("<Menu>", () => {
     await settle();
     expect(one(".dl-menu")?.className).toBe("dl-menu mailbox-menu");
     expect(rows()[0]!.className).toBe("dl-menu-item row-own");
+  });
+});
+
+describe("a menu the app opens itself, with no control of its own to show", () => {
+  /** Drive's shape: a kebab the app draws opens the menu, and Base UI's trigger is one nothing draws. */
+  function Anchored({ finalFocus }: { finalFocus?: { current: HTMLElement | null } }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <>
+        <button type="button" className="kebab" aria-label="More" onClick={() => setOpen(true)} />
+        <input className="elsewhere" aria-label="Rename" />
+        <Menu open={open} onOpenChange={setOpen} modal={false}>
+          <MenuTrigger render={<span hidden />} nativeButton={false} tabIndex={-1} aria-hidden />
+          <MenuContent anchor={() => one(".kebab")} aria-label="More" finalFocus={finalFocus}>
+            <MenuItem>Rename</MenuItem>
+          </MenuContent>
+        </Menu>
+      </>
+    );
+  }
+  const kebab = () => one<HTMLButtonElement>(".kebab")!;
+
+  it("gives focus back to what had it before it opened, never to the hidden trigger", async () => {
+    await mount(<Anchored />);
+    kebab().focus();
+    await click(kebab());
+    expect(one(".dl-menu")).not.toBeNull();
+    await key("Escape");
+    await settle(300);
+    expect(one(".dl-menu")).toBeNull();
+    expect(document.activeElement).toBe(kebab());
+  });
+
+  it("leaves focus alone with nothing to give it back to", async () => {
+    await mount(<Anchored />);
+    await click(kebab());
+    await key("Escape");
+    await settle(300);
+    expect(document.activeElement?.getAttribute("data-slot")).not.toBe("menu-trigger");
+    expect((document.activeElement as HTMLElement).hidden).toBe(false);
+  });
+
+  it("takes a finalFocus of the app's own, which wins", async () => {
+    const to = { current: null as HTMLElement | null };
+    await mount(<Anchored finalFocus={to} />);
+    to.current = one<HTMLElement>(".elsewhere");
+    kebab().focus();
+    await click(kebab());
+    await key("Escape");
+    await settle(300);
+    expect(document.activeElement).toBe(one(".elsewhere"));
+  });
+
+  it("still gives focus back to a trigger that shows", async () => {
+    await mount(
+      <>
+        <input className="elsewhere" aria-label="Rename" />
+        <RowMenu />
+      </>,
+    );
+    one<HTMLElement>(".elsewhere")!.focus();
+    await click(trigger());
+    await key("Escape");
+    await settle(300);
+    expect(document.activeElement).toBe(trigger());
   });
 });
 
