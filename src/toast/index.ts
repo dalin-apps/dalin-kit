@@ -47,6 +47,8 @@ export {
 export {
   PHONE_MAX_VAR,
   PHONE_MAX_WIDTH_PX,
+  PHONE_SIDEWAYS_QUERY,
+  phoneLayoutQuery,
   readPhoneMaxWidth,
   setPhoneMaxWidth,
   usePhoneLayout,
