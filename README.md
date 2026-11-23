@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.6 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.6 is listed under "Moving an app from 0.5 to 0.6", and the steps before it under the two sections after that.
+Version 0.7 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.7 is listed under "Moving an app from 0.6 to 0.7", and the steps before it under the sections after that.
 
 ## Install
 
@@ -65,6 +65,43 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.6 to 0.7
+
+0.7 puts the owner's picks of 2026-11-23 for pressed, disabled and busy controls into the kit, and gives a phone held on its side the phone layout. Four tokens are new in `tokens.css`:
+
+| Token | Value | What reads it |
+|---|---|---|
+| `--dl-press-dim` | 0.92 | A desktop press: the hover look plus `filter: brightness(var(--dl-press-dim))` |
+| `--dl-press-scale` | 0.97 | A phone press shrinks the control to this |
+| `--dl-press-bright` | 1.12 | A phone press brightens it by this |
+| `--dl-disabled-opacity` | 0.45 | A disabled or busy control |
+
+The kit's own parts draw these looks as soon as an app installs 0.7. On the desktop a pressed create button, menu row, palette row or toast action keeps its hover look and goes one step darker. On the phone the header's icons, Cancel, the search rows and the pill's action shrink to 0.97 and brighten. Under reduced motion they only brighten. The kit writes the shrink as `scale`, not `transform`, so a transform the app puts on the same control still holds. No box or fill appears behind a pressed icon.
+
+The create button takes the phone's press only inside an element with the class `dl-phone`. Put that class on the app's phone layout (its shell, or `<html>` while the phone layout is on). Outside it, the button takes the desktop's press.
+
+A disabled control (`disabled` or `aria-disabled="true"`) is 45% opaque, keeps the normal cursor, and shows no hover or press. That holds for the create button, menu and palette rows, the phone's icons, Cancel and search rows, and the toast's action. Menu rows were 0.5 before and read the token now. A busy create button carries `aria-busy="true"` and its verb ("Creating"), and looks the same. It isn't disabled, so it keeps keyboard focus.
+
+### A phone on its side
+
+`usePhoneLayout()`, the `<Toaster>` and `<ToastBand>` also answer phone for `(pointer: coarse) and (max-height: 500px)`, whatever the width. The query is exported as `PHONE_SIDEWAYS_QUERY`, and `phoneLayoutQuery()` returns the whole query in force, the width and the sideways part joined by a comma. The width where the phone layout begins doesn't move.
+
+An app's own phone check joins the same query to its own width, in script and in CSS:
+
+```ts
+import { PHONE_SIDEWAYS_QUERY } from "@dalin/kit";
+
+const phone = window.matchMedia(`(max-width: 899px), ${PHONE_SIDEWAYS_QUERY}`);
+```
+
+```css
+@media (max-width: 767px), (pointer: coarse) and (max-height: 500px) {
+  /* the phone layout */
+}
+```
+
+CSS can't read the constant, so the stylesheet repeats the string.
 
 ## Moving an app from 0.5 to 0.6
 
@@ -152,6 +189,8 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 | `--dl-accent-fg` | `oklch(0.16 0 0)` | Ink on an accent fill |
 | `--dl-selection-bg`, `--dl-selection-fg` | `--dl-accent`, `--dl-accent-fg` | Selected text (`base.css`) |
 | `--dl-focus-ring`, `--dl-focus-w`, `--dl-focus-offset` | `--dl-accent`, 2px, 2px | The keyboard ring |
+| `--dl-press-dim`, `--dl-press-scale`, `--dl-press-bright` | 0.92, 0.97, 1.12 | A press: darker on the desktop, smaller and brighter on the phone |
+| `--dl-disabled-opacity` | 0.45 | A disabled or busy control |
 | `--dl-r-control` | 7px | Controls and tooltips |
 | `--dl-r-card` | 10px | Cards and menus |
 | `--dl-r-sheet` | 14px | Dialogs and phone sheets |
@@ -260,7 +299,7 @@ Raise toasts with sonner's own `toast.success`, `toast.error`, `toast.warning`, 
 
 `toast.css` has no width media query. The `<Toaster>` reads the width and writes `toast-phone` or `toast-tuck` on the list, so the stylesheet and the component can't disagree. The width is `phoneMaxWidth`, then `--dl-phone-max` on `:root` (a length in px, for an app that would rather say it in CSS), then 767.
 
-`<ToastBand>` follows the same width without being told, and renders nothing above it. `usePhoneLayout()` returns the same answer for the app's own code.
+`<ToastBand>` follows the same width without being told, and renders nothing above it. `usePhoneLayout()` returns the same answer for the app's own code. From 0.7 a phone on its side counts as well, at any width (see "A phone on its side").
 
 ### A dock other than the nav pill
 
@@ -927,9 +966,9 @@ import { TipKey, shortcutLabel } from "@dalin/kit";
 
 That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel` takes `Mod`, `Shift` and `Alt` for the platform's keys and writes every other key as given. `<TipKey>` draws the dot and the key in the muted grey, or in the app's own `className`, and renders nothing without a key. `tipText("Archive", "E")` is the same line as a string. `shortcutLabelFor(mac, keys)` and `isMacPlatform(platform)` are the pure halves. The tooltip itself stays each app's own.
 
-## Not in version 0.6
+## Not in version 0.7
 
-These are still open, so the kit has no value for them: type sizes, disabled states, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
+These are still open, so the kit has no value for them: type sizes, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
 
 These are decided and not built yet. The phone's bottom bar is glass tokens here and still each app's own component. The tooltip and the phone sheets are frosted by the tokens and stay each app's own. The family sheet on Base UI's Drawer is not started.
 
