@@ -2,7 +2,7 @@
 
    What it is. Custom properties, named --dl-*, for what the owner has decided
    so far: the typeface, the surfaces by position, the sidebar's rows, the
-   text colours (the accent as text among them), the corners, the motion
+   phone bar's glass, the text colours (the accent as text among them), the corners, the motion
    timings and the meaning colours. A question that is
    still open has no token here, so a missing value means "not decided", and
    the app keeps its own until it is.
@@ -65,6 +65,17 @@
   --dl-row-icon: 17px;
   --dl-row-selected: var(--dl-selected);
   --dl-row-selected-icon: var(--dl-fg);
+
+  /* The phone's bottom bar glass (2026-11-22): calendar's recipe, the
+     lighter of the four bars. A grey at 45% over a 14px blur, with a rim of
+     white at 9%. The grey is calendar's mix said on the family's ladder, as
+     it was drawn: 60% of the raised step over the phone's page fill. The
+     phone toast wears the same glass by default (toast.css), because it
+     stands in for the nav pill and the owner picked "same frost as the
+     bar". */
+  --dl-bar-glass: color-mix(in oklch, color-mix(in oklch, #242424 60%, #151515) 45%, transparent);
+  --dl-bar-blur: blur(14px);
+  --dl-bar-rim: oklch(1 0 0 / 0.09);
 
   /* Text. Faint is the dimmest grey that still holds 4.5:1 on the lightest
      surface it sits on, #2f2f2f (4.53:1 measured; #858d96 gave 3.98:1). */

@@ -19,8 +19,13 @@
    variables below, set on :root or any element above the toaster:
 
      --dl-toast-glass, --dl-toast-blur, --dl-toast-rim
-         The bottom bar's glass. The phone toast stands in for the nav pill,
-         so an app whose bar has its own glass points these three at it.
+         The material under every kind's tint on the desktop, and under a
+         plain toast on a phone page with no pill: notes' glass.
+     --dl-toast-phone-glass, --dl-toast-phone-blur, --dl-toast-phone-rim
+         The same three for the phone toast that docks behind the nav pill.
+         They default to the bar's own glass (--dl-bar-glass, --dl-bar-blur
+         and --dl-bar-rim in tokens.css), so the toast and the pill it
+         stands in for are one material. Leave them alone.
      --dl-bar-w, --dl-bar-h
          The nav pill's measured width and height, written by the app's bar.
      --dl-bar-inset
@@ -84,6 +89,15 @@
   --dl-bar-inset: 16px;
   --dl-bar-z: 30;
   --dl-toast-over-z: 60;
+  /* The phone toast's material: the bottom bar's glass (the owner's pick on
+     2026-11-22, "same frost as the bar"). The literals are the bar's own
+     values, for a page that loads this sheet without tokens.css. */
+  --dl-toast-phone-glass: var(
+    --dl-bar-glass,
+    color-mix(in oklch, color-mix(in oklch, #242424 60%, #151515) 45%, transparent)
+  );
+  --dl-toast-phone-blur: var(--dl-bar-blur, blur(14px));
+  --dl-toast-phone-rim: var(--dl-bar-rim, oklch(1 0 0 / 0.09));
 }
 
 /* ============================================================
@@ -350,6 +364,13 @@
      the floor, raised a card while a pinned toast holds the floor itself. */
   --notif-floor: calc(var(--dl-bar-h) + 14px);
   --notif-base: var(--notif-floor);
+  /* The docked toast wears the bar's glass. Every rule below reads the three
+     names the desktop reads, so they are pointed at the phone's here, on the
+     list, and nothing else changes. `toast-solid` (the end of this file)
+     comes later and still turns the glass solid. */
+  --dl-toast-glass: var(--dl-toast-phone-glass);
+  --dl-toast-blur: var(--dl-toast-phone-blur);
+  --dl-toast-rim: var(--dl-toast-phone-rim);
 }
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone) [data-sonner-toast] {
   width: 100% !important;
