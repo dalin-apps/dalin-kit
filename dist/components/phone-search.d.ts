@@ -113,6 +113,10 @@ export declare function PhoneSearchAvatar({ initials, color, className }: PhoneS
  * while it is open announces on the bottom edge and not under it. Nothing
  * else is needed for that.
  *
+ * The results follow the on-screen keyboard: the sheet measures what the
+ * keyboard covers (`visualViewport`) and phone.css pads the list by it, so
+ * the last row scrolls clear of the keys.
+ *
  * It owns the system's back while it is open (back-entry.ts): one history
  * entry, pushed as it opens. The back button or the back swipe closes
  * search, and Cancel, Escape or a row takes the entry off. A row's action

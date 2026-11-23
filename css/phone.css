@@ -30,6 +30,9 @@
                           #151515.
      --dl-phone-search-z  The sheet's z-index: 50, over the bottom bar and
                           under the toaster while it is over a sheet (60).
+     --kb-inset           The height the on-screen keyboard covers, for an
+                          app that measures it itself. The sheet's own
+                          measure (--dl-phone-kb) wins where it has one.
 
    What an app must not override. The sizes, the insets, the icons' 44px
    targets, and search being an icon.
@@ -242,12 +245,16 @@
   border-radius: var(--dl-r-control, 7px);
 }
 
-/* The suggestions and the results scroll under the field. */
+/* The suggestions and the results scroll under the field. The list ends
+   clear of the on-screen keyboard: <PhoneSearch> measures what the keyboard
+   covers and writes it on the sheet as --dl-phone-kb, and where it has
+   written nothing the app's own --kb-inset is read. */
 .dl-phone-search-body {
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
-  padding: 0 var(--dl-phone-inset, 16px) calc(env(safe-area-inset-bottom, 0px) + 32px);
+  padding: 0 var(--dl-phone-inset, 16px) calc(env(safe-area-inset-bottom, 0px) + 32px + var(--dl-phone-kb, var(--kb-inset, 0px)));
+  scroll-padding-bottom: var(--dl-phone-kb, var(--kb-inset, 0px));
   overflow-y: auto;
   overscroll-behavior: contain;
 }

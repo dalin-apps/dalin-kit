@@ -783,6 +783,8 @@ The sheet registers itself as a toast cover, so a toast raised while it is open 
 
 A toast over the sheet stays usable. A press on it leaves search open, and its action is in the sheet's tab order: Tab on the sheet's last stop goes to the toast, and Tab on the toast's last stop comes back to the field. Shift+Tab runs the same loop the other way. A toast the toaster holds out of the tab order, such as a tucked one, is skipped. The command palette does the same.
 
+The results follow the on-screen keyboard. A phone lays its keyboard over the page without resizing it, so the sheet measures what the keyboard covers from `visualViewport` and writes it on itself as `--dl-phone-kb`. `phone.css` pads the list by that much, and the last result scrolls clear of the keys. Where the sheet has measured nothing, the list reads the app's own `--kb-inset`, the name mail, calendar and notes already use. An app that padded the results itself can delete that rule.
+
 `phone.css` reads three variables: `--dl-phone-inset` (16px), `--dl-phone-fill` (the sheet's fill, `#151515`) and `--dl-phone-search-z` (50, over the bottom bar).
 
 ## Helpers

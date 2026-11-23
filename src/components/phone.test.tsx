@@ -638,6 +638,68 @@ describe("<PhoneSearch>, under a toast", () => {
   });
 });
 
+describe("<PhoneSearch>, over the on-screen keyboard", () => {
+  /** A visual viewport the test can shrink, as a phone's does when its keyboard rises. */
+  function fakeViewport(height: number) {
+    const view = Object.assign(new EventTarget(), { height, offsetTop: 0, scale: 1 });
+    Object.defineProperty(window, "visualViewport", { configurable: true, value: view });
+    return {
+      view,
+      set: async (next: Partial<{ height: number; offsetTop: number; scale: number }>) => {
+        Object.assign(view, next);
+        await act(async () => {
+          view.dispatchEvent(new Event("resize"));
+        });
+      },
+      remove: () => Reflect.deleteProperty(window, "visualViewport"),
+    };
+  }
+  const inset = () => one<HTMLElement>(".dl-phone-search")!.style.getPropertyValue("--dl-phone-kb");
+
+  it("writes how much of the sheet the keyboard covers, and follows it as it rises and falls", async () => {
+    const viewport = fakeViewport(window.innerHeight);
+    try {
+      await mount(<Search />);
+      await tapSearch();
+      expect(inset()).toBe("");
+      await viewport.set({ height: window.innerHeight - 312 });
+      expect(inset()).toBe("312px");
+      // The page scrolled up under the keyboard: less of the sheet is covered.
+      await viewport.set({ offsetTop: 40 });
+      expect(inset()).toBe("272px");
+      await viewport.set({ height: window.innerHeight, offsetTop: 0 });
+      expect(inset()).toBe("");
+    } finally {
+      await click(one(".dl-phone-search-cancel"));
+      await landed();
+      viewport.remove();
+    }
+  });
+
+  it("reads a pinch zoom as no keyboard", async () => {
+    const viewport = fakeViewport(window.innerHeight);
+    try {
+      await mount(<Search />);
+      await tapSearch();
+      await viewport.set({ height: window.innerHeight / 2, scale: 2 });
+      expect(inset()).toBe("");
+    } finally {
+      await click(one(".dl-phone-search-cancel"));
+      await landed();
+      viewport.remove();
+    }
+  });
+
+  it("lets the last result scroll clear of the keyboard, by the kit's measure or the app's own --kb-inset", () => {
+    const body = ruleFor(css, ".dl-phone-search-body");
+    expect(body).toContain(
+      "padding: 0 var(--dl-phone-inset, 16px) calc(env(safe-area-inset-bottom, 0px) + 32px + var(--dl-phone-kb, var(--kb-inset, 0px)))",
+    );
+    expect(body).toContain("scroll-padding-bottom: var(--dl-phone-kb, var(--kb-inset, 0px))");
+    expect(body).toContain("overflow-y: auto");
+  });
+});
+
 describe("phone.css, the header", () => {
   it("is a 48px row 6px under the safe area, 16px in", () => {
     expect(ruleFor(css, ".dl-phone-head")).toContain(

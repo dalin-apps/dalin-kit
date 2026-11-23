@@ -188,6 +188,10 @@ function Sections({
  * while it is open announces on the bottom edge and not under it. Nothing
  * else is needed for that.
  *
+ * The results follow the on-screen keyboard: the sheet measures what the
+ * keyboard covers (`visualViewport`) and phone.css pads the list by it, so
+ * the last row scrolls clear of the keys.
+ *
  * It owns the system's back while it is open (back-entry.ts): one history
  * entry, pushed as it opens. The back button or the back swipe closes
  * search, and Cancel, Escape or a row takes the entry off. A row's action
@@ -258,6 +262,30 @@ export function PhoneSearch({
   useEffect(() => {
     if (!sheet) return;
     return registerToastDock(sheet, { kind: "cover", rank: COVER_RANK });
+  }, [sheet]);
+
+  // The on-screen keyboard. A phone lays it over the page without resizing
+  // it, so a sheet fixed to the screen keeps its full height and its last
+  // rows sit under the keys. The visual viewport is what is left in view:
+  // what it lacks of the window's height is the keyboard, written on the
+  // sheet for phone.css to pad the results by. Nothing is written while
+  // nothing is covered, so an app's own `--kb-inset` still applies.
+  useEffect(() => {
+    const view = window.visualViewport;
+    if (!sheet || !view) return;
+    const write = () => {
+      // A pinch zoom shrinks the visual viewport too, and is no keyboard.
+      const covered = view.scale > 1.01 ? 0 : Math.round(window.innerHeight - view.offsetTop - view.height);
+      if (covered > 0) sheet.style.setProperty("--dl-phone-kb", `${covered}px`);
+      else sheet.style.removeProperty("--dl-phone-kb");
+    };
+    write();
+    view.addEventListener("resize", write);
+    view.addEventListener("scroll", write);
+    return () => {
+      view.removeEventListener("resize", write);
+      view.removeEventListener("scroll", write);
+    };
   }, [sheet]);
 
   // A toast raised over the sheet keeps its Undo in reach of Tab.
