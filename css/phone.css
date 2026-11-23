@@ -162,6 +162,13 @@
   text-align: left;
   outline: none;
 }
+/* Covered: the app has drawn something over the sheet (the reader a result
+   opened) and search stays open under it. Out of sight and out of reach,
+   but still laid out, so the list keeps its scroll for the way back. */
+.dl-phone-search[data-covered] {
+  visibility: hidden;
+  pointer-events: none;
+}
 /* The field in the title row's place: 6px under the safe area, the 48px
    row, then 10px, so the suggestions start where calendar's do. */
 .dl-phone-search-head {
@@ -318,6 +325,17 @@
   font-size: 13px;
   line-height: 1.45;
   color: var(--dl-fg-faint, #8f97a0);
+}
+/* What ends a row: a size, a count. Small and faint, and never cut: the
+   words give way first. */
+.dl-phone-search-meta {
+  flex: none;
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--dl-fg-faint, #8f97a0);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 /* A section's heading: sentence case as written. */
 .dl-phone-search-heading {

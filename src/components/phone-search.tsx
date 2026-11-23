@@ -18,6 +18,8 @@ export type PhoneSearchRow = {
   subtitle?: ReactNode;
   /** What leads the row: a 20px glyph from the app's own set, or a `<PhoneSearchAvatar>`. */
   leading?: ReactNode;
+  /** What ends the row at the right, small and faint: a size, "7 items". */
+  meta?: ReactNode;
   /** Leaves search open after the row is tapped. It closes by default. */
   keepOpen?: boolean;
   /** What tapping the row does. Search has closed by the time it runs, unless `keepOpen`. */
@@ -80,6 +82,21 @@ export type PhoneSearchProps = {
   results?: readonly PhoneSearchSection[];
   /** For a query: the app's own results in place of `results`. */
   children?: ReactNode;
+  /**
+   * Before any query: the app's own content under the sections, such as
+   * calendar's line that says what search finds. A line of words takes the
+   * class `dl-phone-search-note`.
+   */
+  beforeQuery?: ReactNode;
+  /**
+   * Hides the sheet under something the app draws over it, such as the
+   * reader a result opened, without closing search. The sheet stays
+   * mounted, so the results, their scroll and the query are there on the
+   * way back. While covered it is out of sight and inert, it gives the
+   * page back (no focus trap, no scroll lock, nothing hidden from a screen
+   * reader), and Escape and presses are the covering surface's own.
+   */
+  covered?: boolean;
   /** What to say when a query finds nothing. Defaults to `No results for “query”.` */
   emptyText?: (query: string) => ReactNode;
   /**
@@ -161,6 +178,9 @@ function Sections({
               ) : (
                 <span className="dl-phone-search-one">{row.title}</span>
               )}
+              {row.meta !== undefined && row.meta !== null && row.meta !== false ? (
+                <span className="dl-phone-search-meta">{row.meta}</span>
+              ) : null}
             </button>
           ))}
       </section>
@@ -222,6 +242,8 @@ export function PhoneSearch({
   sections = NO_SECTIONS,
   results,
   children,
+  beforeQuery,
+  covered = false,
   emptyText,
   fieldStart,
   fieldEnd,
@@ -258,11 +280,12 @@ export function PhoneSearch({
     node?.focus({ preventScroll: true });
   }, []);
 
-  // The sheet hides the bottom bar, so it is a cover for the toaster.
+  // The sheet hides the bottom bar, so it is a cover for the toaster. Not
+  // while it is itself covered: what is drawn over it owns the screen then.
   useEffect(() => {
-    if (!sheet) return;
+    if (!sheet || covered) return;
     return registerToastDock(sheet, { kind: "cover", rank: COVER_RANK });
-  }, [sheet]);
+  }, [sheet, covered]);
 
   // The on-screen keyboard. A phone lays it over the page without resizing
   // it, so a sheet fixed to the screen keeps its full height and its last
@@ -289,7 +312,7 @@ export function PhoneSearch({
   }, [sheet]);
 
   // A toast raised over the sheet keeps its Undo in reach of Tab.
-  useToasterTab(open ? sheet : null);
+  useToasterTab(open && !covered ? sheet : null);
 
   // The sheet's history entry. Kept in a ref and not tied to one effect's
   // cleanup: React's strict mode runs every effect twice as a tree mounts,
@@ -344,7 +367,21 @@ export function PhoneSearch({
   const found = results?.some((section) => section.children || (section.rows && section.rows.length > 0)) ?? false;
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root
+      open={open}
+      // Covered, the sheet is no longer the screen: the page goes back to
+      // what covers it, and nothing done there closes search.
+      modal={!covered}
+      disablePointerDismissal={covered}
+      onOpenChange={(next, details) => {
+        if (covered && !next) {
+          details.cancel();
+          details.allowPropagation();
+          return;
+        }
+        onOpenChange(next, details);
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Popup
           ref={setSheet}
@@ -352,6 +389,8 @@ export function PhoneSearch({
           className={cx("dl-phone-search", className)}
           aria-label={placeholder}
           initialFocus={input}
+          data-covered={covered ? "" : undefined}
+          inert={covered}
         >
           <form
             className="dl-phone-search-head"
@@ -412,6 +451,7 @@ export function PhoneSearch({
                   </button>
                 ) : null}
                 <Sections sections={sections} choose={choose} />
+                {beforeQuery}
               </>
             )}
           </div>

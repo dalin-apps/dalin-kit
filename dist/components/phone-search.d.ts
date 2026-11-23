@@ -10,6 +10,8 @@ export type PhoneSearchRow = {
     subtitle?: ReactNode;
     /** What leads the row: a 20px glyph from the app's own set, or a `<PhoneSearchAvatar>`. */
     leading?: ReactNode;
+    /** What ends the row at the right, small and faint: a size, "7 items". */
+    meta?: ReactNode;
     /** Leaves search open after the row is tapped. It closes by default. */
     keepOpen?: boolean;
     /** What tapping the row does. Search has closed by the time it runs, unless `keepOpen`. */
@@ -69,6 +71,21 @@ export type PhoneSearchProps = {
     results?: readonly PhoneSearchSection[];
     /** For a query: the app's own results in place of `results`. */
     children?: ReactNode;
+    /**
+     * Before any query: the app's own content under the sections, such as
+     * calendar's line that says what search finds. A line of words takes the
+     * class `dl-phone-search-note`.
+     */
+    beforeQuery?: ReactNode;
+    /**
+     * Hides the sheet under something the app draws over it, such as the
+     * reader a result opened, without closing search. The sheet stays
+     * mounted, so the results, their scroll and the query are there on the
+     * way back. While covered it is out of sight and inert, it gives the
+     * page back (no focus trap, no scroll lock, nothing hidden from a screen
+     * reader), and Escape and presses are the covering surface's own.
+     */
+    covered?: boolean;
     /** What to say when a query finds nothing. Defaults to `No results for “query”.` */
     emptyText?: (query: string) => ReactNode;
     /**
@@ -134,5 +151,5 @@ export declare function PhoneSearchAvatar({ initials, color, className }: PhoneS
  *     onQueryChange={search}
  *   />
  */
-export declare function PhoneSearch({ open, onOpenChange, systemBack, query: queryProp, onQueryChange, onSubmit, placeholder, cancelLabel, action, sections, results, children, emptyText, fieldStart, fieldEnd, className, }: PhoneSearchProps): ReactNode;
+export declare function PhoneSearch({ open, onOpenChange, systemBack, query: queryProp, onQueryChange, onSubmit, placeholder, cancelLabel, action, sections, results, children, beforeQuery, covered, emptyText, fieldStart, fieldEnd, className, }: PhoneSearchProps): ReactNode;
 //# sourceMappingURL=phone-search.d.ts.map

@@ -31,7 +31,7 @@ function Sections({ sections, choose, }) {
         if (empty)
             return null;
         return (_jsxs("section", { className: "dl-phone-search-section", children: [_jsx("h2", { className: "dl-phone-search-heading", children: section.heading }), section.children ??
-                    section.rows.map((row) => (_jsxs("button", { type: "button", className: "dl-phone-search-row", onClick: () => choose(row), children: [row.leading, row.subtitle ? (_jsxs("span", { className: "dl-phone-search-two", children: [_jsx("b", { children: row.title }), _jsx("small", { children: row.subtitle })] })) : (_jsx("span", { className: "dl-phone-search-one", children: row.title }))] }, row.id)))] }, section.id ?? section.heading));
+                    section.rows.map((row) => (_jsxs("button", { type: "button", className: "dl-phone-search-row", onClick: () => choose(row), children: [row.leading, row.subtitle ? (_jsxs("span", { className: "dl-phone-search-two", children: [_jsx("b", { children: row.title }), _jsx("small", { children: row.subtitle })] })) : (_jsx("span", { className: "dl-phone-search-one", children: row.title })), row.meta !== undefined && row.meta !== null && row.meta !== false ? (_jsx("span", { className: "dl-phone-search-meta", children: row.meta })) : null] }, row.id)))] }, section.id ?? section.heading));
     });
 }
 /**
@@ -75,7 +75,7 @@ function Sections({ sections, choose, }) {
  *     onQueryChange={search}
  *   />
  */
-export function PhoneSearch({ open, onOpenChange, systemBack = true, query: queryProp, onQueryChange, onSubmit, placeholder = "Search", cancelLabel = "Cancel", action, sections = NO_SECTIONS, results, children, emptyText, fieldStart, fieldEnd, className, }) {
+export function PhoneSearch({ open, onOpenChange, systemBack = true, query: queryProp, onQueryChange, onSubmit, placeholder = "Search", cancelLabel = "Cancel", action, sections = NO_SECTIONS, results, children, beforeQuery, covered = false, emptyText, fieldStart, fieldEnd, className, }) {
     const [ownQuery, setOwnQuery] = useState("");
     const query = queryProp ?? ownQuery;
     // The sheet's element as state: Base UI mounts it a commit after `open`
@@ -102,12 +102,13 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
         input.current = node;
         node?.focus({ preventScroll: true });
     }, []);
-    // The sheet hides the bottom bar, so it is a cover for the toaster.
+    // The sheet hides the bottom bar, so it is a cover for the toaster. Not
+    // while it is itself covered: what is drawn over it owns the screen then.
     useEffect(() => {
-        if (!sheet)
+        if (!sheet || covered)
             return;
         return registerToastDock(sheet, { kind: "cover", rank: COVER_RANK });
-    }, [sheet]);
+    }, [sheet, covered]);
     // The on-screen keyboard. A phone lays it over the page without resizing
     // it, so a sheet fixed to the screen keeps its full height and its last
     // rows sit under the keys. The visual viewport is what is left in view:
@@ -135,7 +136,7 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
         };
     }, [sheet]);
     // A toast raised over the sheet keeps its Undo in reach of Tab.
-    useToasterTab(open ? sheet : null);
+    useToasterTab(open && !covered ? sheet : null);
     // The sheet's history entry. Kept in a ref and not tied to one effect's
     // cleanup: React's strict mode runs every effect twice as a tree mounts,
     // and an entry popped and pushed again in one task would lose the second
@@ -189,7 +190,17 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
     };
     const asked = query.trim() !== "";
     const found = results?.some((section) => section.children || (section.rows && section.rows.length > 0)) ?? false;
-    return (_jsx(Dialog.Root, { open: open, onOpenChange: onOpenChange, children: _jsx(Dialog.Portal, { children: _jsxs(Dialog.Popup, { ref: setSheet, "data-slot": "phone-search", className: cx("dl-phone-search", className), "aria-label": placeholder, initialFocus: input, children: [_jsxs("form", { className: "dl-phone-search-head", role: "search", onSubmit: (event) => {
+    return (_jsx(Dialog.Root, { open: open, 
+        // Covered, the sheet is no longer the screen: the page goes back to
+        // what covers it, and nothing done there closes search.
+        modal: !covered, disablePointerDismissal: covered, onOpenChange: (next, details) => {
+            if (covered && !next) {
+                details.cancel();
+                details.allowPropagation();
+                return;
+            }
+            onOpenChange(next, details);
+        }, children: _jsx(Dialog.Portal, { children: _jsxs(Dialog.Popup, { ref: setSheet, "data-slot": "phone-search", className: cx("dl-phone-search", className), "aria-label": placeholder, initialFocus: input, "data-covered": covered ? "" : undefined, inert: covered, children: [_jsxs("form", { className: "dl-phone-search-head", role: "search", onSubmit: (event) => {
                             event.preventDefault();
                             onSubmit?.(query);
                         }, children: [_jsxs("div", { className: "dl-phone-search-field", 
@@ -202,7 +213,7 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
                                     if (!onFieldControl(event))
                                         input.current?.focus({ preventScroll: true });
                                 }, children: [_jsx(SearchGlyph, {}), fieldStart, _jsx("input", { ref: focusField, type: "search", className: "dl-phone-search-input", value: query, onChange: (event) => setQuery(event.target.value), placeholder: placeholder, "aria-label": placeholder, enterKeyHint: "search", autoComplete: "off", autoCorrect: "off", autoCapitalize: "none", spellCheck: false }), fieldEnd] }), _jsx(Dialog.Close, { className: "dl-phone-search-cancel", children: cancelLabel })] }), _jsx("div", { className: "dl-phone-search-body", children: asked ? (children ??
-                            (found ? (_jsx(Sections, { sections: results, choose: choose })) : results ? (_jsx("p", { className: "dl-phone-search-note", children: emptyText ? emptyText(query.trim()) : `No results for “${query.trim()}”.` })) : null)) : (_jsxs(_Fragment, { children: [action ? (_jsxs("button", { type: "button", className: "dl-phone-search-row dl-phone-search-action", onClick: () => choose(action), children: [action.icon, _jsx("span", { className: "dl-phone-search-one", children: action.label })] })) : null, _jsx(Sections, { sections: sections, choose: choose })] })) })] }) }) }));
+                            (found ? (_jsx(Sections, { sections: results, choose: choose })) : results ? (_jsx("p", { className: "dl-phone-search-note", children: emptyText ? emptyText(query.trim()) : `No results for “${query.trim()}”.` })) : null)) : (_jsxs(_Fragment, { children: [action ? (_jsxs("button", { type: "button", className: "dl-phone-search-row dl-phone-search-action", onClick: () => choose(action), children: [action.icon, _jsx("span", { className: "dl-phone-search-one", children: action.label })] })) : null, _jsx(Sections, { sections: sections, choose: choose }), beforeQuery] })) })] }) }) }));
 }
 const NO_SECTIONS = [];
 //# sourceMappingURL=phone-search.js.map

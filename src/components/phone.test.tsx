@@ -700,6 +700,131 @@ describe("<PhoneSearch>, over the on-screen keyboard", () => {
   });
 });
 
+describe("<PhoneSearch covered>, under the app's reader", () => {
+  const RESULTS: PhoneSearchSection[] = [
+    { heading: "Messages", rows: [{ id: "m", title: "Thanksgiving plans", keepOpen: true, onSelect: vi.fn() }] },
+  ];
+  function Covered({ covered, onOpenChange }: { covered: boolean; onOpenChange?: (open: boolean) => void }) {
+    return (
+      <>
+        <main className="reader">
+          <button type="button" className="reader-back">
+            Back
+          </button>
+        </main>
+        <PhoneSearch open covered={covered} onOpenChange={onOpenChange ?? (() => {})} results={RESULTS} query="plans" />
+      </>
+    );
+  }
+  /** What a modal sheet does to the page: a layer over it that takes every press, and no scroll. */
+  const pageLocked = () =>
+    document.querySelector('[role="presentation"][data-base-ui-inert]') !== null || /hidden/.test(document.documentElement.getAttribute("style") ?? "");
+
+  it("hides the sheet without unmounting it, so the results and their scroll are there on the way back", async () => {
+    await mount(<Covered covered={false} />);
+    await landed();
+    const body = one<HTMLElement>(".dl-phone-search-body")!;
+    const row = rows()[0]!;
+    body.scrollTop = 120;
+    await mount(<Covered covered />);
+    await settle(60);
+    expect(sheet()?.hasAttribute("data-covered")).toBe(true);
+    expect(sheet()?.hasAttribute("inert")).toBe(true);
+    expect(one(".dl-phone-search-body")).toBe(body);
+    await mount(<Covered covered={false} />);
+    await settle(60);
+    expect(sheet()?.hasAttribute("data-covered")).toBe(false);
+    expect(sheet()?.hasAttribute("inert")).toBe(false);
+    expect(one(".dl-phone-search-body")).toBe(body);
+    expect(rows()[0]).toBe(row);
+    expect(body.scrollTop).toBe(120);
+    expect(field()?.value).toBe("plans");
+  });
+
+  it("gives the page back to the reader while it is covered: no lock, nothing hidden from a screen reader", async () => {
+    await mount(<Covered covered={false} />);
+    await landed();
+    expect(pageLocked()).toBe(true);
+    expect(one(".reader")?.closest('[aria-hidden="true"]')).not.toBeNull();
+    await mount(<Covered covered />);
+    await settle(60);
+    expect(pageLocked()).toBe(false);
+    expect(one(".reader")?.closest('[aria-hidden="true"]')).toBeNull();
+    expect(readToastCovered()).toBe(false);
+    await mount(<Covered covered={false} />);
+    await settle(60);
+    expect(readToastCovered()).toBe(true);
+  });
+
+  it("stays open through the reader's own Escape and its presses", async () => {
+    const onOpenChange = vi.fn();
+    await mount(<Covered covered onOpenChange={onOpenChange} />);
+    await landed();
+    one<HTMLElement>(".reader-back")!.focus();
+    await key("Escape", one(".reader-back"));
+    await press(one(".reader-back"));
+    await settle(100);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(sheet()).not.toBeNull();
+    expect(layers()).toHaveLength(1);
+  });
+
+  it("hides a covered sheet in a way that keeps its layout, and so its scroll", () => {
+    const covered = ruleFor(css, ".dl-phone-search[data-covered]");
+    expect(covered).toContain("visibility: hidden");
+    expect(covered).toContain("pointer-events: none");
+    expect(covered).not.toContain("display");
+  });
+});
+
+describe("<PhoneSearch>, a row's end and the app's own line", () => {
+  it("ends a row with its meta: a size, a count", async () => {
+    await mount(
+      <Search
+        sections={[
+          {
+            heading: "Recent",
+            rows: [
+              { id: "a", title: "Budget.xlsx", subtitle: "Finance / 2026", meta: "48 KB", onSelect: vi.fn() },
+              { id: "b", title: "Photos", meta: "7 items", onSelect: vi.fn() },
+              { id: "c", title: "Notes", onSelect: vi.fn() },
+            ],
+          },
+        ]}
+      />,
+    );
+    await tapSearch();
+    const [first, second, third] = rows().slice(1);
+    expect(first!.lastElementChild?.className).toBe("dl-phone-search-meta");
+    expect(first!.lastElementChild?.textContent).toBe("48 KB");
+    expect(second!.querySelector(".dl-phone-search-meta")?.textContent).toBe("7 items");
+    expect(third!.querySelector(".dl-phone-search-meta")).toBeNull();
+    const meta = ruleFor(css, ".dl-phone-search-meta");
+    expect(meta).toContain("flex: none");
+    expect(meta).toContain("font-size: 13px");
+    expect(meta).toContain("color: var(--dl-fg-faint, #8f97a0)");
+    expect(meta).toContain("font-variant-numeric: tabular-nums");
+    await click(one(".dl-phone-search-cancel"));
+    await landed();
+  });
+
+  it("shows the app's own line before a query, under the sections, and not once there is one", async () => {
+    await mount(
+      <Search results={[]} beforeQuery={<p className="dl-phone-search-note help">Finds events by title, place, notes, guests or calendar.</p>} />,
+    );
+    await tapSearch();
+    const body = one(".dl-phone-search-body")!;
+    expect(body.lastElementChild?.classList.contains("help")).toBe(true);
+    expect(body.lastElementChild?.previousElementSibling?.classList.contains("dl-phone-search-section")).toBe(true);
+    await type(field(), "plans");
+    expect(one(".help")).toBeNull();
+    await type(field(), "");
+    expect(one(".help")).not.toBeNull();
+    await click(one(".dl-phone-search-cancel"));
+    await landed();
+  });
+});
+
 describe("phone.css, the header", () => {
   it("is a 48px row 6px under the safe area, 16px in", () => {
     expect(ruleFor(css, ".dl-phone-head")).toContain(

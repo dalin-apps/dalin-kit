@@ -773,6 +773,8 @@ Before a word is typed it shows what calendar's search shows. First comes the ap
 | `sections` | none | Shown before any query. |
 | `results` | none | Shown for a query. An empty array says nothing was found. |
 | `children` | none | The app's own results for a query, in place of `results`. |
+| `beforeQuery` | none | The app's own content before a query, under the sections. |
+| `covered` | `false` | Hides the sheet under something the app draws over it, without closing search. |
 | `emptyText` | `No results for “query”.` | A function of the query. |
 | `query`, `onQueryChange` | the sheet owns the words | For an app that owns them, or wants to hear them change. |
 | `onSubmit` | none | Called when the keyboard's Search key is pressed. |
@@ -781,7 +783,17 @@ Before a word is typed it shows what calendar's search shows. First comes the ap
 
 The field is a plain box around the input, never a `<label>`, since a label hands every tap to its first control. A tap on a control the app put in `fieldStart` or `fieldEnd` belongs to that control. A tap anywhere else on the field puts the caret in the input.
 
-A section is `{ heading, rows }`, or `{ heading, children }` for rows the kit has no shape for, such as calendar's agenda lines. A row is `{ id, title, subtitle, leading, keepOpen, onSelect }`. `leading` is a 20px glyph or a `<PhoneSearchAvatar initials color>`, a 28px circle. A section with no rows is not drawn.
+A section is `{ heading, rows }`, or `{ heading, children }` for rows the kit has no shape for, such as calendar's agenda lines. A row is `{ id, title, subtitle, leading, meta, keepOpen, onSelect }`. `leading` is a 20px glyph or a `<PhoneSearchAvatar initials color>`, a 28px circle. `meta` ends the row at the right, small and faint: a file's size, "7 items". A section with no rows is not drawn.
+
+`beforeQuery` is the app's own content before a word is typed, drawn under the sections. Calendar's line that says what search finds goes there, in the kit's note class:
+
+```tsx
+<PhoneSearch
+  beforeQuery={<p className="dl-phone-search-note">Finds events by title, place, notes, guests or calendar.</p>}
+/>
+```
+
+`covered` is for a result that opens over search, such as mail's reader. Closing search to show the reader unmounted the sheet, and the way back lost the results and their scroll. With `covered` the sheet stays open and mounted, out of sight and inert. It gives the page back while covered: no focus trap, no scroll lock, nothing hidden from a screen reader, and it is no longer a toast cover. Escape and presses belong to what covers it, and search hears none of them. Its history entry stays under the reader's. Take `covered` off and the list is where it was, with no caret put back in the field.
 
 The sheet owns the system's back while it is open. Opening pushes one history entry over the state that was there, so a router's own markers stay on it. Android's back button or the iOS back swipe then closes search and never leaves the app. Closing by Cancel, Escape or a row takes the entry off again. An app that closes search by unmounting the sheet, as calendar does, gets the same.
 
