@@ -225,8 +225,15 @@ html[data-dl-motion="reduce"] :is(.dl-palette, .dl-palette-dim) {
 .dl-palette-row[data-highlighted] {
   background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
 }
-/* Pressed, with the pointer: the highlight, one step darker (the owner's
+/* A row that can't run right now: the family's disabled look
+   (2026-11-23), 45% opaque, the normal cursor, out of the pointer's reach.
+   Pressed, with the pointer: the highlight, one step darker (the owner's
    pick on 2026-11-23). */
+.dl-palette-row:is([data-disabled], [aria-disabled="true"]) {
+  opacity: var(--dl-disabled-opacity, 0.45);
+  cursor: default;
+  pointer-events: none;
+}
 .dl-palette-row:active:not([data-disabled], [aria-disabled="true"]) {
   background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
   filter: brightness(var(--dl-press-dim, 0.92));

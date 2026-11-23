@@ -219,8 +219,10 @@ html[data-dl-motion="reduce"] .dl-menu.dl-context-menu[data-ending-style]:not([d
   background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
   filter: brightness(var(--dl-press-dim, 0.92));
 }
-.dl-menu-item[data-disabled] {
-  opacity: 0.5;
+/* Disabled: the family's disabled look (2026-11-23), 45% opaque with the
+   normal cursor, and out of the pointer's reach, so no hover or press. */
+.dl-menu-item:is([data-disabled], [aria-disabled="true"]) {
+  opacity: var(--dl-disabled-opacity, 0.45);
   pointer-events: none;
 }
 /* What ends a row at its right: a keycap, a check, a submenu's chevron. It

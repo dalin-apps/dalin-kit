@@ -263,6 +263,13 @@
   scale: var(--dl-press-scale, 0.97);
   filter: brightness(var(--dl-press-bright, 1.12));
 }
+/* Disabled, and busy (the owner's pick on 2026-11-23): 45% opaque, the
+   normal cursor, and no press (the rules above leave them out). A busy
+   control carries aria-busy="true" and keeps its keyboard focus. */
+:is(.dl-phone-icon, .dl-phone-search-cancel, .dl-phone-search-row):is(:disabled, [aria-disabled="true"], [aria-busy="true"]) {
+  opacity: var(--dl-disabled-opacity, 0.45);
+  cursor: default;
+}
 /* Under reduced motion it only brightens: the app's own switch where it
    has spoken (`data-dl-motion` on <html>), the system's setting otherwise. */
 html[data-dl-motion="reduce"] :is(.dl-phone-icon, .dl-phone-search-cancel, .dl-phone-search-row):active {

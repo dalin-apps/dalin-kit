@@ -147,8 +147,8 @@
 }
 
 @media (hover: hover) {
-  .dl-create:hover,
-  .dl-create-glass:hover {
+  .dl-create:hover:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])),
+  .dl-create-glass:hover:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"]), :is(:disabled, [aria-disabled="true"], [aria-busy="true"]) > *) {
     background: linear-gradient(
       180deg,
       oklch(from var(--dl-accent) calc(l + 0.06) calc(c + 0.03) h / 0.48) 0%,
@@ -193,4 +193,16 @@ html[data-dl-motion="reduce"] .dl-phone :active > .dl-create-glass {
   html:not([data-dl-motion="full"]) .dl-phone :active > .dl-create-glass {
     scale: none;
   }
+}
+
+/* Disabled, and busy (the owner's pick on 2026-11-23): 45% opaque, the
+   normal cursor, and no hover or press look (the rules above leave them
+   out). A busy button carries aria-busy="true" and says its verb
+   ("Creating"); it is not disabled, so it keeps its keyboard focus. A glass
+   layer inside a disabled or busy button takes the look for it. */
+.dl-create:is(:disabled, [aria-disabled="true"], [aria-busy="true"]),
+.dl-create-glass:is(:disabled, [aria-disabled="true"], [aria-busy="true"]),
+:is(:disabled, [aria-disabled="true"], [aria-busy="true"]) > .dl-create-glass {
+  opacity: var(--dl-disabled-opacity, 0.45);
+  cursor: default;
 }

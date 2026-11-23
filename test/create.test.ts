@@ -42,7 +42,7 @@ describe(".dl-create, the whole button", () => {
 
 describe(".dl-create-glass, the glass alone", () => {
   it("shares the recipe with the whole button, rule for rule", () => {
-    const glass = rulesWith(css, ".dl-create-glass").filter(([list]) => !list.includes(":where") && !list.includes("focus") && !list.includes(":active") && !list.includes("disabled"));
+    const glass = rulesWith(css, ".dl-create-glass").filter(([list]) => !list.includes(":where") && !list.includes("focus") && !list.includes(":active") && !/^:is|\.dl-create(-glass)?:is\(/.test(list));
     expect(glass.length).toBe(4);
     for (const [list] of glass) {
       const selectors = splitList(list);
@@ -51,9 +51,11 @@ describe(".dl-create-glass, the glass alone", () => {
       );
       expect(selectors[0]!.startsWith(".dl-create")).toBe(true);
     }
+    // A hover leaves a disabled or busy button out, after the suffix.
+    const bare = (list: string) => splitList(list).map((s) => s.replace(/:not\(.*$/, ""));
     for (const suffix of ["", "::before", "::after", ":hover"]) {
       const pair = rulesWith(css, `.dl-create-glass${suffix}`).find(([list]) =>
-        splitList(list).includes(`.dl-create${suffix}`) && splitList(list).includes(`.dl-create-glass${suffix}`),
+        bare(list).includes(`.dl-create${suffix}`) && bare(list).includes(`.dl-create-glass${suffix}`),
       );
       expect(pair, suffix || "base").toBeDefined();
     }
