@@ -55,13 +55,25 @@ export function FilterMenu({ label = "Filters", dot = null, choice, facets = [],
     const phone = variant === "phone";
     const shown = phone && page ? facets.find((f) => f.key === page) ?? null : null;
     // What had focus as the menu opened: the field the control ends, since a
-    // press on the glyph leaves the caret there. Focus goes back to it as the
-    // menu closes, so the next word typed lands in the field.
+    // press on the glyph leaves the caret there. Base UI hands focus back to
+    // the glyph as the menu closes, and only when nothing else has taken it
+    // since (a dialog a pick opened keeps it). While the menu is closing, that
+    // return is passed on to the field, so the next word typed lands there. A
+    // function in `finalFocus` would skip Base UI's check, so this is done on
+    // the glyph's focus instead.
     const before = useRef(null);
+    const closing = useRef(null);
     const setOpen = (next) => {
         if (next) {
             const active = typeof document === "undefined" ? null : document.activeElement;
             before.current = active instanceof HTMLElement && active !== document.body ? active : null;
+        }
+        else if (typeof window !== "undefined") {
+            if (closing.current !== null)
+                window.clearTimeout(closing.current);
+            closing.current = window.setTimeout(() => {
+                closing.current = null;
+            }, 400);
         }
         setOpenState(next);
         onOpenChange?.(next);
@@ -70,22 +82,26 @@ export function FilterMenu({ label = "Filters", dot = null, choice, facets = [],
             onFacetOpen?.(null);
         }
     };
+    const passFocusOn = (e) => {
+        const field = before.current;
+        if (closing.current === null || finalFocus !== undefined)
+            return;
+        window.clearTimeout(closing.current);
+        closing.current = null;
+        // Opened from the keyboard, focus was on the glyph, and it stays there.
+        if (!field || field === e.currentTarget || !field.isConnected)
+            return;
+        field.focus({ preventScroll: true });
+    };
     const openPage = (key) => {
         setPage(key);
         onFacetOpen?.(key);
     };
-    const trigger = (_jsxs(MenuTrigger, { "aria-label": label, "data-slot": "filter-trigger", "data-variant": variant, "data-on": dot ? "" : undefined, className: cx("dl-filter", className), onMouseDown: (e) => e.preventDefault(), children: [_jsx(FilterGlyph, {}), dot ? _jsx("span", { "aria-hidden": "true", "data-slot": "filter-dot", className: "dl-filter-dot", style: { background: dot } }) : null] }));
+    const trigger = (_jsxs(MenuTrigger, { "aria-label": label, "data-slot": "filter-trigger", "data-variant": variant, "data-on": dot ? "" : undefined, className: cx("dl-filter", className), onMouseDown: (e) => e.preventDefault(), onFocus: passFocusOn, children: [_jsx(FilterGlyph, {}), dot ? _jsx("span", { "aria-hidden": "true", "data-slot": "filter-dot", className: "dl-filter-dot", style: { background: dot } }) : null] }));
     const rest = groups
         .filter((group) => group.length > 0)
         .map((group, i) => _jsx(MenuGroupRows, { rule: i > 0, rows: group }, i));
-    return (_jsxs(Menu, { open: open, onOpenChange: setOpen, children: [tooltip ? tooltip(trigger, label) : trigger, _jsx(MenuContent, { align: align, className: cx("dl-filter-menu", menuClassName), "data-variant": variant, finalFocus: finalFocus ??
-                    (() => {
-                        const el = before.current;
-                        // Opened from the keyboard, focus was on the glyph: Base UI's own return.
-                        if (!el || !el.isConnected || el.matches('[data-slot="filter-trigger"]'))
-                            return true;
-                        return el;
-                    }), children: shown ? (_jsxs(_Fragment, { children: [_jsxs(MenuItem, { closeOnClick: false, className: "dl-filter-back", onClick: () => openPage(null), children: [_jsx(ChevronLeftGlyph, {}), shown.label] }), _jsx(MenuSeparator, {}), _jsx(FacetRows, { facet: shown })] })) : (_jsxs(_Fragment, { children: [choice ? (_jsxs(_Fragment, { children: [_jsxs(MenuGroup, { children: [_jsx(MenuLabel, { children: choice.label }), _jsx(MenuRadioGroup, { value: choice.value, onValueChange: (value) => choice.onChange(String(value)), children: choice.options.map((option) => (_jsx(MenuRadioItem, { value: option.value, closeOnClick: choice.closes || undefined, children: option.label }, option.value))) })] }), facets.length || groups.some((g) => g.length) ? _jsx(MenuSeparator, {}) : null] })) : null, facets.map((facet) => phone ? (_jsxs(MenuItem, { closeOnClick: false, onClick: () => openPage(facet.key), children: [_jsx("span", { className: "dl-filter-text", children: facet.label }), _jsx(ChevronRightGlyph, { className: "dl-menu-end dl-menu-chevron" })] }, facet.key)) : (_jsxs(MenuSub, { onOpenChange: (next) => (next ? onFacetOpen?.(facet.key) : undefined), children: [_jsx(MenuSubTrigger, { children: facet.label }), _jsx(MenuSubContent, { className: "dl-filter-sub", children: _jsx(FacetRows, { facet: facet }) })] }, facet.key))), rest] })) })] }));
+    return (_jsxs(Menu, { open: open, onOpenChange: setOpen, children: [tooltip ? tooltip(trigger, label) : trigger, _jsx(MenuContent, { align: align, className: cx("dl-filter-menu", menuClassName), "data-variant": variant, finalFocus: finalFocus, children: shown ? (_jsxs(_Fragment, { children: [_jsxs(MenuItem, { closeOnClick: false, className: "dl-filter-back", onClick: () => openPage(null), children: [_jsx(ChevronLeftGlyph, {}), shown.label] }), _jsx(MenuSeparator, {}), _jsx(FacetRows, { facet: shown })] })) : (_jsxs(_Fragment, { children: [choice ? (_jsxs(_Fragment, { children: [_jsxs(MenuGroup, { children: [_jsx(MenuLabel, { children: choice.label }), _jsx(MenuRadioGroup, { value: choice.value, onValueChange: (value) => choice.onChange(String(value)), children: choice.options.map((option) => (_jsx(MenuRadioItem, { value: option.value, closeOnClick: choice.closes || undefined, children: option.label }, option.value))) })] }), facets.length || groups.some((g) => g.length) ? _jsx(MenuSeparator, {}) : null] })) : null, facets.map((facet) => phone ? (_jsxs(MenuItem, { closeOnClick: false, onClick: () => openPage(facet.key), children: [_jsx("span", { className: "dl-filter-text", children: facet.label }), _jsx(ChevronRightGlyph, { className: "dl-menu-end dl-menu-chevron" })] }, facet.key)) : (_jsxs(MenuSub, { onOpenChange: (next) => (next ? onFacetOpen?.(facet.key) : undefined), children: [_jsx(MenuSubTrigger, { children: facet.label }), _jsx(MenuSubContent, { className: "dl-filter-sub", children: _jsx(FacetRows, { facet: facet }) })] }, facet.key))), rest] })) })] }));
 }
 function MenuGroupRows({ rule, rows }) {
     return (_jsxs(_Fragment, { children: [rule ? _jsx(MenuSeparator, {}) : null, rows.map((option) => (_jsx(OptionRow, { option: option }, option.key)))] }));

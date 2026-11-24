@@ -71,8 +71,9 @@ export type FilterMenuProps = {
     menuClassName?: string;
     /**
      * Where focus goes as the menu closes; `<MenuContent>`'s own prop, passed
-     * through. Left out, it goes back to what had focus as the menu opened (the
-     * field the control ends), or to the glyph when the keyboard opened it.
+     * through. Left out, focus goes back to what had it as the menu opened (the
+     * field the control ends), or to the glyph when the keyboard opened it, and
+     * stays wherever a pick sent it (a dialog the pick opened).
      */
     finalFocus?: MenuContentProps["finalFocus"];
 };

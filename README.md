@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10.4 is listed under "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
+Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10.5 is listed under "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
 
 ## Install
 
@@ -67,6 +67,10 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.10.4 to 0.10.5
+
+0.10.5 keeps the focus return of 0.10.4 and drops its one risk. 0.10.4 sent focus to the field through a function in `finalFocus`, and Base UI skips its own check for a function there: focus came back to the field even when a dialog the pick opened had taken it. Now Base UI returns focus to the glyph as it always did, only when nothing else has taken it, and the glyph passes it on to the field while the menu is closing. An app on 0.10.4 changes only its pin.
 
 ## Moving an app from 0.10.3 to 0.10.4
 
@@ -1012,7 +1016,7 @@ import { FilterMenu, filterCount } from "@dalin/kit/components";
 
 The menu holds, in order, an optional `choice` (a radio group under its label), the `facets`, then the `groups` of plain rows. A facet is a submenu on a computer. On a phone it is a page swapped into the same menu, with a back row at its top, since a submenu has nowhere to open on a narrow screen. A facet's `options` may be undefined while they load: `onFacetOpen` gets the facet's key when its list opens, and null when the list or the menu closes, so the app fetches counts only for what is on screen. A row's `count` sits at its right end; `filterCount(n, capped)` formats one, with a plus past a cap. A `checked` row shows a tick in place of a count.
 
-A press on the glyph keeps focus where it was, so the caret stays in the field. A pick of the `choice` keeps the menu open unless the choice says `closes`, and as the menu closes it hands focus back to what had it when it opened (the field, or the glyph when the keyboard opened it) unless `finalFocus` says otherwise (it is `<MenuContent>`'s prop, passed through). The kit has no tooltip of its own, so `tooltip` wraps the trigger in the app's. The control is 28px with a 16px glyph on a computer, and 44px with a 20px glyph on a phone. Its menu stands two steps over the command palette, so it opens over the palette from its `filter` slot.
+A press on the glyph keeps focus where it was, so the caret stays in the field. A pick of the `choice` keeps the menu open unless the choice says `closes`, and as the menu closes it hands focus back to what had it when it opened (the field, or the glyph when the keyboard opened it), unless something else has taken it since, such as a dialog the pick opened, or `finalFocus` says otherwise (it is `<MenuContent>`'s prop, passed through). The kit has no tooltip of its own, so `tooltip` wraps the trigger in the app's. The control is 28px with a 16px glyph on a computer, and 44px with a 20px glyph on a phone. Its menu stands two steps over the command palette, so it opens over the palette from its `filter` slot.
 
 An app must not override the glyph, its filled form, the absence of a box, or the dot's size and place.
 

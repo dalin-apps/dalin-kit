@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactElement, type ReactNode } from "react";
+import { useRef, useState, type FocusEvent, type ReactElement, type ReactNode } from "react";
 import { cx } from "./cx.js";
 import { CheckGlyph, ChevronLeftGlyph, ChevronRightGlyph, FilterGlyph } from "./icons.js";
 import {
@@ -90,8 +90,9 @@ export type FilterMenuProps = {
   menuClassName?: string;
   /**
    * Where focus goes as the menu closes; `<MenuContent>`'s own prop, passed
-   * through. Left out, it goes back to what had focus as the menu opened (the
-   * field the control ends), or to the glyph when the keyboard opened it.
+   * through. Left out, focus goes back to what had it as the menu opened (the
+   * field the control ends), or to the glyph when the keyboard opened it, and
+   * stays wherever a pick sent it (a dialog the pick opened).
    */
   finalFocus?: MenuContentProps["finalFocus"];
 };
@@ -173,13 +174,23 @@ export function FilterMenu({
   const shown = phone && page ? facets.find((f) => f.key === page) ?? null : null;
 
   // What had focus as the menu opened: the field the control ends, since a
-  // press on the glyph leaves the caret there. Focus goes back to it as the
-  // menu closes, so the next word typed lands in the field.
+  // press on the glyph leaves the caret there. Base UI hands focus back to
+  // the glyph as the menu closes, and only when nothing else has taken it
+  // since (a dialog a pick opened keeps it). While the menu is closing, that
+  // return is passed on to the field, so the next word typed lands there. A
+  // function in `finalFocus` would skip Base UI's check, so this is done on
+  // the glyph's focus instead.
   const before = useRef<HTMLElement | null>(null);
+  const closing = useRef<number | null>(null);
   const setOpen = (next: boolean) => {
     if (next) {
       const active = typeof document === "undefined" ? null : document.activeElement;
       before.current = active instanceof HTMLElement && active !== document.body ? active : null;
+    } else if (typeof window !== "undefined") {
+      if (closing.current !== null) window.clearTimeout(closing.current);
+      closing.current = window.setTimeout(() => {
+        closing.current = null;
+      }, 400);
     }
     setOpenState(next);
     onOpenChange?.(next);
@@ -187,6 +198,15 @@ export function FilterMenu({
       setPage(null);
       onFacetOpen?.(null);
     }
+  };
+  const passFocusOn = (e: FocusEvent<HTMLElement>) => {
+    const field = before.current;
+    if (closing.current === null || finalFocus !== undefined) return;
+    window.clearTimeout(closing.current);
+    closing.current = null;
+    // Opened from the keyboard, focus was on the glyph, and it stays there.
+    if (!field || field === e.currentTarget || !field.isConnected) return;
+    field.focus({ preventScroll: true });
   };
   const openPage = (key: string | null) => {
     setPage(key);
@@ -201,6 +221,7 @@ export function FilterMenu({
       data-on={dot ? "" : undefined}
       className={cx("dl-filter", className)}
       onMouseDown={(e) => e.preventDefault()}
+      onFocus={passFocusOn}
     >
       <FilterGlyph />
       {dot ? <span aria-hidden="true" data-slot="filter-dot" className="dl-filter-dot" style={{ background: dot }} /> : null}
@@ -218,15 +239,7 @@ export function FilterMenu({
         align={align}
         className={cx("dl-filter-menu", menuClassName)}
         data-variant={variant}
-        finalFocus={
-          finalFocus ??
-          (() => {
-            const el = before.current;
-            // Opened from the keyboard, focus was on the glyph: Base UI's own return.
-            if (!el || !el.isConnected || el.matches('[data-slot="filter-trigger"]')) return true;
-            return el;
-          })
-        }
+        finalFocus={finalFocus}
       >
         {shown ? (
           <>

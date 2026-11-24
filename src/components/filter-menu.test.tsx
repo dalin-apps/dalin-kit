@@ -158,6 +158,26 @@ describe("FilterMenu", () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it("lets a dialog a pick opens take focus as it mounts, after the menu has closed", async () => {
+    await mount(
+      <div>
+        <input className="field" />
+        <button type="button" className="elsewhere">Dialog</button>
+        <FilterMenu
+          {...base({
+            // A dialog takes focus as it mounts, a task after the pick.
+            groups: [[{ key: "open", label: "Open a dialog", onSelect: () => void setTimeout(() => one<HTMLButtonElement>(".elsewhere")!.focus(), 0) }]],
+          })}
+        />
+      </div>,
+    );
+    one<HTMLInputElement>(".field")!.focus();
+    await click(one('[data-slot="filter-trigger"]'));
+    await click(rowNamed("Open a dialog"));
+    await settle(200);
+    expect(document.activeElement).toBe(one(".elsewhere"));
+  });
+
   it("runs a row's own action", async () => {
     const props = base();
     await mount(<FilterMenu {...props} />);
