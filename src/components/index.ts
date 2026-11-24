@@ -2,6 +2,15 @@ export { DALIN_APPS, dalinApp, type DalinApp, type DalinAppInfo } from "./apps.j
 export { Wordmark, type WordmarkProps } from "./wordmark.js";
 export { FamilySwitcher, type FamilySwitcherProps } from "./family-switcher.js";
 export { Kbd, type KbdProps } from "./kbd.js";
+export { FilterGlyph, FILTER_FILLED_STROKE, SearchGlyph, type FilterGlyphProps } from "./icons.js";
+export {
+  FilterMenu,
+  filterCount,
+  type FilterChoice,
+  type FilterFacet,
+  type FilterMenuProps,
+  type FilterOption,
+} from "./filter-menu.js";
 export {
   Menu,
   MenuCheckboxItem,

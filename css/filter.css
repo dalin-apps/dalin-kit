@@ -1,0 +1,129 @@
+/* @dalin/kit filter.css: the filter control (<FilterMenu>) and its menu.
+
+   What it is. The family's filter glyph, three lines that shorten as they
+   go down, ending a search field or a palette's input. It stands alone,
+   with no box behind it at rest, under the pointer, pressed or open. At
+   rest it is muted. Under the pointer, while its menu is open and while a
+   filter is on, it turns white and draws its filled form: the lines get
+   heavier, since lines have no inside to fill. A filter that is on puts a
+   dot at the glyph's top right, in the colour the app passes (the owner's
+   pick on 2026-11-24, in all four apps). The menu is the family's frosted
+   menu from menu.css, with a count at a row's right end.
+
+   How an app adopts it. Import this file once, after tokens.css and
+   menu.css, and use <FilterMenu> from @dalin/kit/components. Delete the
+   app's own filter glyph and its trigger's hover box.
+
+   What an app must not override. The glyph, its filled form, the absence
+   of a box, and the dot's size and place. The control's size follows the
+   variant: 28px with a 16px glyph on a computer, 44px with a 20px glyph on
+   a phone. */
+@layer dalin {
+.dl-filter {
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--dl-fg-muted, #b8b8b8);
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+.dl-filter > svg {
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+.dl-filter[data-variant="phone"] {
+  width: 44px;
+  height: 44px;
+}
+.dl-filter[data-variant="phone"] > svg {
+  width: 20px;
+  height: 20px;
+}
+/* White and filled: open, on, and under a pointer that can hover. */
+.dl-filter:is([data-popup-open], [data-on]) {
+  color: var(--dl-fg, #fff);
+}
+.dl-filter:is([data-popup-open], [data-on]) > svg {
+  stroke-width: 2.7;
+}
+@media (hover: hover) {
+  .dl-filter:hover {
+    color: var(--dl-fg, #fff);
+  }
+  .dl-filter:hover > svg {
+    stroke-width: 2.7;
+  }
+}
+/* Pressed: on a computer one step darker than hover; on a phone the
+   family's press, a little smaller and white. */
+.dl-filter:active {
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+.dl-filter[data-variant="phone"]:active {
+  color: var(--dl-fg, #fff);
+  scale: var(--dl-press-scale, 0.97);
+}
+.dl-filter:focus-visible {
+  outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff));
+  outline-offset: 0;
+  border-radius: var(--dl-r-control, 7px);
+}
+.dl-filter[data-variant="phone"]:focus-visible {
+  outline-offset: -8px;
+  border-radius: 12px;
+}
+/* The dot: a filter is on, in the colour the app passes. */
+.dl-filter-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.dl-filter[data-variant="phone"] .dl-filter-dot {
+  top: 10px;
+  right: 9px;
+  width: 8px;
+  height: 8px;
+}
+
+/* The menu. */
+.dl-filter-menu {
+  min-width: 192px;
+}
+.dl-filter-menu[data-variant="phone"] {
+  min-width: 240px;
+}
+.dl-filter-sub {
+  min-width: 208px;
+}
+.dl-filter-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dl-filter-count {
+  margin-left: auto;
+  padding-left: 16px;
+  color: var(--dl-fg-muted, #b8b8b8);
+  font-variant-numeric: tabular-nums;
+}
+.dl-filter-back {
+  font-weight: 500;
+}
+}

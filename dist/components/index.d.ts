@@ -2,6 +2,8 @@ export { DALIN_APPS, dalinApp, type DalinApp, type DalinAppInfo } from "./apps.j
 export { Wordmark, type WordmarkProps } from "./wordmark.js";
 export { FamilySwitcher, type FamilySwitcherProps } from "./family-switcher.js";
 export { Kbd, type KbdProps } from "./kbd.js";
+export { FilterGlyph, FILTER_FILLED_STROKE, SearchGlyph, type FilterGlyphProps } from "./icons.js";
+export { FilterMenu, filterCount, type FilterChoice, type FilterFacet, type FilterMenuProps, type FilterOption, } from "./filter-menu.js";
 export { Menu, MenuCheckboxItem, MenuContent, MenuGroup, MenuItem, MenuLabel, MenuLinkItem, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuShortcut, MenuSub, MenuSubContent, MenuSubTrigger, MenuTrigger, type MenuContentProps, type MenuItemProps, type MenuItemVariant, type MenuLabelProps, type MenuLinkItemProps, type MenuShortcutProps, type MenuSubTriggerProps, } from "./menu.js";
 export { ContextMenu, ContextMenuContent, ContextMenuTrigger, type ContextMenuContentProps, type ContextMenuProps, } from "./context-menu.js";
 export { ariaKeyShortcuts } from "./key-names.js";

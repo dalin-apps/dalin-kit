@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.9 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.9 is listed under "Moving an app from 0.8.1 to 0.9", and the steps before it under the sections after that.
+Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10 is listed under "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
 
 ## Install
 
@@ -33,9 +33,10 @@ import "@dalin/kit/empty.css";
 import "@dalin/kit/palette.css";
 import "@dalin/kit/phone.css";
 import "@dalin/kit/seg.css";
+import "@dalin/kit/filter.css";
 ```
 
-The last five are new in 0.3, one to a part, so an app adds a sheet as it adopts that part. The family switcher and the command palette also need `menu.css`.
+The last five are new in 0.3, one to a part, so an app adds a sheet as it adopts that part. The family switcher, the command palette and the filter also need `menu.css`.
 
 From 0.4 the component sheets (`menu`, `palette`, `phone`, `empty`, `wordmark`, `motion`, and `base` from 0.6) put their rules in a cascade layer named `dalin`. State the layer order once, as the first line of the app's own sheet, before Tailwind is imported:
 
@@ -66,6 +67,12 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.9 to 0.10
+
+0.10 adds the family's filter: `<FilterGlyph>` and `<FilterMenu>` from `@dalin/kit/components`, styled by the new `filter.css` (see "The filter" below). Nothing else changed, so an app with no filter changes only its pin.
+
+To adopt it, import `@dalin/kit/filter.css` after `menu.css`. Replace the app's own filter glyph with `<FilterGlyph>` (notes' lucide funnel, mail's and calendar's two sliders), and a filter that opens a menu with `<FilterMenu>`. Delete the hover box behind the app's old trigger. A filter that is on now shows as a dot in a colour that means something (a mailbox's colour, Archive's red), in every app.
 
 ## Moving an app from 0.8.1 to 0.9
 
@@ -953,6 +960,38 @@ The font size is the app's, since the four apps' settings rows use different siz
 
 An app must not override the edge, the track's fill, the picked lift with its line and shadow, or the muted words of the others.
 
+## The filter
+
+The owner picked one filter glyph for the four apps on 2026-11-24: three lines that shorten as they go down, the list getting smaller. Lines have no inside to fill, so its filled form draws them heavier. It stands alone, with no box behind it. A filter that is on puts a dot at the glyph's top right, in the colour of what it narrows to, in all four apps.
+
+`<FilterGlyph>` is the glyph alone, for an app that draws its own control. Pass `filled` for hover, an open menu and a filter that is on.
+
+`<FilterMenu>` is mail's search filter made general: the glyph as a menu trigger, ending a search field or a palette's input, and the menu it opens. The app keeps the query; each row runs its own `onSelect`, so the kit holds no filter state.
+
+```tsx
+import { FilterMenu, filterCount } from "@dalin/kit/components";
+
+<FilterMenu
+  label={scoped ? `Filters: only ${scoped.short}` : "Filters"}
+  dot={scoped ? scoped.colour : null}
+  choice={{ label: "Search in", value: scoped?.id ?? "", options: [{ value: here.id, label: here.short }, { value: "", label: "All mail" }], onChange: pickMailbox }}
+  facets={[{ key: "from", label: "From", options: senders, empty: "No senders" }]}
+  onFacetOpen={setCounting}
+  groups={[
+    [{ key: "unread", label: "Unread", count: filterCount(unread, capped), onSelect: () => add("is:unread") }],
+    [{ key: "people", label: "Only people", checked: scope === "people", onSelect: togglePeople }],
+  ]}
+  variant={phone ? "phone" : "desktop"}
+  tooltip={(trigger, label) => <Tip label={label}>{trigger}</Tip>}
+/>
+```
+
+The menu holds, in order, an optional `choice` (a radio group under its label), the `facets`, then the `groups` of plain rows. A facet is a submenu on a computer. On a phone it is a page swapped into the same menu, with a back row at its top, since a submenu has nowhere to open on a narrow screen. A facet's `options` may be undefined while they load: `onFacetOpen` gets the facet's key when its list opens, and null when the menu closes, so the app fetches counts only for what is on screen. A row's `count` sits at its right end; `filterCount(n, capped)` formats one, with a plus past a cap. A `checked` row shows a tick in place of a count.
+
+A press on the glyph keeps focus where it was, so the caret stays in the field. The kit has no tooltip of its own, so `tooltip` wraps the trigger in the app's. The control is 28px with a 16px glyph on a computer, and 44px with a 20px glyph on a phone.
+
+An app must not override the glyph, its filled form, the absence of a box, or the dot's size and place.
+
 ## Helpers
 
 Three things each app had copied, and the motion reader described under "One place for the motion switch". They export from `@dalin/kit` and from `@dalin/kit/helpers`.
@@ -1003,7 +1042,7 @@ import { TipKey, shortcutLabel } from "@dalin/kit";
 
 That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel` takes `Mod`, `Shift` and `Alt` for the platform's keys and writes every other key as given. `<TipKey>` draws the dot and the key in the muted grey, or in the app's own `className`, and renders nothing without a key. `tipText("Archive", "E")` is the same line as a string. `shortcutLabelFor(mac, keys)` and `isMacPlatform(platform)` are the pure halves. The tooltip itself stays each app's own.
 
-## Not in version 0.9
+## Not in version 0.10
 
 These are still open, so the kit has no value for them: type sizes, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
 
