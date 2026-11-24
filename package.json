@@ -1,7 +1,7 @@
 {
   "name": "@dalin/kit",
-  "version": "0.7.0",
-  "description": "The shared design base of the dalin apps: tokens, the toast, the create button, the wordmark and family switcher, frosted menus, the command palette, the phone header and search, and the helpers each app had copied.",
+  "version": "0.8.0",
+  "description": "The shared design base of the dalin apps: tokens, the toast, the create button, the wordmark and family switcher, frosted menus, the command palette, the phone header and search, the segmented control, and the helpers each app had copied.",
   "type": "module",
   "license": "MIT",
   "author": "Samuel Gomez",
@@ -46,7 +46,8 @@
     "./menu.css": "./css/menu.css",
     "./empty.css": "./css/empty.css",
     "./palette.css": "./css/palette.css",
-    "./phone.css": "./css/phone.css"
+    "./phone.css": "./css/phone.css",
+    "./seg.css": "./css/seg.css"
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
