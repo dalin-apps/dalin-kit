@@ -16,6 +16,7 @@ import {
   MenuSubContent,
   MenuSubTrigger,
   MenuTrigger,
+  type MenuContentProps,
 } from "./menu.js";
 
 /** One row the menu offers: a filter to add, or a switch that ticks. */
@@ -49,6 +50,14 @@ export type FilterChoice = {
   value: string;
   options: readonly { value: string; label: ReactNode }[];
   onChange: (value: string) => void;
+  /**
+   * A pick closes the menu. Off by default, Base UI's rule for a radio row,
+   * which suits a choice made among other filters (mail's "Search in"); on
+   * for a choice that is the whole errand (notes' "Show"). An app that closed
+   * the menu itself on a pick left Base UI's focus return running after the
+   * close, which pulled focus out of whatever the reader opened next.
+   */
+  closes?: boolean;
 };
 
 export type FilterMenuProps = {
@@ -79,6 +88,8 @@ export type FilterMenuProps = {
   className?: string;
   /** The app's own class on the menu, beside `dl-filter-menu`: mail's 44px phone rows. */
   menuClassName?: string;
+  /** Where focus goes as the menu closes, when the trigger is not the answer; `<MenuContent>`'s own prop, passed through. */
+  finalFocus?: MenuContentProps["finalFocus"];
 };
 
 /**
@@ -147,6 +158,7 @@ export function FilterMenu({
   align = "end",
   className,
   menuClassName,
+  finalFocus,
 }: FilterMenuProps): ReactNode {
   const [openState, setOpenState] = useState(false);
   const open = openProp ?? openState;
@@ -188,7 +200,7 @@ export function FilterMenu({
   return (
     <Menu open={open} onOpenChange={setOpen}>
       {tooltip ? tooltip(trigger, label) : trigger}
-      <MenuContent align={align} className={cx("dl-filter-menu", menuClassName)} data-variant={variant}>
+      <MenuContent align={align} className={cx("dl-filter-menu", menuClassName)} data-variant={variant} finalFocus={finalFocus}>
         {shown ? (
           <>
             <MenuItem closeOnClick={false} className="dl-filter-back" onClick={() => openPage(null)}>
@@ -206,7 +218,7 @@ export function FilterMenu({
                   <MenuLabel>{choice.label}</MenuLabel>
                   <MenuRadioGroup value={choice.value} onValueChange={(value) => choice.onChange(String(value))}>
                     {choice.options.map((option) => (
-                      <MenuRadioItem key={option.value} value={option.value}>
+                      <MenuRadioItem key={option.value} value={option.value} closeOnClick={choice.closes || undefined}>
                         {option.label}
                       </MenuRadioItem>
                     ))}

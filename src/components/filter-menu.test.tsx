@@ -7,7 +7,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { readCss, rulesWith } from "../../test/css.js";
-import { all, click, mount, one, settle, withDom } from "../../test/dom.js";
+import { all, click, key, mount, one, settle, withDom } from "../../test/dom.js";
 import { FilterMenu, filterCount, type FilterMenuProps } from "./filter-menu.js";
 import { FILTER_FILLED_STROKE, FilterGlyph } from "./icons.js";
 
@@ -108,6 +108,39 @@ describe("FilterMenu", () => {
     expect(all(".dl-menu-separator")).toHaveLength(2);
     await click(all('[role="menuitemradio"]')[0]);
     expect(onChange).toHaveBeenCalledWith("w");
+  });
+
+  it("stays open on a pick of the choice, or closes when the choice says so", async () => {
+    const choice = { label: "Show", value: "a", options: [{ value: "a", label: "A" }, { value: "b", label: "B" }], onChange: vi.fn() };
+    await mount(<FilterMenu {...base({ choice })} />);
+    await click(one('[data-slot="filter-trigger"]'));
+    await click(all('[role="menuitemradio"]')[1]);
+    await settle(50);
+    expect(one(".dl-filter-menu")).not.toBeNull();
+    await key("Escape");
+    await settle(300);
+
+    await mount(<FilterMenu {...base({ choice: { ...choice, closes: true } })} />);
+    await click(one('[data-slot="filter-trigger"]'));
+    await click(all('[role="menuitemradio"]')[1]);
+    await settle(300);
+    expect(choice.onChange).toHaveBeenLastCalledWith("b");
+    expect(one(".dl-filter-menu")).toBeNull();
+  });
+
+  it("takes a finalFocus of the app's own, which wins over the trigger", async () => {
+    const to = { current: null as HTMLElement | null };
+    await mount(
+      <>
+        <input className="elsewhere" aria-label="Search" />
+        <FilterMenu {...base()} finalFocus={to} />
+      </>,
+    );
+    to.current = one<HTMLElement>(".elsewhere");
+    await click(one('[data-slot="filter-trigger"]'));
+    await key("Escape");
+    await settle(300);
+    expect(document.activeElement).toBe(one(".elsewhere"));
   });
 
   it("runs a row's own action", async () => {

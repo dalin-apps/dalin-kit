@@ -1,4 +1,5 @@
 import { type ReactElement, type ReactNode } from "react";
+import { type MenuContentProps } from "./menu.js";
 /** One row the menu offers: a filter to add, or a switch that ticks. */
 export type FilterOption = {
     key: string;
@@ -31,6 +32,14 @@ export type FilterChoice = {
         label: ReactNode;
     }[];
     onChange: (value: string) => void;
+    /**
+     * A pick closes the menu. Off by default, Base UI's rule for a radio row,
+     * which suits a choice made among other filters (mail's "Search in"); on
+     * for a choice that is the whole errand (notes' "Show"). An app that closed
+     * the menu itself on a pick left Base UI's focus return running after the
+     * close, which pulled focus out of whatever the reader opened next.
+     */
+    closes?: boolean;
 };
 export type FilterMenuProps = {
     /** The control's name, for its tooltip and a screen reader. "Filters", "Filters: only Work". */
@@ -60,6 +69,8 @@ export type FilterMenuProps = {
     className?: string;
     /** The app's own class on the menu, beside `dl-filter-menu`: mail's 44px phone rows. */
     menuClassName?: string;
+    /** Where focus goes as the menu closes, when the trigger is not the answer; `<MenuContent>`'s own prop, passed through. */
+    finalFocus?: MenuContentProps["finalFocus"];
 };
 /**
  * A count for a filter row, with "+" past a cap: "1,000+". Pass `capped`
@@ -90,5 +101,5 @@ export declare function filterCount(count: number | undefined, capped?: boolean)
  *     groups={[[{ key: "unread", label: "Unread", count: filterCount(n), onSelect: () => add("is:unread") }]]}
  *   />
  */
-export declare function FilterMenu({ label, dot, choice, facets, onFacetOpen, groups, variant, open: openProp, onOpenChange, tooltip, align, className, menuClassName, }: FilterMenuProps): ReactNode;
+export declare function FilterMenu({ label, dot, choice, facets, onFacetOpen, groups, variant, open: openProp, onOpenChange, tooltip, align, className, menuClassName, finalFocus, }: FilterMenuProps): ReactNode;
 //# sourceMappingURL=filter-menu.d.ts.map
