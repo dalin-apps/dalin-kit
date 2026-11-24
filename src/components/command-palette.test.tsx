@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { readCss, ruleFor, ruleNaming } from "../../test/css.js";
 import { all, click, key, mount, one, press as pressOn, settle, type, withDom, withToast } from "../../test/dom.js";
 import { INPUT_ATTR } from "../helpers/input-modality.js";
+import { FilterMenu } from "./filter-menu.js";
 import { CommandPalette, SOURCE_WAIT_MS, type CommandPaletteProps, type PaletteItem, type PaletteSource } from "./command-palette.js";
 
 withDom();
@@ -168,6 +169,37 @@ describe("opening it", () => {
 });
 
 describe("what it shows", () => {
+  it("ends the field with the app's filter, and asks again with the same words when the filter changes the sources", async () => {
+    function Filtered() {
+      const [doneOnly, setDoneOnly] = useState(false);
+      const sources: PaletteSource[] = doneOnly ? [{ id: "todos", heading: "To-dos", search: find(TODOS) }] : SOURCES;
+      return (
+        <CommandPalette
+          open
+          sources={sources}
+          filter={
+            <FilterMenu
+              dot={doneOnly ? "red" : null}
+              groups={[[{ key: "todos", label: "Only to-dos", checked: doneOnly, onSelect: () => setDoneOnly((v) => !v) }]]}
+            />
+          }
+        />
+      );
+    }
+    await mount(<Filtered />);
+    const trigger = one('.dl-palette-query [data-slot="filter-trigger"]')!;
+    expect(trigger.nextElementSibling?.classList.contains("dl-palette-close")).toBe(true);
+    await type(field(), "sound");
+    expect(headings()).toEqual(["Pages", "To-dos"]);
+    await click(trigger);
+    await click(all('[role="menuitem"]').find((r) => r.textContent?.includes("Only to-dos")));
+    await settle(200);
+    expect(field()!.value).toBe("sound");
+    expect(headings()).toEqual(["To-dos"]);
+    expect(titles()).toEqual(["Sound check with the band"]);
+    expect(one('[data-slot="filter-dot"]')).not.toBeNull();
+  });
+
   it("groups the results under each source's heading, with the actions last", async () => {
     await mountPalette({ open: true });
     expect(headings()).toEqual(["Pages", "To-dos", "Actions"]);

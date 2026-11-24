@@ -75,6 +75,13 @@ export type CommandPaletteProps = {
      * the key is then typed into the query.
      */
     appKey?: string | readonly string[];
+    /**
+     * A control at the end of the field, before the Esc cap: a `<FilterMenu>`.
+     * Keep the filters as the app's own state and build `sources` from them
+     * (a `useMemo` on the filters): a new `sources` asks every source again
+     * for the words in the field.
+     */
+    filter?: ReactNode;
     /** Extra classes for the panel, beside `dl-palette`. */
     className?: string;
 };
@@ -121,5 +128,5 @@ export declare const SOURCE_WAIT_MS = 400;
  *     actions={[{ id: "new", title: "New page", keys: ["N"], onSelect: newPage }]}
  *   />
  */
-export declare function CommandPalette({ open: openProp, onOpenChange, sources, actions, actionsHeading, placeholder, label, emptyText, hotkey, appKey, className, }: CommandPaletteProps): ReactNode;
+export declare function CommandPalette({ open: openProp, onOpenChange, sources, actions, actionsHeading, placeholder, label, emptyText, hotkey, appKey, filter, className, }: CommandPaletteProps): ReactNode;
 //# sourceMappingURL=command-palette.d.ts.map

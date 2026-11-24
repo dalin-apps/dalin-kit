@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10 is listed under "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
+Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10.1 is listed under "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
 
 ## Install
 
@@ -67,6 +67,12 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.10 to 0.10.1
+
+0.10.1 gives the command palette a `filter` slot, a control at the end of its field (see "The command palette" below). An app with no filter in its palette changes only its pin.
+
+A filter in the palette keeps its choices as the app's own state, and the app builds `sources` from them with a `useMemo` on those choices. A new `sources` asks every source again for the words already in the field, so a pick narrows the list at once and the words stay where they were. Clear the filters in `onOpenChange` when the palette closes, so the next opening starts from everything, as its field does.
 
 ## Moving an app from 0.9 to 0.10
 
@@ -818,6 +824,7 @@ Per the curator's motion rule, opening it from the keyboard does not animate, an
 | `placeholder` | `"Search"` | The field's placeholder, which is also its accessible name. |
 | `label` | `"Command palette"` | The dialog's accessible name. |
 | `emptyText` | `No results for “query”.` | A function of the query, for the app's own words. |
+| `filter` | none | A control at the end of the field, before the Esc cap: a `<FilterMenu>` (see "The filter"). |
 | `className` | none | The app's own, beside `dl-palette`. |
 
 A source is `{ id, heading, search }`. `search(query, signal)` returns rows, or a promise of them, and the signal aborts when the query changes or the palette closes. It is called with `""` as the palette opens, for whatever the app shows before a word is typed.
