@@ -11,7 +11,9 @@
    menu from menu.css, with a count at a row's right end.
 
    How an app adopts it. Import this file once, after tokens.css and
-   menu.css, and use <FilterMenu> from @dalin/kit/components. Delete the
+   menu.css, and use <FilterMenu> from @dalin/kit/components. Its menu
+   stands over the command palette, so it works in the palette's `filter`
+   slot. Delete the
    app's own filter glyph and its trigger's hover box.
 
    What an app must not override. The glyph, its filled form, the absence
@@ -101,7 +103,16 @@
   height: 8px;
 }
 
-/* The menu. */
+/* The menu. It stands over the command palette, whose field the control
+   may end: menus stack at --dl-overlay-z (70) and the palette at
+   --dl-palette-z (90), so a filter menu opened there would draw under it.
+   An app that raises its menus higher keeps its own value. */
+.dl-menu-positioner:has(> :is(.dl-filter-menu, .dl-filter-sub)) {
+  z-index: max(
+    var(--dl-overlay-z, var(--dl-z-overlay, 70)),
+    calc(var(--dl-palette-z, var(--dl-z-palette, 90)) + 2)
+  );
+}
 .dl-filter-menu {
   min-width: 192px;
 }

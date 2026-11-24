@@ -210,6 +210,14 @@ describe("filter.css", () => {
     }
   });
 
+  it("stands its menu over the command palette, and keeps an app's higher menu step", () => {
+    const [, body] = rulesWith(css, ".dl-menu-positioner:has(")[0]!;
+    expect(body).toMatch(/max\(\s*var\(--dl-overlay-z/);
+    expect(body).toMatch(/calc\(var\(--dl-palette-z, var\(--dl-z-palette, 90\)\) \+ 2\)/);
+    // The panel is the palette's z-index plus one, so the menu must clear both.
+    expect(readCss("palette")).toContain("z-index: calc(var(--dl-palette-z, var(--dl-z-palette, 90)) + 1)");
+  });
+
   it("turns the glyph white when open or on, and under a hovering pointer only", () => {
     expect(rulesWith(css, ".dl-filter:is([data-popup-open], [data-on])").map(([, b]) => b).join()).toContain("--dl-fg");
     expect(css).toMatch(/@media \(hover: hover\)\s*\{\s*\.dl-filter:hover/);

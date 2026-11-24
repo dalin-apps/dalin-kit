@@ -74,6 +74,10 @@ Then delete the app's own copy of whatever the kit now covers. Two copies of a t
 
 Do not close the kit's menu from the app on a pick instead: Base UI's focus return then runs after the close, and it pulled focus out of a command palette the reader opened the instant after.
 
+## Moving an app from 0.10.2 to 0.10.3
+
+0.10.3 stands the filter's menu over the command palette. Menus stack at `--dl-overlay-z` (70) and the palette at `--dl-palette-z` (90), so a `<FilterMenu>` in the palette's `filter` slot opened under it. Its menu and submenus now take the higher of `--dl-overlay-z` and two over the palette. An app that raised them itself, as calendar does to clear its own palette, keeps its value, and can drop the override once its palette sits under the kit's step. An app on 0.10.2 changes only its pin.
+
 ## Moving an app from 0.10.1 to 0.10.2
 
 0.10.2 gives `<FilterMenu>` a `menuClassName`, the app's own class on its menu, so mail's 44px phone rows no longer need a selector on `.dl-filter-menu`. The phone's back row now calls `onFacetOpen(null)`, as closing the menu does, so the app stops counting a list nobody is looking at. An app on 0.10.1 changes only its pin.
@@ -1005,7 +1009,7 @@ import { FilterMenu, filterCount } from "@dalin/kit/components";
 
 The menu holds, in order, an optional `choice` (a radio group under its label), the `facets`, then the `groups` of plain rows. A facet is a submenu on a computer. On a phone it is a page swapped into the same menu, with a back row at its top, since a submenu has nowhere to open on a narrow screen. A facet's `options` may be undefined while they load: `onFacetOpen` gets the facet's key when its list opens, and null when the list or the menu closes, so the app fetches counts only for what is on screen. A row's `count` sits at its right end; `filterCount(n, capped)` formats one, with a plus past a cap. A `checked` row shows a tick in place of a count.
 
-A press on the glyph keeps focus where it was, so the caret stays in the field. A pick of the `choice` keeps the menu open unless the choice says `closes`, and the menu hands focus back to the trigger as it closes unless `finalFocus` says otherwise (it is `<MenuContent>`'s prop, passed through). The kit has no tooltip of its own, so `tooltip` wraps the trigger in the app's. The control is 28px with a 16px glyph on a computer, and 44px with a 20px glyph on a phone.
+A press on the glyph keeps focus where it was, so the caret stays in the field. A pick of the `choice` keeps the menu open unless the choice says `closes`, and the menu hands focus back to the trigger as it closes unless `finalFocus` says otherwise (it is `<MenuContent>`'s prop, passed through). The kit has no tooltip of its own, so `tooltip` wraps the trigger in the app's. The control is 28px with a 16px glyph on a computer, and 44px with a 20px glyph on a phone. Its menu stands two steps over the command palette, so it opens over the palette from its `filter` slot.
 
 An app must not override the glyph, its filled form, the absence of a box, or the dot's size and place.
 
