@@ -22,7 +22,7 @@ describe("the keyboard ring", () => {
     expect(rule).toContain("box-shadow: none !important");
   });
 
-  it.each(["create", "wordmark", "phone", "palette", "toast", "menu", "empty"] as const)(
+  it.each(["create", "wordmark", "phone", "palette", "toast", "menu", "empty", "seg"] as const)(
     "draws every ring in %s.css from the focus tokens",
     (sheet) => {
       for (const [selector, body] of rulesWith(readCss(sheet), ":focus-visible")) {

@@ -1,0 +1,111 @@
+/* @dalin/kit seg.css: the segmented control, a short choice shown as
+   segments side by side (List, Columns, Grid).
+
+   What it is. A track with a plain #333 line around it and a #1f1f1f fill,
+   2px of room inside, and one segment per option. The picked segment is a
+   #3a3a3a lift with white words and a small shadow; the others have muted
+   words that turn white under the pointer. Mail's and calendar's look, made
+   the family's by the owner's pick on 2026-11-23, when drive's and notes'
+   brighter grey and edge read too loud.
+
+   How an app adopts it. Import this file once, after tokens.css. Put
+   `dl-seg` on the group (role="radiogroup") and `dl-seg-option` on each
+   button (role="radio" with aria-checked). Delete the app's own rules for
+   the track's edge and fill, the segment's colours, its hover, press, ring
+   and transition.
+
+   The font size is the app's. Set it on .dl-seg-option in the app's own
+   sheet; the kit's rule sits in the dalin layer, so the app's wins. Room
+   around the words is the app's too, through padding on .dl-seg-option.
+
+   What an app must not override. The edge, the track's fill, the picked
+   lift and its shadow, and the muted words of the others. */
+
+@layer dalin {
+  .dl-seg {
+    display: inline-flex;
+    flex: none;
+    padding: 2px;
+    border: 1px solid #333;
+    border-radius: var(--dl-r-control, 7px);
+    background: #1f1f1f;
+  }
+  .dl-seg-option {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 11px;
+    border: 0;
+    border-radius: 5px;
+    background: none;
+    color: var(--dl-fg-muted, #b8b8b8);
+    font: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color var(--dl-t-hover, 120ms) var(--dl-ease),
+      color var(--dl-t-hover, 120ms) var(--dl-ease);
+  }
+  /* The press reaches over the track's own 2px and its edge, so the whole
+     height of the control takes it. */
+  .dl-seg-option::before {
+    content: "";
+    position: absolute;
+    inset: -3px 0;
+  }
+  .dl-seg-option[aria-checked="true"] {
+    background: #3a3a3a;
+    color: var(--dl-fg, #fff);
+    box-shadow: 0 1px 2px oklch(0 0 0 / 0.45);
+  }
+  @media (hover: hover) {
+    .dl-seg-option[aria-checked="false"]:hover {
+      color: var(--dl-fg, #fff);
+    }
+  }
+  .dl-seg-option:focus-visible {
+    outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff));
+    outline-offset: calc(-1 * var(--dl-focus-w, 2px));
+  }
+
+  /* Pressed on the desktop: the hover look, one step darker (the owner's
+     pick on 2026-11-23). */
+  .dl-seg-option:active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])) {
+    color: var(--dl-fg, #fff);
+    filter: brightness(var(--dl-press-dim, 0.92));
+  }
+
+  /* On the phone each segment reaches 44px up and down for a thumb, and a
+     press shrinks and brightens it. */
+  .dl-phone .dl-seg-option::before {
+    inset: calc(50% - 22px) 0;
+  }
+  .dl-phone .dl-seg-option:active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])) {
+    scale: var(--dl-press-scale, 0.97);
+    filter: brightness(var(--dl-press-bright, 1.12));
+  }
+  /* Under reduced motion it only brightens: the app's own switch where it
+     has spoken (`data-dl-motion` on <html>), the system's setting otherwise. */
+  html[data-dl-motion="reduce"] .dl-phone .dl-seg-option:active {
+    scale: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-dl-motion="full"]) .dl-phone .dl-seg-option:active {
+      scale: none;
+    }
+  }
+
+  /* Disabled: 45% opaque, the normal cursor, no hover or press. */
+  .dl-seg-option:is(:disabled, [aria-disabled="true"]) {
+    opacity: var(--dl-disabled-opacity, 0.45);
+    cursor: default;
+    pointer-events: none;
+  }
+
+  /* From the keyboard nothing fades: the pick lands at once. */
+  html[data-input="keyboard"] .dl-seg-option {
+    transition: none;
+  }
+}

@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.7 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.7 is listed under "Moving an app from 0.6 to 0.7", and the steps before it under the sections after that.
+Version 0.8 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.8 is listed under "Moving an app from 0.7 to 0.8", and the steps before it under the sections after that.
 
 ## Install
 
@@ -32,6 +32,7 @@ import "@dalin/kit/menu.css";
 import "@dalin/kit/empty.css";
 import "@dalin/kit/palette.css";
 import "@dalin/kit/phone.css";
+import "@dalin/kit/seg.css";
 ```
 
 The last five are new in 0.3, one to a part, so an app adds a sheet as it adopts that part. The family switcher and the command palette also need `menu.css`.
@@ -65,6 +66,12 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.7 to 0.8
+
+0.8 adds `seg.css`, the segmented control (see "The segmented control" below). Nothing else changed, so an app that doesn't draw one can skip it.
+
+To adopt it, import `@dalin/kit/seg.css` after `tokens.css`, then add `dl-seg` beside the app's own class on the group and `dl-seg-option` beside the app's own class on each button. Delete the app's rules for the track's edge and fill and for the segment's colours, hover, press, ring and transition. Keep the app's font size and any layout rules, such as a row that wraps the control under its label in a narrow window.
 
 ## Moving an app from 0.6 to 0.7
 
@@ -916,6 +923,26 @@ The results follow the on-screen keyboard. A phone lays its keyboard over the pa
 
 `phone.css` reads three variables: `--dl-phone-inset` (16px), `--dl-phone-fill` (the sheet's fill, `#151515`) and `--dl-phone-search-z` (50, over the bottom bar).
 
+## The segmented control
+
+A short choice shown as segments side by side: List, Columns, Grid. The track has a plain #333 line around it and a #1f1f1f fill. The picked segment is a #3a3a3a lift with white words and a small shadow, and the others have muted words that turn white under the pointer. That was mail's and calendar's look. The owner made it the family's on 2026-11-23, when the brighter grey and edge in drive and notes read too loud.
+
+```tsx
+<span className="dl-seg" role="radiogroup" aria-labelledby={labelId}>
+  {options.map((o) => (
+    <button key={o.value} type="button" role="radio" aria-checked={o.value === value} className="dl-seg-option" onClick={() => pick(o.value)}>
+      {o.label}
+    </button>
+  ))}
+</span>
+```
+
+The kit has no component for it: each app's settings rows build their own markup, so the kit gives the classes. A press looks like every other kit control's: one step darker on the desktop, and inside `.dl-phone` it shrinks and brightens, with each segment reaching 44px up and down for a thumb.
+
+The font size is the app's, since the four apps' settings rows use different sizes (12px to 14px). Set it on `.dl-seg-option` in the app's own sheet. The kit's rules sit in the `dalin` layer, so that rule wins. Room around the words works the same way, through padding.
+
+An app must not override the edge, the track's fill, the picked lift and its shadow, or the muted words of the others.
+
 ## Helpers
 
 Three things each app had copied, and the motion reader described under "One place for the motion switch". They export from `@dalin/kit` and from `@dalin/kit/helpers`.
@@ -966,7 +993,7 @@ import { TipKey, shortcutLabel } from "@dalin/kit";
 
 That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel` takes `Mod`, `Shift` and `Alt` for the platform's keys and writes every other key as given. `<TipKey>` draws the dot and the key in the muted grey, or in the app's own `className`, and renders nothing without a key. `tipText("Archive", "E")` is the same line as a string. `shortcutLabelFor(mac, keys)` and `isMacPlatform(platform)` are the pure halves. The tooltip itself stays each app's own.
 
-## Not in version 0.7
+## Not in version 0.8
 
 These are still open, so the kit has no value for them: type sizes, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
 

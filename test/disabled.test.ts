@@ -74,7 +74,7 @@ describe("the phone's parts and the toast's action", () => {
   });
 
   it("no sheet uses a not-allowed or pointer cursor for a disabled control", () => {
-    for (const sheet of ["create", "menu", "palette", "phone", "toast"] as const) {
+    for (const sheet of ["create", "menu", "palette", "phone", "toast", "seg"] as const) {
       expect(readCss(sheet), sheet).not.toMatch(/cursor:\s*not-allowed/);
     }
   });
