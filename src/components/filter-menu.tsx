@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactElement, type ReactNode } from "react";
+import { useRef, useState, type ReactElement, type ReactNode } from "react";
 import { cx } from "./cx.js";
 import { CheckGlyph, ChevronLeftGlyph, ChevronRightGlyph, FilterGlyph } from "./icons.js";
 import {
@@ -88,7 +88,11 @@ export type FilterMenuProps = {
   className?: string;
   /** The app's own class on the menu, beside `dl-filter-menu`: mail's 44px phone rows. */
   menuClassName?: string;
-  /** Where focus goes as the menu closes, when the trigger is not the answer; `<MenuContent>`'s own prop, passed through. */
+  /**
+   * Where focus goes as the menu closes; `<MenuContent>`'s own prop, passed
+   * through. Left out, it goes back to what had focus as the menu opened (the
+   * field the control ends), or to the glyph when the keyboard opened it.
+   */
   finalFocus?: MenuContentProps["finalFocus"];
 };
 
@@ -135,7 +139,9 @@ function FacetRows({ facet }: { facet: FilterFacet }): ReactNode {
  * filter is on, when a dot in `dot`'s colour sits at its top right.
  *
  * A press keeps focus where it was, so the caret stays in the field the
- * control ends.
+ * control ends, and focus goes back there as the menu closes, so the next
+ * word typed lands in the field. Opened from the keyboard, focus goes back
+ * to the glyph.
  *
  *   <FilterMenu
  *     label="Filters"
@@ -166,7 +172,15 @@ export function FilterMenu({
   const phone = variant === "phone";
   const shown = phone && page ? facets.find((f) => f.key === page) ?? null : null;
 
+  // What had focus as the menu opened: the field the control ends, since a
+  // press on the glyph leaves the caret there. Focus goes back to it as the
+  // menu closes, so the next word typed lands in the field.
+  const before = useRef<HTMLElement | null>(null);
   const setOpen = (next: boolean) => {
+    if (next) {
+      const active = typeof document === "undefined" ? null : document.activeElement;
+      before.current = active instanceof HTMLElement && active !== document.body ? active : null;
+    }
     setOpenState(next);
     onOpenChange?.(next);
     if (!next) {
@@ -200,7 +214,20 @@ export function FilterMenu({
   return (
     <Menu open={open} onOpenChange={setOpen}>
       {tooltip ? tooltip(trigger, label) : trigger}
-      <MenuContent align={align} className={cx("dl-filter-menu", menuClassName)} data-variant={variant} finalFocus={finalFocus}>
+      <MenuContent
+        align={align}
+        className={cx("dl-filter-menu", menuClassName)}
+        data-variant={variant}
+        finalFocus={
+          finalFocus ??
+          (() => {
+            const el = before.current;
+            // Opened from the keyboard, focus was on the glyph: Base UI's own return.
+            if (!el || !el.isConnected || el.matches('[data-slot="filter-trigger"]')) return true;
+            return el;
+          })
+        }
+      >
         {shown ? (
           <>
             <MenuItem closeOnClick={false} className="dl-filter-back" onClick={() => openPage(null)}>

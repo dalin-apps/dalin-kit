@@ -143,6 +143,21 @@ describe("FilterMenu", () => {
     expect(document.activeElement).toBe(one(".elsewhere"));
   });
 
+  it("gives focus back to the field it ends after a pick, so the next word lands there", async () => {
+    await mount(
+      <div>
+        <input className="field" />
+        <FilterMenu {...base()} />
+      </div>,
+    );
+    const input = one<HTMLInputElement>(".field")!;
+    input.focus();
+    await click(one('[data-slot="filter-trigger"]'));
+    await click(rowNamed("Unread"));
+    await settle(200);
+    expect(document.activeElement).toBe(input);
+  });
+
   it("runs a row's own action", async () => {
     const props = base();
     await mount(<FilterMenu {...props} />);

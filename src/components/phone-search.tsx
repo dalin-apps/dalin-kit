@@ -80,6 +80,12 @@ export type PhoneSearchProps = {
   sections?: readonly PhoneSearchSection[];
   /** For a query: the results, in sections. */
   results?: readonly PhoneSearchSection[];
+  /**
+   * Whether a filter in `fieldEnd` is on. The sheet then shows `results`
+   * before a word is typed, as it does for a query, so a pick with no words
+   * lists what it leaves.
+   */
+  narrowed?: boolean;
   /** For a query: the app's own results in place of `results`. */
   children?: ReactNode;
   /**
@@ -241,6 +247,7 @@ export function PhoneSearch({
   action,
   sections = NO_SECTIONS,
   results,
+  narrowed = false,
   children,
   beforeQuery,
   covered = false,
@@ -363,7 +370,7 @@ export function PhoneSearch({
     else row.onSelect();
   };
 
-  const asked = query.trim() !== "";
+  const asked = query.trim() !== "" || narrowed;
   const found = results?.some((section) => section.children || (section.rows && section.rows.length > 0)) ?? false;
 
   return (
@@ -440,7 +447,7 @@ export function PhoneSearch({
               (found ? (
                 <Sections sections={results!} choose={choose} />
               ) : results ? (
-                <p className="dl-phone-search-note">{emptyText ? emptyText(query.trim()) : `No results for “${query.trim()}”.`}</p>
+                <p className="dl-phone-search-note">{emptyText ? emptyText(query.trim()) : query.trim() ? `No results for “${query.trim()}”.` : "No results."}</p>
               ) : null)
             ) : (
               <>

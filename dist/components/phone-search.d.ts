@@ -69,6 +69,12 @@ export type PhoneSearchProps = {
     sections?: readonly PhoneSearchSection[];
     /** For a query: the results, in sections. */
     results?: readonly PhoneSearchSection[];
+    /**
+     * Whether a filter in `fieldEnd` is on. The sheet then shows `results`
+     * before a word is typed, as it does for a query, so a pick with no words
+     * lists what it leaves.
+     */
+    narrowed?: boolean;
     /** For a query: the app's own results in place of `results`. */
     children?: ReactNode;
     /**
@@ -151,5 +157,5 @@ export declare function PhoneSearchAvatar({ initials, color, className }: PhoneS
  *     onQueryChange={search}
  *   />
  */
-export declare function PhoneSearch({ open, onOpenChange, systemBack, query: queryProp, onQueryChange, onSubmit, placeholder, cancelLabel, action, sections, results, children, beforeQuery, covered, emptyText, fieldStart, fieldEnd, className, }: PhoneSearchProps): ReactNode;
+export declare function PhoneSearch({ open, onOpenChange, systemBack, query: queryProp, onQueryChange, onSubmit, placeholder, cancelLabel, action, sections, results, narrowed, children, beforeQuery, covered, emptyText, fieldStart, fieldEnd, className, }: PhoneSearchProps): ReactNode;
 //# sourceMappingURL=phone-search.d.ts.map

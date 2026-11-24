@@ -69,7 +69,11 @@ export type FilterMenuProps = {
     className?: string;
     /** The app's own class on the menu, beside `dl-filter-menu`: mail's 44px phone rows. */
     menuClassName?: string;
-    /** Where focus goes as the menu closes, when the trigger is not the answer; `<MenuContent>`'s own prop, passed through. */
+    /**
+     * Where focus goes as the menu closes; `<MenuContent>`'s own prop, passed
+     * through. Left out, it goes back to what had focus as the menu opened (the
+     * field the control ends), or to the glyph when the keyboard opened it.
+     */
     finalFocus?: MenuContentProps["finalFocus"];
 };
 /**
@@ -92,7 +96,9 @@ export declare function filterCount(count: number | undefined, capped?: boolean)
  * filter is on, when a dot in `dot`'s colour sits at its top right.
  *
  * A press keeps focus where it was, so the caret stays in the field the
- * control ends.
+ * control ends, and focus goes back there as the menu closes, so the next
+ * word typed lands in the field. Opened from the keyboard, focus goes back
+ * to the glyph.
  *
  *   <FilterMenu
  *     label="Filters"

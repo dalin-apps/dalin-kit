@@ -274,6 +274,17 @@ describe("<PhoneSearch>", () => {
     expect(headings()).toEqual(["Recent", "People"]);
   });
 
+  it("shows the results with no words while a filter is on, and says so plainly when they are empty", async () => {
+    const results: PhoneSearchSection[] = [{ heading: "Images", rows: [{ id: "i", title: "beach.jpg", onSelect: vi.fn() }] }];
+    await mount(<Search results={results} narrowed />);
+    await tapSearch();
+    expect(field()?.value).toBe("");
+    expect(one(".dl-phone-search-action")).toBeNull();
+    expect(headings()).toEqual(["Images"]);
+    await mount(<Search results={[]} narrowed />);
+    expect(one(".dl-phone-search-note")?.textContent).toBe("No results.");
+  });
+
   it("says so when the results are empty, and shows the app's own body in their place", async () => {
     await mount(<Search results={[]} />);
     await tapSearch();

@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10.3 is listed under "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
+Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10.4 is listed under "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
 
 ## Install
 
@@ -68,15 +68,17 @@ The toast and the helpers import from `@dalin/kit`, and every component from `@d
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
 
+## Moving an app from 0.10.3 to 0.10.4
+
+0.10.4 sends focus back to the field after a pick. Base UI returned it to the glyph, so the next word typed went nowhere until the field was pressed. `<FilterMenu>` now gives focus back to whatever had it as the menu opened, the field the control ends, and to the glyph when the keyboard opened the menu. An app that passes `finalFocus` keeps its own. An app that sent the caret back itself, as calendar's palette does, can drop that.
+
+`<PhoneSearch>` takes `narrowed`: while a filter in `fieldEnd` is on, the sheet shows `results` before a word is typed, so a pick with no words lists what it leaves. With no words and nothing found it says "No results." An app on 0.10.3 changes only its pin.
+
 ## Moving an app from 0.10.2 to 0.10.3
 
-0.10.3 gives `<FilterMenu>` two knobs an app had to build the menu from the kit's parts to get. `closes` on its `choice` makes a pick close the menu, for a choice that is the whole errand (notes' "Show"); without it a radio row keeps the menu open, Base UI's rule, which suits mail's "Search in". `finalFocus` is `<MenuContent>`'s own prop passed through, for an app that decides where focus goes as the menu closes. An app on 0.10.2 changes only its pin.
+0.10.3 stands the filter's menu over the command palette. Menus stack at `--dl-overlay-z` (70) and the palette at `--dl-palette-z` (90), so a `<FilterMenu>` in the palette's `filter` slot opened under it. Its menu and submenus now take the higher of `--dl-overlay-z` and two over the palette. An app that raised them itself, as calendar does to clear its own palette, keeps its value.
 
-Do not close the kit's menu from the app on a pick instead: Base UI's focus return then runs after the close, and it pulled focus out of a command palette the reader opened the instant after.
-
-## Moving an app from 0.10.2 to 0.10.3
-
-0.10.3 stands the filter's menu over the command palette. Menus stack at `--dl-overlay-z` (70) and the palette at `--dl-palette-z` (90), so a `<FilterMenu>` in the palette's `filter` slot opened under it. Its menu and submenus now take the higher of `--dl-overlay-z` and two over the palette. An app that raised them itself, as calendar does to clear its own palette, keeps its value, and can drop the override once its palette sits under the kit's step. An app on 0.10.2 changes only its pin.
+It also gives `<FilterMenu>` two knobs an app had to build the menu from the kit's parts to get. `closes` on its `choice` makes a pick close the menu, for a choice that is the whole errand (notes' "Show"); without it a radio row keeps the menu open, Base UI's rule, which suits mail's "Search in". `finalFocus` is `<MenuContent>`'s own prop passed through, for an app that decides where focus goes as the menu closes. An app on 0.10.2 changes only its pin.
 
 ## Moving an app from 0.10.1 to 0.10.2
 
@@ -931,6 +933,7 @@ Before a word is typed it shows what calendar's search shows. First comes the ap
 | `query`, `onQueryChange` | the sheet owns the words | For an app that owns them, or wants to hear them change. |
 | `onSubmit` | none | Called when the keyboard's Search key is pressed. |
 | `fieldStart`, `fieldEnd` | none | The app's own pieces inside the field, such as calendar's calendar picker. |
+| `narrowed` | `false` | Whether a filter in `fieldEnd` is on. The sheet then shows `results` before a word is typed. |
 | `className` | none | The app's own, beside `dl-phone-search`. |
 
 The field is a plain box around the input, never a `<label>`, since a label hands every tap to its first control. A tap on a control the app put in `fieldStart` or `fieldEnd` belongs to that control. A tap anywhere else on the field puts the caret in the input.
@@ -1009,7 +1012,7 @@ import { FilterMenu, filterCount } from "@dalin/kit/components";
 
 The menu holds, in order, an optional `choice` (a radio group under its label), the `facets`, then the `groups` of plain rows. A facet is a submenu on a computer. On a phone it is a page swapped into the same menu, with a back row at its top, since a submenu has nowhere to open on a narrow screen. A facet's `options` may be undefined while they load: `onFacetOpen` gets the facet's key when its list opens, and null when the list or the menu closes, so the app fetches counts only for what is on screen. A row's `count` sits at its right end; `filterCount(n, capped)` formats one, with a plus past a cap. A `checked` row shows a tick in place of a count.
 
-A press on the glyph keeps focus where it was, so the caret stays in the field. A pick of the `choice` keeps the menu open unless the choice says `closes`, and the menu hands focus back to the trigger as it closes unless `finalFocus` says otherwise (it is `<MenuContent>`'s prop, passed through). The kit has no tooltip of its own, so `tooltip` wraps the trigger in the app's. The control is 28px with a 16px glyph on a computer, and 44px with a 20px glyph on a phone. Its menu stands two steps over the command palette, so it opens over the palette from its `filter` slot.
+A press on the glyph keeps focus where it was, so the caret stays in the field. A pick of the `choice` keeps the menu open unless the choice says `closes`, and as the menu closes it hands focus back to what had it when it opened (the field, or the glyph when the keyboard opened it) unless `finalFocus` says otherwise (it is `<MenuContent>`'s prop, passed through). The kit has no tooltip of its own, so `tooltip` wraps the trigger in the app's. The control is 28px with a 16px glyph on a computer, and 44px with a 20px glyph on a phone. Its menu stands two steps over the command palette, so it opens over the palette from its `filter` slot.
 
 An app must not override the glyph, its filled form, the absence of a box, or the dot's size and place.
 
