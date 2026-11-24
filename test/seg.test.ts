@@ -1,8 +1,8 @@
 /**
- * The segmented control (seg.css): mail's and calendar's look, made the
- * family's by the owner's pick on 2026-11-23. A #333 edge around a #1f1f1f
- * track, the picked segment a #3a3a3a lift with white words, the others
- * muted. The font size is the app's, so the kit sets none.
+ * The segmented control (seg.css): notes' Share switch, made the family's by
+ * the owner's pick on 2026-11-23. A #2f2f2f rule around a #1c1c1c track, the
+ * picked segment a #3d3d3d lift with a #5c5c5c line inside its edge and white
+ * words, the others muted. The font size is the app's, so the kit sets none.
  */
 import { describe, expect, it } from "vitest";
 import { outweighs, readCss, ruleFor, rulesWith } from "./css.js";
@@ -11,19 +11,18 @@ const css = readCss("seg");
 const READY = ':not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"]))';
 
 describe("the segmented control", () => {
-  it("draws the track with a plain #333 line and the #1f1f1f fill", () => {
+  it("draws a sunken track: the content fill inside the family's rule", () => {
     const track = ruleFor(css, ".dl-seg");
-    expect(track).toContain("border: 1px solid #333");
-    expect(track).toContain("background: #1f1f1f");
+    expect(track).toContain("border: 1px solid var(--dl-border, #2f2f2f)");
+    expect(track).toContain("background: var(--dl-content, #1c1c1c)");
     expect(track).toContain("border-radius: var(--dl-r-control, 7px)");
   });
 
-  it("lifts the picked segment to #3a3a3a with white words and one small shadow, no ring", () => {
-    const picked = ruleFor(css, '.dl-seg-option[aria-checked="true"]');
-    expect(picked).toContain("background: #3a3a3a");
+  it("lifts the picked segment to #3d3d3d with a #5c5c5c line inside its edge, white words and a small shadow", () => {
+    const picked = ruleFor(css, '.dl-seg-option[aria-checked="true"]').replace(/\s+/g, " ");
+    expect(picked).toContain("background: var(--dl-border-strong, #3d3d3d)");
     expect(picked).toContain("color: var(--dl-fg, #fff)");
-    expect(picked).toContain("box-shadow: 0 1px 2px oklch(0 0 0 / 0.45)");
-    expect(picked).not.toContain("inset");
+    expect(picked).toContain("box-shadow: inset 0 0 0 1px var(--dl-kbd-edge, #5c5c5c), 0 1px 2px oklch(0 0 0 / 0.4)");
   });
 
   it("mutes the other segments and leaves the font size to the app", () => {

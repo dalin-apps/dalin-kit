@@ -1,12 +1,12 @@
 /* @dalin/kit seg.css: the segmented control, a short choice shown as
    segments side by side (List, Columns, Grid).
 
-   What it is. A track with a plain #333 line around it and a #1f1f1f fill,
-   2px of room inside, and one segment per option. The picked segment is a
-   #3a3a3a lift with white words and a small shadow; the others have muted
-   words that turn white under the pointer. Mail's and calendar's look, made
-   the family's by the owner's pick on 2026-11-23, when drive's and notes'
-   brighter grey and edge read too loud.
+   What it is. A sunken track: the content fill (#1c1c1c) with the family's
+   rule (#2f2f2f) around it, 2px of room inside, and one segment per option.
+   The picked segment is a #3d3d3d lift with a #5c5c5c line just inside its
+   edge, white words and a small shadow; the others have muted words that
+   turn white under the pointer. This is the look of notes' Share switch,
+   made the family's by the owner's pick on 2026-11-23.
 
    How an app adopts it. Import this file once, after tokens.css. Put
    `dl-seg` on the group (role="radiogroup") and `dl-seg-option` on each
@@ -19,16 +19,16 @@
    around the words is the app's too, through padding on .dl-seg-option.
 
    What an app must not override. The edge, the track's fill, the picked
-   lift and its shadow, and the muted words of the others. */
+   lift with its line and shadow, and the muted words of the others. */
 
 @layer dalin {
   .dl-seg {
     display: inline-flex;
     flex: none;
     padding: 2px;
-    border: 1px solid #333;
+    border: 1px solid var(--dl-border, #2f2f2f);
     border-radius: var(--dl-r-control, 7px);
-    background: #1f1f1f;
+    background: var(--dl-content, #1c1c1c);
   }
   .dl-seg-option {
     position: relative;
@@ -56,9 +56,11 @@
     inset: -3px 0;
   }
   .dl-seg-option[aria-checked="true"] {
-    background: #3a3a3a;
+    background: var(--dl-border-strong, #3d3d3d);
     color: var(--dl-fg, #fff);
-    box-shadow: 0 1px 2px oklch(0 0 0 / 0.45);
+    box-shadow:
+      inset 0 0 0 1px var(--dl-kbd-edge, #5c5c5c),
+      0 1px 2px oklch(0 0 0 / 0.4);
   }
   @media (hover: hover) {
     .dl-seg-option[aria-checked="false"]:hover {
