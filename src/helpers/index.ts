@@ -10,3 +10,4 @@ export {
 export { isMacPlatform, shortcutLabel, shortcutLabelFor, tipText } from "./shortcut-label.js";
 export { TipKey } from "./tip-key.js";
 export { MOTION_ATTR, reducesMotion, setMotionAttr, setMotionReader, systemReducesMotion, type MotionChoice } from "./motion.js";
+export { SEG_SLIDE_ATTR, placeSegLift, slideSegLift } from "./seg-slide.js";

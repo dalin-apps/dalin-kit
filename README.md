@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.8.1 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.8.1 is listed under "Moving an app from 0.8 to 0.8.1", and the steps before it under the sections after that.
+Version 0.9 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.9 is listed under "Moving an app from 0.8.1 to 0.9", and the steps before it under the sections after that.
 
 ## Install
 
@@ -66,6 +66,10 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.8.1 to 0.9
+
+0.9 makes the segmented control's lift slide. Import `slideSegLift` from `@dalin/kit` and pass it as the ref of every `.dl-seg` group. A group without it still works and jumps as before. The track now sets `position: relative`, so an app rule that positions the track itself can go.
 
 ## Moving an app from 0.8 to 0.8.1
 
@@ -932,7 +936,9 @@ The results follow the on-screen keyboard. A phone lays its keyboard over the pa
 A short choice shown as segments side by side: List, Columns, Grid. The track is sunken: the content fill (#1c1c1c) inside the family's rule (#2f2f2f). The picked segment is a #3d3d3d lift with a #5c5c5c line just inside its edge, white words and a small shadow, and the others have muted words that turn white under the pointer. That was the look of the Share switch in notes. The owner made it the family's on 2026-11-23.
 
 ```tsx
-<span className="dl-seg" role="radiogroup" aria-labelledby={labelId}>
+import { slideSegLift } from "@dalin/kit";
+
+<span className="dl-seg" role="radiogroup" aria-labelledby={labelId} ref={slideSegLift}>
   {options.map((o) => (
     <button key={o.value} type="button" role="radio" aria-checked={o.value === value} className="dl-seg-option" onClick={() => pick(o.value)}>
       {o.label}
@@ -941,7 +947,7 @@ A short choice shown as segments side by side: List, Columns, Grid. The track is
 </span>
 ```
 
-The kit has no component for it: each app's settings rows build their own markup, so the kit gives the classes. A press looks like every other kit control's: one step darker on the desktop, and inside `.dl-phone` it shrinks and brightens, with each segment reaching 44px up and down for a thumb.
+The kit has no component for it: each app's settings rows build their own markup, so the kit gives the classes and one helper. `slideSegLift`, passed as the group's ref, makes the lift slide from one pick to the next over `--dl-t-base`, as the Share switch did. The segments are as wide as their words, so it measures the picked one and writes its box on the group (`--dl-seg-x`, `--dl-seg-y`, `--dl-seg-w`, `--dl-seg-h`), and the track's `::before` draws the lift there. It measures again on a new pick and when the group resizes. Its first placement lands at once, and a pick made from the keyboard or under reduced motion lands at once too. Without the helper, or before it runs, the picked segment draws its own lift in the same place, so the server's markup looks right and nothing moves when the helper takes over. It is a React 19 ref callback that returns its cleanup; `placeSegLift(group)` is the measuring half alone. A press looks like every other kit control's: one step darker on the desktop, and inside `.dl-phone` it shrinks and brightens, with each segment reaching 44px up and down for a thumb.
 
 The font size is the app's, since the four apps' settings rows use different sizes (12px to 14px). Set it on `.dl-seg-option` in the app's own sheet. The kit's rules sit in the `dalin` layer, so that rule wins. Room around the words works the same way, through padding.
 
@@ -997,7 +1003,7 @@ import { TipKey, shortcutLabel } from "@dalin/kit";
 
 That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel` takes `Mod`, `Shift` and `Alt` for the platform's keys and writes every other key as given. `<TipKey>` draws the dot and the key in the muted grey, or in the app's own `className`, and renders nothing without a key. `tipText("Archive", "E")` is the same line as a string. `shortcutLabelFor(mac, keys)` and `isMacPlatform(platform)` are the pure halves. The tooltip itself stays each app's own.
 
-## Not in version 0.8
+## Not in version 0.9
 
 These are still open, so the kit has no value for them: type sizes, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
 

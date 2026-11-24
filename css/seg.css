@@ -14,6 +14,11 @@
    the track's edge and fill, the segment's colours, its hover, press, ring
    and transition.
 
+   The lift slides from one pick to the next once the group carries
+   `slideSegLift` from @dalin/kit/helpers as its ref. That helper measures
+   the picked segment, and the track's ::before draws the lift there. Without
+   it the picked segment draws its own lift and a pick jumps.
+
    The font size is the app's. Set it on .dl-seg-option in the app's own
    sheet; the kit's rule sits in the dalin layer, so the app's wins. Room
    around the words is the app's too, through padding on .dl-seg-option.
@@ -23,6 +28,8 @@
 
 @layer dalin {
   .dl-seg {
+    position: relative;
+    isolation: isolate;
     display: inline-flex;
     flex: none;
     padding: 2px;
@@ -70,6 +77,48 @@
   .dl-seg-option:focus-visible {
     outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff));
     outline-offset: calc(-1 * var(--dl-focus-w, 2px));
+  }
+
+  /* The sliding lift. Once slideSegLift has measured the pick, the track's
+     ::before is the lift and the picked segment draws none of its own. It
+     slides over --dl-t-base, never from the keyboard (the family rule:
+     nothing started from the keyboard animates) or under reduced motion. */
+  .dl-seg[data-dl-seg-slide]::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    width: var(--dl-seg-w, 0px);
+    height: var(--dl-seg-h, 0px);
+    border-radius: 5px;
+    background: var(--dl-border-strong, #3d3d3d);
+    box-shadow:
+      inset 0 0 0 1px var(--dl-kbd-edge, #5c5c5c),
+      0 1px 2px oklch(0 0 0 / 0.4);
+    transform: translate(var(--dl-seg-x, 0px), var(--dl-seg-y, 0px));
+    pointer-events: none;
+  }
+  .dl-seg[data-dl-seg-slide="live"]::before {
+    transition:
+      transform var(--dl-t-base, 180ms) var(--dl-ease),
+      width var(--dl-t-base, 180ms) var(--dl-ease);
+  }
+  .dl-seg[data-dl-seg-slide] > .dl-seg-option {
+    z-index: 1;
+  }
+  .dl-seg[data-dl-seg-slide] > .dl-seg-option[aria-checked="true"] {
+    background: none;
+    box-shadow: none;
+  }
+  html[data-input="keyboard"] .dl-seg[data-dl-seg-slide]::before,
+  html[data-dl-motion="reduce"] .dl-seg[data-dl-seg-slide]::before {
+    transition: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html:not([data-dl-motion="full"]) .dl-seg[data-dl-seg-slide]::before {
+      transition: none;
+    }
   }
 
   /* Pressed on the desktop: the hover look, one step darker (the owner's

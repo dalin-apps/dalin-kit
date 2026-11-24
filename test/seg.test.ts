@@ -59,3 +59,38 @@ describe("the segmented control", () => {
     expect(off).toContain("cursor: default");
   });
 });
+
+describe("the sliding lift", () => {
+  const lift = ruleFor(css, ".dl-seg[data-dl-seg-slide]::before").replace(/\s+/g, " ");
+
+  it("is drawn by the track once the helper has measured, with the picked segment's own look", () => {
+    const picked = ruleFor(css, '.dl-seg-option[aria-checked="true"]').replace(/\s+/g, " ");
+    for (const part of ["background: var(--dl-border-strong, #3d3d3d)", "inset 0 0 0 1px var(--dl-kbd-edge, #5c5c5c)", "0 1px 2px oklch(0 0 0 / 0.4)"]) {
+      expect(lift).toContain(part);
+      expect(picked).toContain(part);
+    }
+    expect(lift).toContain("transform: translate(var(--dl-seg-x, 0px), var(--dl-seg-y, 0px))");
+    expect(lift).toContain("width: var(--dl-seg-w, 0px)");
+    expect(lift).toContain("pointer-events: none");
+  });
+
+  it("slides only once live, and the picked segment then draws no lift of its own", () => {
+    expect(ruleFor(css, '.dl-seg[data-dl-seg-slide="live"]::before')).toContain("transform var(--dl-t-base, 180ms)");
+    expect(lift).not.toContain("transition");
+    const own = ruleFor(css, '.dl-seg[data-dl-seg-slide] > .dl-seg-option[aria-checked="true"]');
+    expect(own).toContain("background: none");
+    expect(own).toContain("box-shadow: none");
+    expect(outweighs('.dl-seg[data-dl-seg-slide] > .dl-seg-option[aria-checked="true"]', '.dl-seg-option[aria-checked="true"]')).toBe(true);
+  });
+
+  it("never slides from the keyboard or under reduced motion, either switch", () => {
+    const still = rulesWith(css, ".dl-seg[data-dl-seg-slide]::before").filter(([, body]) => body.includes("transition: none"));
+    const selectors = still.flatMap(([list]) => list.split(",").map((s) => s.trim()));
+    expect(selectors).toEqual([
+      'html[data-input="keyboard"] .dl-seg[data-dl-seg-slide]::before',
+      'html[data-dl-motion="reduce"] .dl-seg[data-dl-seg-slide]::before',
+      'html:not([data-dl-motion="full"]) .dl-seg[data-dl-seg-slide]::before',
+    ]);
+    for (const s of selectors) expect(outweighs(s, '.dl-seg[data-dl-seg-slide="live"]::before'), s).toBe(true);
+  });
+});
