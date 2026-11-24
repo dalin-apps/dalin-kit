@@ -44,7 +44,7 @@ export type FilterMenuProps = {
     dot?: string | null;
     choice?: FilterChoice;
     facets?: readonly FilterFacet[];
-    /** A facet's list was opened (its key) or the menu closed (null): fetch its counts now. */
+    /** A facet's list was opened (its key), or closed by the phone's back row or the menu closing (null): fetch its counts now. */
     onFacetOpen?: (key: string | null) => void;
     /** Rows after the facets. The first group follows them directly, and a rule comes before each one after. */
     groups?: readonly (readonly FilterOption[])[];
@@ -56,7 +56,10 @@ export type FilterMenuProps = {
     tooltip?: (trigger: ReactElement, label: string) => ReactNode;
     /** Where the menu lines up with the control. "end" by default, since the control ends a field. */
     align?: "start" | "center" | "end";
+    /** The app's own class on the trigger. */
     className?: string;
+    /** The app's own class on the menu, beside `dl-filter-menu`: mail's 44px phone rows. */
+    menuClassName?: string;
 };
 /**
  * A count for a filter row, with "+" past a cap: "1,000+". Pass `capped`
@@ -87,5 +90,5 @@ export declare function filterCount(count: number | undefined, capped?: boolean)
  *     groups={[[{ key: "unread", label: "Unread", count: filterCount(n), onSelect: () => add("is:unread") }]]}
  *   />
  */
-export declare function FilterMenu({ label, dot, choice, facets, onFacetOpen, groups, variant, open: openProp, onOpenChange, tooltip, align, className, }: FilterMenuProps): ReactNode;
+export declare function FilterMenu({ label, dot, choice, facets, onFacetOpen, groups, variant, open: openProp, onOpenChange, tooltip, align, className, menuClassName, }: FilterMenuProps): ReactNode;
 //# sourceMappingURL=filter-menu.d.ts.map

@@ -131,6 +131,7 @@ describe("FilterMenu", () => {
     expect(rowNamed("Ada")!.textContent).toContain("12");
     expect(rowNamed("Unread")).toBeUndefined();
     await click(one(".dl-filter-back"));
+    expect(onFacetOpen).toHaveBeenLastCalledWith(null);
     expect(rowNamed("Unread")).toBeDefined();
   });
 
@@ -152,6 +153,12 @@ describe("FilterMenu", () => {
     await settle(200);
     expect(onOpenChange).toHaveBeenLastCalledWith(false);
     expect(onFacetOpen).toHaveBeenLastCalledWith(null);
+  });
+
+  it("puts the app's class on the menu beside its own", async () => {
+    await mount(<FilterMenu {...base({ menuClassName: "menu-touch" })} />);
+    await click(one('[data-slot="filter-trigger"]'));
+    expect(one(".dl-filter-menu")!.classList.contains("menu-touch")).toBe(true);
   });
 
   it("puts the trigger in the app's tooltip", async () => {

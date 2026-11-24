@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10.1 is listed under "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
+Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10.2 is listed under "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
 
 ## Install
 
@@ -67,6 +67,10 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.10.1 to 0.10.2
+
+0.10.2 gives `<FilterMenu>` a `menuClassName`, the app's own class on its menu, so mail's 44px phone rows no longer need a selector on `.dl-filter-menu`. The phone's back row now calls `onFacetOpen(null)`, as closing the menu does, so the app stops counting a list nobody is looking at. An app on 0.10.1 changes only its pin.
 
 ## Moving an app from 0.10 to 0.10.1
 
@@ -993,7 +997,7 @@ import { FilterMenu, filterCount } from "@dalin/kit/components";
 />
 ```
 
-The menu holds, in order, an optional `choice` (a radio group under its label), the `facets`, then the `groups` of plain rows. A facet is a submenu on a computer. On a phone it is a page swapped into the same menu, with a back row at its top, since a submenu has nowhere to open on a narrow screen. A facet's `options` may be undefined while they load: `onFacetOpen` gets the facet's key when its list opens, and null when the menu closes, so the app fetches counts only for what is on screen. A row's `count` sits at its right end; `filterCount(n, capped)` formats one, with a plus past a cap. A `checked` row shows a tick in place of a count.
+The menu holds, in order, an optional `choice` (a radio group under its label), the `facets`, then the `groups` of plain rows. A facet is a submenu on a computer. On a phone it is a page swapped into the same menu, with a back row at its top, since a submenu has nowhere to open on a narrow screen. A facet's `options` may be undefined while they load: `onFacetOpen` gets the facet's key when its list opens, and null when the list or the menu closes, so the app fetches counts only for what is on screen. A row's `count` sits at its right end; `filterCount(n, capped)` formats one, with a plus past a cap. A `checked` row shows a tick in place of a count.
 
 A press on the glyph keeps focus where it was, so the caret stays in the field. The kit has no tooltip of its own, so `tooltip` wraps the trigger in the app's. The control is 28px with a 16px glyph on a computer, and 44px with a 20px glyph on a phone.
 

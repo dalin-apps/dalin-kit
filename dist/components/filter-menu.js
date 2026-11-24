@@ -46,7 +46,7 @@ function FacetRows({ facet }) {
  *     groups={[[{ key: "unread", label: "Unread", count: filterCount(n), onSelect: () => add("is:unread") }]]}
  *   />
  */
-export function FilterMenu({ label = "Filters", dot = null, choice, facets = [], onFacetOpen, groups = [], variant = "desktop", open: openProp, onOpenChange, tooltip, align = "end", className, }) {
+export function FilterMenu({ label = "Filters", dot = null, choice, facets = [], onFacetOpen, groups = [], variant = "desktop", open: openProp, onOpenChange, tooltip, align = "end", className, menuClassName, }) {
     const [openState, setOpenState] = useState(false);
     const open = openProp ?? openState;
     const [page, setPage] = useState(null);
@@ -62,14 +62,13 @@ export function FilterMenu({ label = "Filters", dot = null, choice, facets = [],
     };
     const openPage = (key) => {
         setPage(key);
-        if (key)
-            onFacetOpen?.(key);
+        onFacetOpen?.(key);
     };
     const trigger = (_jsxs(MenuTrigger, { "aria-label": label, "data-slot": "filter-trigger", "data-variant": variant, "data-on": dot ? "" : undefined, className: cx("dl-filter", className), onMouseDown: (e) => e.preventDefault(), children: [_jsx(FilterGlyph, {}), dot ? _jsx("span", { "aria-hidden": "true", "data-slot": "filter-dot", className: "dl-filter-dot", style: { background: dot } }) : null] }));
     const rest = groups
         .filter((group) => group.length > 0)
         .map((group, i) => _jsx(MenuGroupRows, { rule: i > 0, rows: group }, i));
-    return (_jsxs(Menu, { open: open, onOpenChange: setOpen, children: [tooltip ? tooltip(trigger, label) : trigger, _jsx(MenuContent, { align: align, className: "dl-filter-menu", "data-variant": variant, children: shown ? (_jsxs(_Fragment, { children: [_jsxs(MenuItem, { closeOnClick: false, className: "dl-filter-back", onClick: () => setPage(null), children: [_jsx(ChevronLeftGlyph, {}), shown.label] }), _jsx(MenuSeparator, {}), _jsx(FacetRows, { facet: shown })] })) : (_jsxs(_Fragment, { children: [choice ? (_jsxs(_Fragment, { children: [_jsxs(MenuGroup, { children: [_jsx(MenuLabel, { children: choice.label }), _jsx(MenuRadioGroup, { value: choice.value, onValueChange: (value) => choice.onChange(String(value)), children: choice.options.map((option) => (_jsx(MenuRadioItem, { value: option.value, children: option.label }, option.value))) })] }), facets.length || groups.some((g) => g.length) ? _jsx(MenuSeparator, {}) : null] })) : null, facets.map((facet) => phone ? (_jsxs(MenuItem, { closeOnClick: false, onClick: () => openPage(facet.key), children: [_jsx("span", { className: "dl-filter-text", children: facet.label }), _jsx(ChevronRightGlyph, { className: "dl-menu-end dl-menu-chevron" })] }, facet.key)) : (_jsxs(MenuSub, { onOpenChange: (next) => (next ? onFacetOpen?.(facet.key) : undefined), children: [_jsx(MenuSubTrigger, { children: facet.label }), _jsx(MenuSubContent, { className: "dl-filter-sub", children: _jsx(FacetRows, { facet: facet }) })] }, facet.key))), rest] })) })] }));
+    return (_jsxs(Menu, { open: open, onOpenChange: setOpen, children: [tooltip ? tooltip(trigger, label) : trigger, _jsx(MenuContent, { align: align, className: cx("dl-filter-menu", menuClassName), "data-variant": variant, children: shown ? (_jsxs(_Fragment, { children: [_jsxs(MenuItem, { closeOnClick: false, className: "dl-filter-back", onClick: () => openPage(null), children: [_jsx(ChevronLeftGlyph, {}), shown.label] }), _jsx(MenuSeparator, {}), _jsx(FacetRows, { facet: shown })] })) : (_jsxs(_Fragment, { children: [choice ? (_jsxs(_Fragment, { children: [_jsxs(MenuGroup, { children: [_jsx(MenuLabel, { children: choice.label }), _jsx(MenuRadioGroup, { value: choice.value, onValueChange: (value) => choice.onChange(String(value)), children: choice.options.map((option) => (_jsx(MenuRadioItem, { value: option.value, children: option.label }, option.value))) })] }), facets.length || groups.some((g) => g.length) ? _jsx(MenuSeparator, {}) : null] })) : null, facets.map((facet) => phone ? (_jsxs(MenuItem, { closeOnClick: false, onClick: () => openPage(facet.key), children: [_jsx("span", { className: "dl-filter-text", children: facet.label }), _jsx(ChevronRightGlyph, { className: "dl-menu-end dl-menu-chevron" })] }, facet.key)) : (_jsxs(MenuSub, { onOpenChange: (next) => (next ? onFacetOpen?.(facet.key) : undefined), children: [_jsx(MenuSubTrigger, { children: facet.label }), _jsx(MenuSubContent, { className: "dl-filter-sub", children: _jsx(FacetRows, { facet: facet }) })] }, facet.key))), rest] })) })] }));
 }
 function MenuGroupRows({ rule, rows }) {
     return (_jsxs(_Fragment, { children: [rule ? _jsx(MenuSeparator, {}) : null, rows.map((option) => (_jsx(OptionRow, { option: option }, option.key)))] }));
