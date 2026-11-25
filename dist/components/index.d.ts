@@ -13,4 +13,6 @@ export { CommandPalette, SOURCE_WAIT_MS, type CommandPaletteProps, type PaletteI
 export { fold, matchParts, matchesQuery, queryTerms, type MatchPart } from "./palette-match.js";
 export { PHONE_MARK_PX, PhoneHeader, PhoneHeaderIcon, type PhoneHeaderIconProps, type PhoneHeaderProps, } from "./phone-header.js";
 export { PhoneSearch, PhoneSearchAvatar, type PhoneSearchAction, type PhoneSearchAvatarProps, type PhoneSearchChangeDetails, type PhoneSearchProps, type PhoneSearchRow, type PhoneSearchSection, } from "./phone-search.js";
+export { SHEET_NO_DRAG_ATTR, Sheet, SheetBody, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHandle, SheetHeader, SheetTitle, SheetTrigger, noSheetDrag, type SheetActions, type SheetChangeDetails, type SheetChangeReason, type SheetContentProps, type SheetLayout, type SheetNativeDetails, type SheetProps, } from "./sheet.js";
+export { SHEET_DISMISS_FRACTION, SHEET_DISMISS_PX, SHEET_FLING_MIN_PX, SHEET_FLING_VELOCITY, SHEET_OPEN_GUARD_MS, SHEET_SCROLL_GUARD_MS, sheetDismissDistance, sheetDragBlock, sheetShouldDismiss, type SheetDragBlock, } from "./sheet-release.js";
 //# sourceMappingURL=index.d.ts.map

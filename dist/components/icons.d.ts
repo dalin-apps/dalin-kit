@@ -2,6 +2,8 @@ import type { ReactNode, SVGProps } from "react";
 export declare function CheckGlyph(props: SVGProps<SVGSVGElement>): ReactNode;
 export declare function ChevronLeftGlyph(props: SVGProps<SVGSVGElement>): ReactNode;
 export declare function ChevronRightGlyph(props: SVGProps<SVGSVGElement>): ReactNode;
+/** The X that closes a sheet drawn as a dialog. */
+export declare function CloseGlyph(props: SVGProps<SVGSVGElement>): ReactNode;
 /** The family's magnifying glass: a lens of radius 8, so the four apps draw one icon. */
 export declare function SearchGlyph(props: SVGProps<SVGSVGElement>): ReactNode;
 /** The filled form's stroke: lines have no inside to fill, so they get heavier. */

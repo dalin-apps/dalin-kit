@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 import { readCss } from "./css.js";
 
-const LAYERED = ["menu", "palette", "phone", "empty", "wordmark", "motion", "base", "seg", "filter"] as const;
+const LAYERED = ["menu", "palette", "phone", "empty", "wordmark", "motion", "base", "seg", "filter", "sheet"] as const;
 
 /** The text of a sheet outside any `@layer dalin { ... }` block. */
 function outsideLayer(css: string): string {

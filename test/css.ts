@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 
 /** A kit stylesheet as text, with its comments taken out. Vitest runs from the package root. */
 export function readCss(
-  name: "toast" | "create" | "tokens" | "base" | "motion" | "wordmark" | "menu" | "empty" | "palette" | "phone" | "seg" | "filter",
+  name: "toast" | "create" | "tokens" | "base" | "motion" | "wordmark" | "menu" | "empty" | "palette" | "phone" | "seg" | "filter" | "sheet",
 ): string {
   return readFileSync(`css/${name}.css`, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 }

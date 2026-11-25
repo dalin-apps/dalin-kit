@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10.6 is listed under "Moving an app from 0.10.5 to 0.10.6", "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
+Version 0.11 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, the sheet, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.11 is listed under "Moving an app from 0.10.6 to 0.11", "Moving an app from 0.10.5 to 0.10.6", "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
 
 ## Install
 
@@ -10,11 +10,11 @@ Version 0.10 holds the tokens, the page's selection colours, the toast, the crea
 npm install github:gomezsj12/dalin-kit
 ```
 
-It imports as `@dalin/kit`. The built `dist/` is committed, so an install needs no build step. React 19 and sonner 2 are peer dependencies. `@base-ui/react` 1.4.1 or later is an optional one: the components are built on it, and the toast and the helpers are not.
+It imports as `@dalin/kit`. The built `dist/` is committed, so an install needs no build step. React 19 and sonner 2 are peer dependencies. `@base-ui/react` 1.9.0 or later is an optional one: the components are built on it, and the toast and the helpers are not. The floor was 1.4.1 until 0.11, where the sheet needed Base UI's Drawer.
 
-The package has two code entries. `@dalin/kit` is the toast and the helpers, and loads nothing of Base UI. `@dalin/kit/components` is everything built on Base UI: the wordmark and family switcher, menus, the palette, the empty state and the phone parts. In 0.3 the root exported the components as well, so importing the toast loaded Base UI. An app moving to 0.4 changes those imports to `@dalin/kit/components`. `@dalin/kit/toast` and `@dalin/kit/helpers` are each half of the root alone.
+The package has two code entries. `@dalin/kit` is the toast and the helpers, and loads nothing of Base UI. `@dalin/kit/components` is everything built on Base UI: the wordmark and family switcher, menus, the palette, the empty state, the phone parts and the sheet. In 0.3 the root exported the components as well, so importing the toast loaded Base UI. An app moving to 0.4 changes those imports to `@dalin/kit/components`. `@dalin/kit/toast` and `@dalin/kit/helpers` are each half of the root alone.
 
-The kit is tested on sonner 2.0.7, which the four apps lock, and on 2.0.8. The components are tested on Base UI 1.4.1 and 1.9.0, the oldest and the newest the apps ship.
+The kit is tested on sonner 2.0.7, which the four apps lock, and on 2.0.8. The components are tested on Base UI 1.9.0, which all four apps ship.
 
 ## Adopt it in an app
 
@@ -34,11 +34,12 @@ import "@dalin/kit/palette.css";
 import "@dalin/kit/phone.css";
 import "@dalin/kit/seg.css";
 import "@dalin/kit/filter.css";
+import "@dalin/kit/sheet.css";
 ```
 
-The last five are new in 0.3, one to a part, so an app adds a sheet as it adopts that part. The family switcher, the command palette and the filter also need `menu.css`.
+Each part has a stylesheet of its own, so an app adds one as it adopts that part. The family switcher, the command palette and the filter also need `menu.css`.
 
-From 0.4 the component sheets (`menu`, `palette`, `phone`, `empty`, `wordmark`, `motion`, and `base` from 0.6) put their rules in a cascade layer named `dalin`. State the layer order once, as the first line of the app's own sheet, before Tailwind is imported:
+From 0.4 the component sheets (`menu`, `palette`, `phone`, `empty`, `wordmark`, `motion`, `base` from 0.6, and `seg`, `filter` and `sheet` since) put their rules in a cascade layer named `dalin`. State the layer order once, as the first line of the app's own sheet, before Tailwind is imported:
 
 ```css
 @layer theme, base, dalin, components, utilities;
@@ -67,6 +68,42 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.10.6 to 0.11
+
+0.11 adds the family's sheet: `<Sheet>` and its parts from `@dalin/kit/components`, styled by the new `sheet.css` (see "The sheet" below). No part that was already in the kit changed, so an app that moves no sheet changes its pin and one number.
+
+The number is Base UI's. The sheet is built on Base UI's Drawer, so the kit now asks for `@base-ui/react` 1.9.0 or later, where it asked for 1.4.1. All four apps already ship 1.9.0.
+
+`tokens.css` gains one step on the z ladder, `--dl-z-sheet` (55). It stands over the phone's search (50), which a sheet may open over, and under the toaster while that stands over a sheet (60).
+
+No app has to move a sheet to take 0.11. To move one, import `@dalin/kit/sheet.css` after `tokens.css`, draw the surface with `<Sheet>` and `<SheetContent>`, and delete the app's own drag, focus trap, exit timer and sheet rules for it. Each app's sheets do things the kit's sheet has to keep doing, and this is where each one goes:
+
+| What the app's sheet does today | Where it goes |
+| --- | --- |
+| Asks before it drops unsaved edits (calendar's `attemptClose`) | `details.cancel()` in `onOpenChange`, then the app closes the sheet itself |
+| Leaves Escape to a field with text (calendar's `fieldOwnsEscape`) | `ownsEscape` |
+| Slides away as a cloned copy (calendar's `use-sheet-exit.ts`) | Nothing: keep the `<Sheet>` mounted and change `open`, and the real panel slides |
+| Holds a history entry of the app's own (drive's `useBackGuard`, mail's `useBackLayer`) | Stays the app's. Leave `systemBack` off |
+| Navigates only once its entry has gone (drive's `afterBackGuards`) | `actionsRef.current.close(then)`, or `onOpenChangeComplete` |
+| Is drawn into the search dialog (calendar) | `container` on `<SheetContent>` |
+| Counts as an open overlay (notes' `useRegisterOverlay`) | Call it with the same `open` the sheet is given |
+| Ticks as it opens or is dismissed (haptics) | `onOpenChange`, which names the reason |
+| Registers as a toast dock, or is named in `<Toaster cover>` | Nothing: the sheet registers itself. Take its class out of the selector |
+| Becomes a small dialog on a computer (every Settings sheet) | `layout="dialog"`, from the app's own width check |
+| Stands at a z-index of the app's own | `--dl-sheet-z` |
+| Is a solid panel (mail's Settings sheet) | `--dl-sheet-fill` and `--dl-sheet-blur: none` |
+| Holds a swipe between files, or a PDF that pans (mail's attachment viewer) | `noSheetDrag("x")` on the swipe, `noSheetDrag()` on the PDF |
+| Stops at a height of its own (mail's 88dvh) | `max-height` in the app's own class on `<SheetContent>` |
+
+Four things change for a sheet as it moves, and the owner approved the first on 2026-11-24.
+
+- It drags from anywhere on it once its body is scrolled to the top, where only the grab strip dragged. Calendar's pick sheets and every sheet in drive but the Settings ones did not drag at all, and now do.
+- A pull upward gives by one curve in every app (see "The drag"). Calendar's gave 35% of the pull, mail's 25%, and the Settings sheets none.
+- Every sheet opens and closes over `--dl-t-sheet`, 260ms. Mail's compose sheet takes 300ms today, and would take 260ms if it moves.
+- On Android, Base UI takes Chrome's back gesture for an open sheet through the browser's CloseWatcher, with no history entry (`"close-watcher"`). Calendar's and notes' sheets have no entry of their own, and now close on it. Drive's and mail's hear that reason too, and their own guard takes its entry off as it does for any close from the screen.
+
+The distance that closes a sheet and the flick that closes it are the ones the apps had (see "The drag").
 
 ## Moving an app from 0.10.5 to 0.10.6
 
@@ -258,6 +295,7 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 | `--dl-meaning-starred` | `oklch(0.75 0.15 80)` | Starred, amber |
 | `--dl-meaning-spam` | `oklch(0.72 0.17 50)` | Spam, orange |
 | `--dl-z-bar`, `--dl-z-search`, `--dl-z-toast` | 30, 50, 60 | The phone bar, the phone search, the toaster over a sheet |
+| `--dl-z-sheet` | 55 | The family's sheet: its scrim, the panel one over. Over the phone search, under the toaster |
 | `--dl-z-overlay`, `--dl-z-dialog` | 70, 80 | Menus and popovers; a dialog's scrim, its panel one over |
 | `--dl-z-palette`, `--dl-z-tooltip` | 90, 95 | The command palette's dim, its panel one over; a tooltip |
 
@@ -291,7 +329,7 @@ These are tokens with no class behind them. Each app's sidebar keeps its own mar
 
 Menus, context menus, popovers, the command palette, tooltips and phone sheets are frosted: `--dl-overlay` over `--dl-overlay-blur`, with the strong edge and one shadow. The settings dialog is the exception. It stays solid, on `--dl-dialog` with the same edge.
 
-The kit's own overlays read these tokens. An app's tooltip and its phone sheets are still its own, and read them from the app's rules.
+The kit's own overlays read these tokens, the sheet among them from 0.11. An app's tooltip is still its own, and so is a phone sheet it has not moved onto `<Sheet>`. Both read the tokens from the app's rules.
 
 `--dl-overlay-level` is the toast's fix for bright content, applied to menus and popovers. A menu can open over a white email, where the bare glass turned pale and muted words fell to 3.2:1. The filter brings white down to a mid grey before the glass goes on, and muted words then hold 6.3:1. It leaves a dark pane where it is, so nothing changes on the family's own surfaces. Set it to `contrast(1)` to turn it off.
 
@@ -1024,6 +1062,198 @@ A press on the glyph keeps focus where it was, so the caret stays in the field. 
 
 An app must not override the glyph, its filled form, the absence of a box, or the dot's size and place.
 
+## The sheet
+
+```tsx
+import { Sheet, SheetBody, SheetClose, SheetContent, SheetFooter, SheetTitle } from "@dalin/kit/components";
+
+<Sheet open={open} onOpenChange={(next) => setOpen(next)}>
+  <SheetContent>
+    <SheetBody>
+      <SheetTitle>Move to</SheetTitle>
+      {folders}
+    </SheetBody>
+    <SheetFooter>
+      <SheetClose>Cancel</SheetClose>
+    </SheetFooter>
+  </SheetContent>
+</Sheet>
+```
+
+One bottom sheet for the four apps, on Base UI's Drawer. Each app had built its own by hand, three of them in calendar alone, and each copy had its own drag, focus trap and exit. It needs `sheet.css`.
+
+The panel is the overlay glass with 14px top corners and the 40 by 4 handle at its top. It rises from the foot of the screen over `--dl-t-sheet` (260ms) on `--dl-ease` and sinks the same way, with the page dimmed by `--dl-scrim` behind it. Nothing behind it moves or shrinks: the owner picked the dim alone on 2026-11-24. Opened or closed from the keyboard, or under reduced motion, it lands at once.
+
+| Part | What it is |
+| --- | --- |
+| `Sheet` | The root. It owns the open state, or takes the app's. |
+| `SheetTrigger` | A button that opens it, for a sheet that owns its state. |
+| `SheetContent` | The scrim, the box that places the panel, and the panel with its handle. |
+| `SheetHandle` | The grab strip. `SheetContent` draws one, so an app draws its own only to give it a tap of its own. |
+| `SheetHeader`, `SheetFooter` | A row above the body and one below it. Neither scrolls. |
+| `SheetTitle`, `SheetDescription` | The heading, which names the sheet for a screen reader, and a muted line. |
+| `SheetBody` | The part that scrolls. |
+| `SheetClose` | A button that closes it. |
+
+`<Sheet>` takes:
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `open`, `defaultOpen` | the sheet owns it | For an app that owns the open state, or one that only says how it starts. |
+| `onOpenChange` | none | Called before every open and close with `(open, details)`. `details.reason` says why and `details.cancel()` refuses it. |
+| `onOpenChangeComplete` | none | Called with `open` once the slide has ended. |
+| `layout` | `"sheet"` | `"dialog"` draws the same parts as a small centred dialog. |
+| `modal` | `true` | `false` leaves the page in use. `"trap-focus"` holds Tab and nothing else. |
+| `swipe` | `true` | Whether a drag closes it. |
+| `dismissOnOutsidePress` | `true` | Whether a press on the scrim closes it. |
+| `systemBack` | `false` | Whether the sheet holds a history entry while it is open. |
+| `ownsEscape` | none | `(target, event) => boolean`. True leaves this Escape to something inside the sheet. |
+| `virtualKeyboard` | `false` | Turns on Base UI's own keyboard handling. |
+| `actionsRef` | none | A ref that receives `close(then)`. |
+
+`<SheetContent>` takes the panel's own props (`className`, `style`, `data-*`, a `ref`) and these:
+
+| Prop | Default | What it does |
+| --- | --- | --- |
+| `label` | none | The accessible name of a sheet with no `<SheetTitle>`. |
+| `container` | `<body>` | The element the sheet is drawn into. |
+| `initialFocus`, `finalFocus` | the panel, the opener | Base UI's own: where focus goes as it opens and as it closes. |
+| `scrim` | `true` | Whether the page is dimmed behind it. |
+| `handle` | `true` | Whether the grab handle is drawn. |
+| `closeLabel` | `"Close"` | The name of the dialog layout's X. |
+| `toastCover` | `true` | Whether the sheet tells the toaster it covers the bottom bar. |
+| `keepMounted` | `false` | Keeps the sheet in the document while it is closed. |
+| `scrimClassName`, `viewportClassName` | none | The app's own classes on the scrim and on the box around the panel. |
+
+### The drag
+
+A finger drags the sheet from anywhere on it, the body and its buttons included, once the body is scrolled to its top. While the body is scrolled down, a downward drag scrolls it. The owner approved that on 2026-11-24. Before it, only the grab strip dragged. A mouse drags by the handle, the header and the footer, and selects text in the body.
+
+A press starts no drag in four cases, which are vaul's rules and which Base UI lacks:
+
+- in the sheet's first 500ms, while the tap that opened it is still ending;
+- for 100ms after anything inside it scrolled;
+- on a `<select>`;
+- while text inside it is selected.
+
+A region with gestures of its own opts out with `data-dl-no-drag`, which `noSheetDrag()` writes:
+
+```tsx
+import { noSheetDrag } from "@dalin/kit/components";
+
+<div {...noSheetDrag()}>{scrubber}</div>
+<div {...noSheetDrag("x")}>{files}</div>
+```
+
+With no argument, no drag that starts in the region moves the sheet: a media scrubber, a PDF being panned. With `"x"` a sideways drag belongs to the region and a downward one still moves the sheet, which is what mail's swipe between attachments needs. `"y"` is the other axis.
+
+A release closes the sheet past 96px or 40% of its height, whichever is less. A flick faster than 0.5px a millisecond closes it too, once the sheet has travelled 16px. Anything less settles it back. That is the rule mail, calendar and every Settings sheet each carried a copy of, and `sheetShouldDismiss` is its one home now. The speed is read at the release, so a finger that stopped before it lifted is no flick.
+
+Base UI's Drawer has a rule of its own: past half the height, or the same flick with no least travel, averaged over the whole drag. The kit's rule wins, and this is how. The kit listens on both sides of Base UI's own handlers. Before Base UI hears a release, the kit reads how far down Base UI has the panel and how fast the finger was moving, and decides. If Base UI then asks to close and the kit's answer was no, the kit refuses that close with Base UI's `eventDetails.cancel()` and the sheet settles. If the kit's answer was yes and Base UI asked for nothing, the kit closes the sheet itself. Where both say yes, Base UI runs the close, in less than the sheet time after a fast flick. `onOpenChange` hears `"swipe"` in every case.
+
+A pull upward meets one resistance in every app, Base UI's own curve: the panel rises by the square root of the pull, so 100px of finger lifts it 10px. Calendar's sheets rose 35px for that pull, mail's 25px, and the Settings sheets not at all. The curve sits between them. It is also what the Drawer draws by itself, and a factor of the kit's own would have to overwrite the Drawer's transform on every frame of a drag.
+
+The scrim lifts as the panel goes down, by 55% of the dim over a full drag (`--dl-sheet-lift`), the rate calendar's and notes' sheets used.
+
+### Nothing fixed is trapped in it
+
+The panel has no transform at rest, no filter, no backdrop filter and no `will-change`. Any of those would make it the containing block for a `position: fixed` child, and drive's and notes' sheets hold such children. So the frost is a layer behind the panel's content, and a transform is on the panel only while it opens, closes or is under a finger. A fixed child does move with the panel during those moments.
+
+### Refusing a close
+
+Every way out asks `onOpenChange` first: the scrim, Escape, a swipe, a `<SheetClose>`, the system's back and `close()`. The app refuses with `details.cancel()`, and a refused swipe settles back where it was. An editor with unsaved words refuses, asks its question, and closes the sheet itself on the answer:
+
+```tsx
+<Sheet
+  open={open}
+  onOpenChange={(next, details) => {
+    if (!next && dirty) {
+      details.cancel();
+      askToDiscard();
+      return;
+    }
+    setOpen(next);
+  }}
+>
+```
+
+A close the app makes by setting `open` to `false` asks nobody. `details.reason` is Base UI's word for the cause (`"outside-press"`, `"escape-key"`, `"swipe"`, `"close-press"`, `"trigger-press"`, `"imperative-action"`, `"focus-out"`, `"close-watcher"`) or the kit's `"system-back"`.
+
+Keep the `<Sheet>` mounted and change `open`. A sheet the app unmounts to close it is gone in one frame, with no slide.
+
+### Escape, focus and a sheet over a sheet
+
+Escape closes the sheet. `ownsEscape` lets something inside it take the key first: while it answers true the sheet stays open and the key travels on to the field, which drops its text. Calendar passes its `fieldOwnsEscape`.
+
+Focus lands on the panel as the sheet opens, and not on its first control, since a focused field would raise the phone's keyboard over the sheet. `initialFocus` names another target. Tab stays inside a modal sheet, and focus goes back to what opened it. `modal={false}` gives the page back, as mail's compose does while it peeks.
+
+A sheet over a sheet is a `<Sheet>` drawn inside the first one's content: drive's place peek over the file sheet, calendar's picks over the event sheet. Escape, a press outside and a swipe then close the top one alone. It dims the one behind with a scrim of its own and stands two steps higher on the z ladder. The one behind stays where it is, and carries `data-nested-drawer-open` for an app that wants to style it.
+
+### The toaster
+
+An open sheet registers itself as a toast cover, so a toast raised over it announces above its top edge. An app's `<Toaster cover>` selector need not name it. A closing sheet covers nothing: it leaves the dock as its close begins, and its panel and scrim carry `data-dl-leaving` until they are gone.
+
+A toast over a modal sheet keeps its action in reach of Tab, as over the phone's search and the palette: Tab on the sheet's last stop goes to the toast, and Tab on the toast's last stop comes back.
+
+### The dialog layout
+
+Every Settings sheet becomes a small dialog in the middle of the window on a computer. `layout="dialog"` draws that: no handle, an X in the corner with no box behind it, no drag, and the family's 150ms open and close. The width where the phone layout ends is the app's (calendar's begins under 900px, the others under 768px), so the app passes the answer:
+
+```tsx
+<Sheet layout={usePhoneLayout() ? "sheet" : "dialog"} open={open} onOpenChange={change}>
+```
+
+It stands two over `--dl-z-dialog`, so it opens over the Settings dialog.
+
+### The system's back
+
+`systemBack` gives the sheet one history entry while it is open, the way the phone's search has one: the back button or the back swipe closes the sheet, and a close from the screen takes the entry off. A refused back keeps an entry under the sheet, so the next back asks again. It is off by default. Drive and mail already give their layers entries of their own, and a second one would stack. Calendar's and notes' sheets have none today, so turning it on there is a change to decide.
+
+A row that closes the sheet and then navigates calls `close(then)`. `then` runs once the slide has ended and the entry has gone, which is the first moment a navigation is safe:
+
+```tsx
+const actions = useRef<SheetActions>(null);
+
+<Sheet actionsRef={actions} systemBack>
+  ...
+  <button onClick={() => actions.current?.close(() => openFolder(id))}>Open</button>
+</Sheet>
+```
+
+### The keyboard
+
+The panel stands on the on-screen keyboard and stops short of the safe area at the top. It reads how much the keyboard covers from the app's own `--kb-inset`, the variable mail, calendar and notes already publish, and an app that measures it another way sets `--dl-sheet-kb`. Drive publishes neither, so its sheets stay where they are when the keyboard rises, as they do today.
+
+Base UI's own keyboard handling is off. Notes and mail set `navigator.virtualKeyboard.overlaysContent` and follow the caret themselves, and a second scroller would fight them. `virtualKeyboard` turns it on for a sheet in an app that does neither.
+
+### Variables an app may set
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `--dl-sheet-z` | 55, or 82 in the dialog layout | The scrim's z-index. The panel is one over it. |
+| `--dl-sheet-scrim` | `--dl-scrim` | The fill over the page. |
+| `--dl-sheet-lift` | 0.55 | How much of the dim a full drag takes away. |
+| `--dl-sheet-fill`, `--dl-sheet-blur` | the overlay glass | The panel's fill and what it does to the page behind. `none` for the blur makes it solid. |
+| `--dl-sheet-w` | 100% | The widest the panel grows. |
+| `--dl-sheet-top` | 28px | The least room left above the panel, under the safe area. |
+| `--dl-sheet-kb` | `--kb-inset` | What the on-screen keyboard covers. |
+| `--dl-sheet-inset` | 16px | The body's side padding. |
+| `--dl-sheet-dialog-w`, `--dl-sheet-dialog-t` | 28rem, `--dl-t-open` | The dialog layout's width, and its open and close. |
+
+Every part carries a class (`dl-sheet`, `dl-sheet-scrim`, `dl-sheet-viewport`, `dl-sheet-handle`, `dl-sheet-body` and so on), a `data-slot`, and on the panel, the scrim and the viewport `data-layout`. The panel and the scrim also carry Base UI's state: `data-open`, `data-starting-style`, `data-ending-style` and `data-swiping`. The rules sit in the `dalin` layer, so the app's own class wins.
+
+An app must not override the handle's pill, the corners, the sheet time and its curve, or the rule that the panel rests with no transform.
+
+### What is not a sheet
+
+Five surfaces look like one and should stay as they are.
+
+- The phone's search. It opens at once, with the caret placed as the field mounts, which is what lets iOS raise the keyboard. A slide would delay that focus.
+- Notes' format bar and its More grid. They must never take focus, or the caret and the keyboard leave the page. A sheet takes focus as it opens.
+- Menus. A menu opens under its control, and mail's and notes' phone menus are menus by decision.
+- Mail's reader. It is a page that slides in from the side and goes back on an edge swipe, with the inbox moving behind it.
+- Notes' icon picker. It waits for the keyboard before it shows and docks to the keyboard's top edge, and it has to focus its search field to raise that keyboard.
+
 ## Helpers
 
 Three things each app had copied, and the motion reader described under "One place for the motion switch". They export from `@dalin/kit` and from `@dalin/kit/helpers`.
@@ -1074,11 +1304,11 @@ import { TipKey, shortcutLabel } from "@dalin/kit";
 
 That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel` takes `Mod`, `Shift` and `Alt` for the platform's keys and writes every other key as given. `<TipKey>` draws the dot and the key in the muted grey, or in the app's own `className`, and renders nothing without a key. `tipText("Archive", "E")` is the same line as a string. `shortcutLabelFor(mac, keys)` and `isMacPlatform(platform)` are the pure halves. The tooltip itself stays each app's own.
 
-## Not in version 0.10
+## Not in version 0.11
 
 These are still open, so the kit has no value for them: type sizes, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
 
-These are decided and not built yet. The phone's bottom bar is glass tokens here and still each app's own component. The tooltip and the phone sheets are frosted by the tokens and stay each app's own. The family sheet on Base UI's Drawer is not started.
+These are decided and not built yet. The phone's bottom bar is glass tokens here and still each app's own component. The tooltip is frosted by the tokens and stays each app's own. The sheet is built, and no app has moved a surface onto it yet. It has no snap points, since no app's sheet rests at more than one height.
 
 Five requests from the wave 1 reviews are also waiting: holding a toast until a pill is expected, a hook for the bar's measured footprint, a desktop dock for mail's compose chip, a prop that forces the toast's layout, and a per-part fade in `motion.css`.
 
@@ -1093,8 +1323,8 @@ npm run build
 
 Commit `dist/` with the source change that produced it. Apps install from GitHub and never build, so a stale `dist/` ships the old code. `npm run check:dist` rebuilds and fails if the result differs from what is committed.
 
-The component tests run the real Base UI parts in jsdom, on the pinned 1.4.1. `npm run test:base-ui-next` runs them again on 1.9.0, installed beside it as `base-ui-next`. `test/dom.tsx` mounts a tree and sends it clicks and keys, and `withToast()` there puts a toaster on the page as Sonner draws one. `test/color.ts` is the colour math behind every contrast claim. `test/layers.test.ts` pins which sheets sit in the `dalin` layer, and `src/helpers/exports.test.ts` walks the imports of each entry, so the root can't start loading Base UI again unnoticed.
+The component tests run the real Base UI parts in jsdom, on the pinned 1.9.0. That is the floor of the peer range and the version every app ships, so there is no second Base UI to run against, and the `base-ui-next` install and its script went in 0.11. When an app moves past 1.9.0, install the newer one as `base-ui-next` (`npm i -D base-ui-next@npm:@base-ui/react@<version>`) and run `BASE_UI=next npx vitest run src/components`: `vitest.config.ts` still holds the alias. `test/dom.tsx` mounts a tree and sends it clicks and keys, and `withToast()` there puts a toaster on the page as Sonner draws one. `test/color.ts` is the colour math behind every contrast claim. `test/layers.test.ts` pins which sheets sit in the `dalin` layer, and `src/helpers/exports.test.ts` walks the imports of each entry, so the root can't start loading Base UI again unnoticed.
 
 The toast tests run the real `<Toaster>` in jsdom. jsdom has no cascade to trust for `:where()` and `:has()`, so a test that needs to know which of two rules wins weighs their selectors with `test/css.ts`. A test about the docked phone stack that mounts no bar calls `withPill()` from `test/pill.ts`, since the toaster docks only beside a pill.
 
-The dev dependency is pinned to sonner 2.0.7, the version the apps ship. 2.0.8 is installed beside it as `sonner-next`, and `default-kind-next.test.ts` runs the default kind's suite on it. `toaster.test.ts` pins one rule that is easy to break: the toaster re-sends sonner a `pointerup` to clear a stuck flag, and that event must never go out while a pointer is down, or it ends any drag in progress.
+The dev dependency is pinned to sonner 2.0.7, the version the apps ship. 2.0.8 is installed beside it as `sonner-next`, and `default-kind-next.test.ts` runs the default kind's suite on it. `sheet.test.tsx` drives the sheet's drag with touch events it builds itself. jsdom has no layout, so the test gives the panel a height, answers `elementFromPoint` with the element the finger is on, and writes each event's time. `toaster.test.ts` pins one rule that is easy to break: the toaster re-sends sonner a `pointerup` to clear a stuck flag, and that event must never go out while a pointer is down, or it ends any drag in progress.

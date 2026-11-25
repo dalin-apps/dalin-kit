@@ -1,7 +1,7 @@
 {
   "name": "@dalin/kit",
-  "version": "0.10.6",
-  "description": "The shared design base of the dalin apps: tokens, the toast, the create button, the wordmark and family switcher, frosted menus, the command palette, the phone header and search, the segmented control, the filter, and the helpers each app had copied.",
+  "version": "0.11.0",
+  "description": "The shared design base of the dalin apps: tokens, the toast, the create button, the wordmark and family switcher, frosted menus, the command palette, the phone header and search, the segmented control, the filter, the sheet, and the helpers each app had copied.",
   "type": "module",
   "license": "MIT",
   "author": "Samuel Gomez",
@@ -48,7 +48,8 @@
     "./palette.css": "./css/palette.css",
     "./phone.css": "./css/phone.css",
     "./seg.css": "./css/seg.css",
-    "./filter.css": "./css/filter.css"
+    "./filter.css": "./css/filter.css",
+    "./sheet.css": "./css/sheet.css"
   },
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
@@ -56,7 +57,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.check.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:base-ui-next": "BASE_UI=next vitest run src/components",
     "check:dist": "npm run build && git diff --exit-code -- dist"
   },
   "keywords": [
@@ -69,7 +69,7 @@
     "react"
   ],
   "peerDependencies": {
-    "@base-ui/react": "^1.4.1",
+    "@base-ui/react": "^1.9.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "sonner": "^2.0.7"
@@ -80,10 +80,9 @@
     }
   },
   "devDependencies": {
-    "@base-ui/react": "1.4.1",
+    "@base-ui/react": "1.9.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "base-ui-next": "npm:@base-ui/react@1.9.0",
     "jsdom": "^29.1.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",

@@ -1,11 +1,14 @@
 import { defineConfig } from "vitest/config";
 
 /**
- * The suite runs on the Base UI the dev dependency pins, 1.4.1, the oldest
- * the peer range allows and the one mail ships. `npm run test:base-ui-next`
- * runs it again on the newest the apps ship (calendar's 1.9.0), installed
- * beside it as `base-ui-next`, by pointing every `@base-ui/react` import
- * there.
+ * The suite runs on the Base UI the dev dependency pins, 1.9.0. That is
+ * the floor of the peer range (the sheet is built on its Drawer) and the
+ * version all four apps ship, so there is no second one to run against.
+ *
+ * When an app moves past it, install the newer one beside this as
+ * `base-ui-next` (`npm i -D base-ui-next@npm:@base-ui/react@<version>`)
+ * and run `BASE_UI=next npx vitest run src/components`: the alias below
+ * points every `@base-ui/react` import there.
  */
 const next = process.env.BASE_UI === "next";
 

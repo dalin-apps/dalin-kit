@@ -1,0 +1,291 @@
+/* @dalin/kit sheet.css: the family's sheet (<Sheet>).
+
+   What it is. A frosted panel at the foot of the phone's screen, 14px at
+   its top corners, with the page dimmed behind it. A 40 by 4 handle sits at
+   its top. It rises over --dl-t-sheet (260ms) on --dl-ease and sinks the
+   same way. A finger drags it from anywhere on it, the dim lifts as it
+   goes down, and a release settles it or closes it. With
+   `layout="dialog"` the same parts are a small dialog in the middle of
+   the window: no handle, an X in its corner, and the family's 150ms open.
+
+   How an app adopts it. Import this file once, after tokens.css, and draw
+   <Sheet> with <SheetContent>. Delete the app's own sheet, scrim and
+   handle rules for a surface it moves over.
+
+   The panel holds nothing fixed. At rest the panel has no transform, no
+   filter and no backdrop filter, and nothing here sets `will-change`. Any
+   of those would make the panel the containing block for a fixed child,
+   and drive's and notes' sheets hold some. So the frost is a layer behind
+   the panel's content (::before), and a transform is on the panel only
+   while it opens, closes or is under a finger. Base UI writes the drag's
+   transform on the element itself and takes it off at the release.
+
+   Motion. Nothing moves when a key opened or closed the sheet: <Sheet>
+   writes `data-instant`, and `watchInputModality` writes `data-input` on
+   <html>. Nothing moves under reduced motion either: the app's own switch
+   where it has one (`data-dl-motion` on <html>), the system's otherwise.
+   A release after a drag runs for Base UI's share of the sheet time, less
+   for a faster flick (--drawer-swipe-strength).
+
+   Variables an app may set, on :root or on the sheet through `className`.
+     --dl-sheet-z        The scrim's z-index; the panel is one over it. 55
+                         (--dl-z-sheet): over the phone's search, under the
+                         toaster while it stands over a sheet. The dialog
+                         layout stands two over --dl-z-dialog, so it opens
+                         over the Settings dialog. A sheet over a sheet is
+                         two higher again.
+     --dl-sheet-scrim    The fill over the page. --dl-scrim unless set.
+     --dl-sheet-lift     How much of the dim a full drag takes away. 0.55.
+     --dl-sheet-fill     The panel's fill. The overlay glass, --dl-overlay.
+     --dl-sheet-blur     What the panel does to the page behind it. The
+                         overlay's blur and level. `none` for a solid panel.
+     --dl-sheet-w        The widest the panel grows. 100%.
+     --dl-sheet-top      The least room left above the panel, under the
+                         safe area. 28px.
+     --dl-sheet-kb       What the on-screen keyboard covers. The app's own
+                         --kb-inset unless set, and 0 without that.
+     --dl-sheet-inset    The body's side padding. 16px.
+     --dl-sheet-dialog-w The dialog layout's width. 28rem.
+     --dl-sheet-dialog-t The dialog layout's open and close. --dl-t-open.
+
+   What an app must not override. The handle's pill, the corners, the
+   sheet time and its curve, and the rule that the panel rests with no
+   transform.
+
+   Cascade. Every rule here is in the cascade layer `dalin` (see menu.css),
+   so a utility an app passes through `className` wins over the default. */
+@layer dalin {
+.dl-sheet-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--dl-sheet-z, var(--dl-z-sheet, 55)) + var(--dl-sheet-depth, 0) * 2);
+  background: var(--dl-sheet-scrim, var(--dl-scrim, rgb(0 0 0 / 0.62)));
+  /* Lifts as the panel is dragged away, at the rate the finger asks for. */
+  opacity: calc(1 - var(--drawer-swipe-progress, 0) * var(--dl-sheet-lift, 0.55));
+  transition: opacity var(--dl-t-sheet, 260ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+.dl-sheet-scrim:is([data-starting-style], [data-ending-style]) {
+  opacity: 0;
+}
+/* A finger on the sheet owns the dim outright. */
+.dl-sheet-scrim[data-swiping] {
+  transition: none;
+}
+.dl-sheet-viewport {
+  /* What the keyboard covers: the app's own measure, unless Base UI's
+     keyboard handling is on (`virtualKeyboard`). */
+  --dl-sheet-kb-now: var(--dl-sheet-kb, var(--kb-inset, 0px));
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--dl-sheet-z, var(--dl-z-sheet, 55)) + var(--dl-sheet-depth, 0) * 2 + 1);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  /* The panel stands on the keyboard. */
+  padding-bottom: var(--dl-sheet-kb-now);
+}
+.dl-sheet-viewport[data-kb="base"] {
+  --dl-sheet-kb-now: var(--drawer-keyboard-inset, 0px);
+}
+.dl-sheet {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--dl-sheet-w, 100%);
+  max-height: calc(
+    100dvh - env(safe-area-inset-top, 0px) - var(--dl-sheet-top, 28px) - var(--dl-sheet-kb-now, 0px)
+  );
+  /* The home indicator's room, which the keyboard takes over while it is up. */
+  padding-bottom: max(0px, env(safe-area-inset-bottom, 0px) - var(--dl-sheet-kb-now, 0px));
+  border: 1px solid var(--dl-overlay-edge, #3d3d3d);
+  border-bottom: 0;
+  border-radius: var(--dl-r-sheet, 14px) var(--dl-r-sheet, 14px) 0 0;
+  background: transparent;
+  /* A stacking context for the frost behind the content, with no
+     containing block made for a fixed child. */
+  isolation: isolate;
+  color: var(--dl-fg, #fff);
+  box-shadow: var(--dl-overlay-shadow, 0 12px 32px -8px rgb(0 0 0 / 0.55));
+  outline: none;
+  transition: transform var(--dl-t-sheet, 260ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+/* The frost, as a layer behind the content. Blurred, then levelled, as the
+   menus are, so the words hold over a white page. */
+.dl-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--dl-sheet-fill, var(--dl-overlay, rgb(32 32 32 / 0.72)));
+  backdrop-filter: var(
+    --dl-sheet-blur,
+    var(--dl-overlay-blur, blur(16px) saturate(1.5)) var(--dl-overlay-level, contrast(0.709) brightness(0.468))
+  );
+}
+/* The only transforms this sheet sets: a panel on its way in or out. */
+.dl-sheet:is([data-starting-style], [data-ending-style]) {
+  transform: translateY(100%);
+}
+/* A close runs for the sheet time, or for less after a flick. */
+.dl-sheet[data-ending-style] {
+  transition-duration: calc(var(--drawer-swipe-strength, 1) * var(--dl-t-sheet, 260ms));
+}
+.dl-sheet[data-swiping] {
+  user-select: none;
+}
+/* The mark of a closing sheet is the close fade's own (motion.css), which
+   would fade the panel over 110ms while it slides. The sheet has its exit. */
+:is(.dl-sheet, .dl-sheet-scrim)[data-dl-leaving] {
+  animation: none !important;
+}
+.dl-sheet-handle {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  padding: 11px 0 7px;
+  cursor: grab;
+  touch-action: none;
+}
+.dl-sheet-handle:active {
+  cursor: grabbing;
+}
+.dl-sheet-handle-pill {
+  width: var(--dl-sheet-handle-w, 40px);
+  height: var(--dl-sheet-handle-h, 4px);
+  border-radius: calc(var(--dl-sheet-handle-h, 4px) / 2);
+  background: var(--dl-sheet-handle, rgb(255 255 255 / 0.22));
+}
+.dl-sheet-header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--dl-sheet-inset, 16px) 8px;
+}
+.dl-sheet-title {
+  margin: 0;
+  font-weight: 600;
+}
+.dl-sheet-description {
+  margin: 0;
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+.dl-sheet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: clip;
+  overscroll-behavior: contain;
+  padding: 4px var(--dl-sheet-inset, 16px) 16px;
+}
+.dl-sheet-footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px var(--dl-sheet-inset, 16px) 12px;
+}
+
+/* The dialog layout: the Settings sheets on a computer. */
+.dl-sheet-scrim[data-layout="dialog"] {
+  z-index: calc(var(--dl-sheet-z, calc(var(--dl-z-dialog, 80) + 2)) + var(--dl-sheet-depth, 0) * 2);
+  transition-duration: var(--dl-sheet-dialog-t, var(--dl-t-open, 150ms));
+}
+.dl-sheet-viewport[data-layout="dialog"] {
+  z-index: calc(var(--dl-sheet-z, calc(var(--dl-z-dialog, 80) + 2)) + var(--dl-sheet-depth, 0) * 2 + 1);
+  justify-content: center;
+  padding: 24px;
+}
+.dl-sheet[data-layout="dialog"] {
+  max-width: var(--dl-sheet-dialog-w, 28rem);
+  max-height: min(80dvh, 640px);
+  padding-bottom: 0;
+  border-bottom: 1px solid var(--dl-overlay-edge, #3d3d3d);
+  border-radius: var(--dl-r-sheet, 14px);
+  transition:
+    transform var(--dl-sheet-dialog-t, var(--dl-t-open, 150ms)) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    opacity var(--dl-sheet-dialog-t, var(--dl-t-open, 150ms)) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+.dl-sheet[data-layout="dialog"]:is([data-starting-style], [data-ending-style]) {
+  transform: translateY(8px) scale(0.98);
+  opacity: 0;
+}
+.dl-sheet[data-layout="dialog"][data-ending-style] {
+  transition-duration: var(--dl-sheet-dialog-t, var(--dl-t-open, 150ms));
+}
+.dl-sheet[data-layout="dialog"] > .dl-sheet-body {
+  padding: 22px;
+}
+/* The way out a mouse can see. No box behind it, at rest or under the
+   pointer: the glyph alone, muted, and white when pointed at. */
+.dl-sheet-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--dl-r-control, 7px);
+  background: none;
+  color: var(--dl-fg-muted, #b8b8b8);
+  cursor: pointer;
+  transition: color var(--dl-t-hover, 120ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+.dl-sheet-x:active {
+  color: var(--dl-fg, #fff);
+  filter: brightness(var(--dl-press-dim, 0.92));
+}
+@media (hover: hover) {
+  .dl-sheet-x:hover {
+    color: var(--dl-fg, #fff);
+  }
+}
+.dl-sheet-x:focus-visible {
+  outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-accent, currentColor));
+  outline-offset: var(--dl-focus-offset, 2px);
+}
+/* A title clears the X. */
+.dl-sheet[data-layout="dialog"] .dl-sheet-title {
+  margin-right: 28px;
+}
+
+/* Nothing moves when the keyboard opened or closed it. The panel is drawn
+   where it rests from its first frame, since with no transition a start a
+   full height below would show as one frame of nothing. */
+:is(.dl-sheet, .dl-sheet-scrim)[data-instant],
+html[data-input="keyboard"] :is(.dl-sheet, .dl-sheet-scrim) {
+  transition: none;
+}
+.dl-sheet[data-instant]:is([data-starting-style], [data-ending-style]),
+html[data-input="keyboard"] .dl-sheet:is([data-starting-style], [data-ending-style]) {
+  transform: none;
+}
+/* Reduced motion: the app's own switch where it has spoken
+   (`data-dl-motion` on <html>, see menu.css), the system's setting
+   otherwise. */
+html[data-dl-motion="reduce"] :is(.dl-sheet, .dl-sheet-scrim) {
+  transition: none;
+}
+html[data-dl-motion="reduce"] .dl-sheet:is([data-starting-style], [data-ending-style]) {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-dl-motion="full"]) :is(.dl-sheet, .dl-sheet-scrim) {
+    transition: none;
+  }
+  html:not([data-dl-motion="full"]) .dl-sheet:is([data-starting-style], [data-ending-style]) {
+    transform: none;
+  }
+}
+}

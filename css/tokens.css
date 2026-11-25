@@ -226,13 +226,15 @@
 
   /* The z ladder, low to high, at the numbers the kit and the apps already
      use, so nothing moves. The phone bar; the phone search sheet over it;
-     the toaster while it stands over a sheet; menus and popovers; a dialog
+     the family's sheet (its panel one over its scrim), which may open over
+     search; the toaster while it stands over a sheet; menus and popovers; a dialog
      and its scrim (the panel one over the scrim); the command palette (its
      panel one over its dim); a tooltip, over everything it can label. The
      kit's own sheets read these with the old number as the fallback, and an
      app's own --dl-bar-z, --dl-overlay-z and the rest still win. */
   --dl-z-bar: 30;
   --dl-z-search: 50;
+  --dl-z-sheet: 55;
   --dl-z-toast: 60;
   --dl-z-overlay: 70;
   --dl-z-dialog: 80;

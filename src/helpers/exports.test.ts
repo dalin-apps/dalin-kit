@@ -126,6 +126,20 @@ describe("@dalin/kit/components", () => {
     "PhoneSearchAvatar",
     "SOURCE_WAIT_MS",
     "ariaKeyShortcuts",
+    "Sheet",
+    "SheetTrigger",
+    "SheetContent",
+    "SheetHandle",
+    "SheetHeader",
+    "SheetTitle",
+    "SheetDescription",
+    "SheetBody",
+    "SheetFooter",
+    "SheetClose",
+    "SHEET_NO_DRAG_ATTR",
+    "noSheetDrag",
+    "sheetShouldDismiss",
+    "sheetDragBlock",
   ])("exports %s", (name) => {
     expect((components as Record<string, unknown>)[name]).toBeDefined();
   });
@@ -146,5 +160,9 @@ describe("package.json", () => {
     expect(pkg.peerDependencies["@base-ui/react"]).toBeDefined();
     expect(pkg.peerDependenciesMeta?.["@base-ui/react"]?.optional).toBe(true);
     expect(pkg.peerDependenciesMeta?.sonner).toBeUndefined();
+  });
+
+  it("asks for a Base UI that has the Drawer the sheet is built on", () => {
+    expect(pkg.peerDependencies["@base-ui/react"]).toBe("^1.9.0");
   });
 });
