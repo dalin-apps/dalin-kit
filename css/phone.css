@@ -299,14 +299,16 @@ html[data-dl-motion="reduce"] :is(.dl-phone-icon, .dl-phone-search-cancel, .dl-p
 }
 /* Results that scroll themselves (`ownScroller`): the body holds still and
    gives them its height, and their scroller ends on --dl-phone-search-end,
-   so the keyboard is counted once. */
+   so the keyboard is counted once. The scroller is the body's last child;
+   a status line drawn before it keeps its own height. Only while the app's
+   results show: before a query the kit's rows scroll in the body. */
 .dl-phone-search-body[data-own-scroller] {
   display: flex;
   flex-direction: column;
   padding-bottom: 0;
   overflow: hidden;
 }
-.dl-phone-search-body[data-own-scroller] > :only-child {
+.dl-phone-search-body[data-own-scroller] > :last-child {
   flex: 1;
   min-height: 0;
 }

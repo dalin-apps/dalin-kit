@@ -52,6 +52,7 @@ export function usePalette() {
         close: () => ctx.setOpen(false),
     };
 }
+const KIT_POPUP_PROPS = ["role", "aria-label", "aria-labelledby", "aria-modal", "tabIndex", "hidden", "data-slot"];
 /**
  * The root of the family's command palette: the dialog, its open state,
  * Ctrl K and the app's key, the motion rule, the toast's place in Tab, the
@@ -66,7 +67,10 @@ export function usePalette() {
  *     </PaletteList>
  *   </Palette>
  */
-export function Palette({ open: openProp, onOpenChange, query: queryProp, onQueryChange, sources = NO_SOURCES, actions = NO_ACTIONS, actionsHeading = "Actions", tail, results: ownResults, marks: marksOf, placeholder = "Search", label = "Command palette", emptyText, hotkey = true, appKey, onEscape, finalFocus, zIndex, className, children, style, onKeyDownCapture, onPointerDownCapture, ...attributes }) {
+export function Palette({ open: openProp, onOpenChange, query: queryProp, onQueryChange, sources = NO_SOURCES, actions = NO_ACTIONS, actionsHeading = "Actions", tail, results: ownResults, marks: marksOf, placeholder = "Search", label = "Command palette", emptyText, hotkey = true, appKey, onEscape, finalFocus, zIndex, className, children, style, onKeyDownCapture, onPointerDownCapture, ...passed }) {
+    const attributes = { ...passed };
+    for (const name of KIT_POPUP_PROPS)
+        delete attributes[name];
     const [ownOpen, setOwnOpen] = useState(false);
     const open = openProp ?? ownOpen;
     const [ownQuery, setOwnQuery] = useState("");
@@ -78,6 +82,8 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
     const [menu, setMenu] = useState(null);
     // An Enter pressed while the list was stale, waiting for the answer.
     const heldEnter = useRef(false);
+    // The controls that held the last Escape, each said to be an open menu.
+    const escapeHeld = useRef(NO_ESCAPE_HELD);
     // An Enter pressed on a row that waits for the next answer (`dim: "waiting"`).
     // It belongs to that place in the list: a key or a pointer that moves the
     // highlight, new words, a page and a close each drop it.
@@ -317,12 +323,22 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
             if (!next && details.reason === "escape-key") {
                 // A menu of the palette's own that is open takes Escape first: the
                 // filter's, pressed before focus has moved into it, and a row's.
-                // The key goes on to the menu, which closes on it.
-                if (menu || (panel && ownMenuOpen(panel, inputRef.current))) {
+                // The key goes on to the menu, which closes on it. A control that
+                // says it is open but did not take the last press (it is open
+                // still) does not hold the palette a second time. One press is
+                // heard twice, by the panel and then the document, and both hear
+                // the same answer.
+                const press = details.event;
+                const held = menu ? null : panel ? ownMenusOpen(panel, inputRef.current) : [];
+                const last = escapeHeld.current;
+                const again = last.press !== press && held !== null && held.length > 0 && held.every((el) => last.controls.has(el));
+                if (menu || (held && held.length > 0 && !again)) {
+                    escapeHeld.current = { press, controls: new Set(held ?? []) };
                     details.cancel();
                     details.allowPropagation();
                     return;
                 }
+                escapeHeld.current = NO_ESCAPE_HELD;
                 // The app's own Escape first, then one page back.
                 if (onEscape?.()) {
                     details.cancel();
@@ -344,6 +360,12 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
                         onKeyDownCapture?.(event);
                         if (event.key !== "Shift" && event.key !== "Control" && event.key !== "Alt" && event.key !== "Meta")
                             setInstant(true);
+                        // Any other key may open a menu again: its next Escape is its own.
+                        if (event.key !== "Escape")
+                            escapeHeld.current = NO_ESCAPE_HELD;
+                        // A key the app has spent is the app's: no held Enter, no held arrows.
+                        if (event.defaultPrevented)
+                            return;
                         // An IME's Enter and arrows are its own, stale list or not.
                         if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)
                             return;
@@ -366,6 +388,7 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
                     }, onPointerDownCapture: (event) => {
                         onPointerDownCapture?.(event);
                         setInstant(false);
+                        escapeHeld.current = NO_ESCAPE_HELD;
                     }, children: _jsx(PaletteContext.Provider, { value: value, children: _jsxs(Autocomplete.Root, { open: true, inline: true, items: body || rehighlight ? NO_GROUPS : results.groups, value: query, onValueChange: (next, details) => {
                                 // Choosing a row would write its title into the field.
                                 if (details.reason === "item-press")
@@ -510,16 +533,32 @@ export function PaletteBody({ status, children, className }) {
 }
 /** The palette's place in the toaster's Tab loop: held, so Tab never leaves it. */
 const PALETTE_TAB = { hold: true };
+const NO_ESCAPE_HELD = { press: undefined, controls: new Set() };
+/** The kit's own menu triggers, open whenever they say so. */
+const KIT_TRIGGERS = new Set(["menu-trigger", "menu-sub-trigger", "filter-trigger", "context-menu-trigger"]);
 /**
- * Whether a menu of the palette's own is open: a trigger inside the panel
- * that says its popup is expanded. The field says expanded for its list,
- * and is not one.
+ * The menus of the palette's own that are open: their triggers inside the
+ * panel. A trigger counts when it has a popup (`aria-haspopup` and not
+ * "false"), says it is expanded, and is one of the kit's or has its popup
+ * mounted outside the panel (a popup floats in a portal; a listbox drawn
+ * inline in the body is always there and is no menu). The field says
+ * expanded for its list, and is not one.
  */
-function ownMenuOpen(panel, input) {
-    for (const el of panel.querySelectorAll('[aria-haspopup][aria-expanded="true"]'))
-        if (el !== input)
-            return true;
-    return false;
+function ownMenusOpen(panel, input) {
+    const open = [];
+    for (const el of panel.querySelectorAll('[aria-haspopup][aria-expanded="true"]')) {
+        if (el === input || el.getAttribute("aria-haspopup") === "false")
+            continue;
+        if (KIT_TRIGGERS.has(el.getAttribute("data-slot") ?? "")) {
+            open.push(el);
+            continue;
+        }
+        const ids = (el.getAttribute("aria-controls") ?? "").split(/\s+/).filter(Boolean);
+        const popup = ids.map((id) => el.ownerDocument.getElementById(id)).find((node) => node !== null);
+        if (popup && !panel.contains(popup))
+            open.push(el);
+    }
+    return open;
 }
 /** One array each for "none", so a palette given neither does not search again on every render. */
 const NO_SOURCES = [];

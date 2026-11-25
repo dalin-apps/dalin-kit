@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -546,11 +547,26 @@ export function PhoneSearch({
   // caused, and a focus set a frame later is too late for that.
   const appInput = useRef(inputRef);
   appInput.current = inputRef;
+  // The app's ref the field was last handed to, so a ref swapped later is
+  // set and the one it replaced is cleared.
+  const handed = useRef<Ref<HTMLInputElement> | undefined>(undefined);
   const focusField = useCallback((node: HTMLInputElement | null) => {
     input.current = node;
-    assignRef(appInput.current, node);
+    if (node) {
+      assignRef(appInput.current, node);
+      handed.current = appInput.current;
+    } else {
+      assignRef(handed.current, null);
+      handed.current = undefined;
+    }
     node?.focus({ preventScroll: true });
   }, []);
+  useLayoutEffect(() => {
+    if (!input.current || handed.current === inputRef) return;
+    assignRef(handed.current, null);
+    assignRef(inputRef, input.current);
+    handed.current = inputRef;
+  }, [inputRef]);
 
   // The sheet hides the bottom bar, so it is a cover for the toaster. Not
   // while it is itself covered: what is drawn over it owns the screen then.
@@ -689,7 +705,9 @@ export function PhoneSearch({
   );
 
   const keyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (!completion || event.nativeEvent.isComposing) return;
+    // An IME confirming a candidate sends these keys too. Safari ends the
+    // composition before that keydown, so only its keyCode 229 tells.
+    if (!completion || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
     if ((event.key === "Tab" && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey) || (event.key === "ArrowRight" && caretAtEnd(event.currentTarget))) {
       event.preventDefault();
       completion.onAccept();
@@ -797,7 +815,7 @@ export function PhoneSearch({
             </div>
             <Dialog.Close className="dl-phone-search-cancel">{cancelLabel}</Dialog.Close>
           </form>
-          <div className="dl-phone-search-body" data-own-scroller={ownScroller ? "" : undefined}>
+          <div className="dl-phone-search-body" data-own-scroller={ownScroller && asked && children != null ? "" : undefined}>
             {asked ? (
               children ??
               (found ? (

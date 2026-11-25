@@ -201,10 +201,22 @@ type PaletteOwnProps = {
  * `<Palette>`'s props. Any other attribute (a `data-*` marker, an `id`)
  * goes to the panel, Base UI's popup, beside the kit's own: mail's
  * shortcut gating and compose fold read their markers there. The kit's
- * `data-slot`, `role`, `aria-label` and `aria-modal` win over one of the
- * same name, and `style` is laid under the palette's z-index.
+ * `data-slot`, `role`, `aria-label`, `aria-labelledby`, `aria-modal`,
+ * `tabIndex` and `hidden` win over one of the same name, and `style` is
+ * laid under the palette's z-index.
  */
-export type PaletteProps = PaletteOwnProps & Omit<HTMLAttributes<HTMLDivElement>, keyof PaletteOwnProps | "role" | "aria-modal">;
+export type PaletteProps = PaletteOwnProps &
+  Omit<HTMLAttributes<HTMLDivElement>, keyof PaletteOwnProps | KitPopupProp>;
+
+/**
+ * The panel's attributes the kit and Base UI own: the dialog's role and
+ * name, the popup's tabIndex -1 (focus restore and the toast's Tab fallback
+ * land on it) and Base UI's hidden. Base UI lays an element's own props over
+ * its internal ones, so one of these from the app would win; they are
+ * dropped before the rest go to the panel.
+ */
+type KitPopupProp = "role" | "aria-label" | "aria-labelledby" | "aria-modal" | "tabIndex" | "hidden" | "data-slot";
+const KIT_POPUP_PROPS: readonly string[] = ["role", "aria-label", "aria-labelledby", "aria-modal", "tabIndex", "hidden", "data-slot"];
 
 /**
  * The root of the family's command palette: the dialog, its open state,
@@ -244,8 +256,10 @@ export function Palette({
   style,
   onKeyDownCapture,
   onPointerDownCapture,
-  ...attributes
+  ...passed
 }: PaletteProps): ReactNode {
+  const attributes: Record<string, unknown> = { ...passed };
+  for (const name of KIT_POPUP_PROPS) delete attributes[name];
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
   const [ownQuery, setOwnQuery] = useState("");
@@ -257,6 +271,8 @@ export function Palette({
   const [menu, setMenu] = useState<RowMenuState | null>(null);
   // An Enter pressed while the list was stale, waiting for the answer.
   const heldEnter = useRef(false);
+  // The controls that held the last Escape, each said to be an open menu.
+  const escapeHeld = useRef<EscapeHeld>(NO_ESCAPE_HELD);
   // An Enter pressed on a row that waits for the next answer (`dim: "waiting"`).
   // It belongs to that place in the list: a key or a pointer that moves the
   // highlight, new words, a page and a close each drop it.
@@ -504,12 +520,22 @@ export function Palette({
         if (!next && details.reason === "escape-key") {
           // A menu of the palette's own that is open takes Escape first: the
           // filter's, pressed before focus has moved into it, and a row's.
-          // The key goes on to the menu, which closes on it.
-          if (menu || (panel && ownMenuOpen(panel, inputRef.current))) {
+          // The key goes on to the menu, which closes on it. A control that
+          // says it is open but did not take the last press (it is open
+          // still) does not hold the palette a second time. One press is
+          // heard twice, by the panel and then the document, and both hear
+          // the same answer.
+          const press = details.event;
+          const held = menu ? null : panel ? ownMenusOpen(panel, inputRef.current) : [];
+          const last = escapeHeld.current;
+          const again = last.press !== press && held !== null && held.length > 0 && held.every((el) => last.controls.has(el));
+          if (menu || (held && held.length > 0 && !again)) {
+            escapeHeld.current = { press, controls: new Set(held ?? []) };
             details.cancel();
             details.allowPropagation();
             return;
           }
+          escapeHeld.current = NO_ESCAPE_HELD;
           // The app's own Escape first, then one page back.
           if (onEscape?.()) {
             details.cancel();
@@ -544,6 +570,10 @@ export function Palette({
           onKeyDownCapture={(event: ReactKeyboardEvent<HTMLDivElement>) => {
             onKeyDownCapture?.(event);
             if (event.key !== "Shift" && event.key !== "Control" && event.key !== "Alt" && event.key !== "Meta") setInstant(true);
+            // Any other key may open a menu again: its next Escape is its own.
+            if (event.key !== "Escape") escapeHeld.current = NO_ESCAPE_HELD;
+            // A key the app has spent is the app's: no held Enter, no held arrows.
+            if (event.defaultPrevented) return;
             // An IME's Enter and arrows are its own, stale list or not.
             if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             if (!stale || body) return;
@@ -563,6 +593,7 @@ export function Palette({
           onPointerDownCapture={(event) => {
             onPointerDownCapture?.(event);
             setInstant(false);
+            escapeHeld.current = NO_ESCAPE_HELD;
           }}
         >
           <PaletteContext.Provider value={value}>
@@ -969,14 +1000,34 @@ export function PaletteBody({ status, children, className }: PaletteBodyProps): 
 /** The palette's place in the toaster's Tab loop: held, so Tab never leaves it. */
 const PALETTE_TAB = { hold: true } as const;
 
+/** The last Escape a menu held: the press, and the controls open as it came. */
+type EscapeHeld = { press: Event | undefined; controls: ReadonlySet<Element> };
+const NO_ESCAPE_HELD: EscapeHeld = { press: undefined, controls: new Set() };
+
+/** The kit's own menu triggers, open whenever they say so. */
+const KIT_TRIGGERS = new Set(["menu-trigger", "menu-sub-trigger", "filter-trigger", "context-menu-trigger"]);
+
 /**
- * Whether a menu of the palette's own is open: a trigger inside the panel
- * that says its popup is expanded. The field says expanded for its list,
- * and is not one.
+ * The menus of the palette's own that are open: their triggers inside the
+ * panel. A trigger counts when it has a popup (`aria-haspopup` and not
+ * "false"), says it is expanded, and is one of the kit's or has its popup
+ * mounted outside the panel (a popup floats in a portal; a listbox drawn
+ * inline in the body is always there and is no menu). The field says
+ * expanded for its list, and is not one.
  */
-function ownMenuOpen(panel: HTMLElement, input: HTMLInputElement | null): boolean {
-  for (const el of panel.querySelectorAll('[aria-haspopup][aria-expanded="true"]')) if (el !== input) return true;
-  return false;
+function ownMenusOpen(panel: HTMLElement, input: HTMLInputElement | null): Element[] {
+  const open: Element[] = [];
+  for (const el of panel.querySelectorAll('[aria-haspopup][aria-expanded="true"]')) {
+    if (el === input || el.getAttribute("aria-haspopup") === "false") continue;
+    if (KIT_TRIGGERS.has(el.getAttribute("data-slot") ?? "")) {
+      open.push(el);
+      continue;
+    }
+    const ids = (el.getAttribute("aria-controls") ?? "").split(/\s+/).filter(Boolean);
+    const popup = ids.map((id) => el.ownerDocument.getElementById(id)).find((node) => node !== null);
+    if (popup && !panel.contains(popup)) open.push(el);
+  }
+  return open;
 }
 
 /** One array each for "none", so a palette given neither does not search again on every render. */

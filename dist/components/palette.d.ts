@@ -97,10 +97,19 @@ type PaletteOwnProps = {
  * `<Palette>`'s props. Any other attribute (a `data-*` marker, an `id`)
  * goes to the panel, Base UI's popup, beside the kit's own: mail's
  * shortcut gating and compose fold read their markers there. The kit's
- * `data-slot`, `role`, `aria-label` and `aria-modal` win over one of the
- * same name, and `style` is laid under the palette's z-index.
+ * `data-slot`, `role`, `aria-label`, `aria-labelledby`, `aria-modal`,
+ * `tabIndex` and `hidden` win over one of the same name, and `style` is
+ * laid under the palette's z-index.
  */
-export type PaletteProps = PaletteOwnProps & Omit<HTMLAttributes<HTMLDivElement>, keyof PaletteOwnProps | "role" | "aria-modal">;
+export type PaletteProps = PaletteOwnProps & Omit<HTMLAttributes<HTMLDivElement>, keyof PaletteOwnProps | KitPopupProp>;
+/**
+ * The panel's attributes the kit and Base UI own: the dialog's role and
+ * name, the popup's tabIndex -1 (focus restore and the toast's Tab fallback
+ * land on it) and Base UI's hidden. Base UI lays an element's own props over
+ * its internal ones, so one of these from the app would win; they are
+ * dropped before the rest go to the panel.
+ */
+type KitPopupProp = "role" | "aria-label" | "aria-labelledby" | "aria-modal" | "tabIndex" | "hidden" | "data-slot";
 /**
  * The root of the family's command palette: the dialog, its open state,
  * Ctrl K and the app's key, the motion rule, the toast's place in Tab, the
@@ -115,7 +124,7 @@ export type PaletteProps = PaletteOwnProps & Omit<HTMLAttributes<HTMLDivElement>
  *     </PaletteList>
  *   </Palette>
  */
-export declare function Palette({ open: openProp, onOpenChange, query: queryProp, onQueryChange, sources, actions, actionsHeading, tail, results: ownResults, marks: marksOf, placeholder, label, emptyText, hotkey, appKey, onEscape, finalFocus, zIndex, className, children, style, onKeyDownCapture, onPointerDownCapture, ...attributes }: PaletteProps): ReactNode;
+export declare function Palette({ open: openProp, onOpenChange, query: queryProp, onQueryChange, sources, actions, actionsHeading, tail, results: ownResults, marks: marksOf, placeholder, label, emptyText, hotkey, appKey, onEscape, finalFocus, zIndex, className, children, style, onKeyDownCapture, onPointerDownCapture, ...passed }: PaletteProps): ReactNode;
 /** A ghost completion over the field: the rest of a name, laid after the words in a fainter ink. */
 export type PaletteCompletion = {
     /** What would follow the words: "na Ito" after "da". */

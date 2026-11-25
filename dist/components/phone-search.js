@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import { useCallback, useEffect, useRef, useState, } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { registerToastDock } from "../toast/toast-dock.js";
 import { pushBackEntry } from "./back-entry.js";
@@ -149,11 +149,28 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
     // caused, and a focus set a frame later is too late for that.
     const appInput = useRef(inputRef);
     appInput.current = inputRef;
+    // The app's ref the field was last handed to, so a ref swapped later is
+    // set and the one it replaced is cleared.
+    const handed = useRef(undefined);
     const focusField = useCallback((node) => {
         input.current = node;
-        assignRef(appInput.current, node);
+        if (node) {
+            assignRef(appInput.current, node);
+            handed.current = appInput.current;
+        }
+        else {
+            assignRef(handed.current, null);
+            handed.current = undefined;
+        }
         node?.focus({ preventScroll: true });
     }, []);
+    useLayoutEffect(() => {
+        if (!input.current || handed.current === inputRef)
+            return;
+        assignRef(handed.current, null);
+        assignRef(inputRef, input.current);
+        handed.current = inputRef;
+    }, [inputRef]);
     // The sheet hides the bottom bar, so it is a cover for the toaster. Not
     // while it is itself covered: what is drawn over it owns the screen then.
     useEffect(() => {
@@ -279,7 +296,9 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
     const groupList = (groups) => (_jsx("div", { className: "dl-phone-search-results", "data-stale": answers.stale ? "" : undefined, "aria-busy": answers.stale || answers.busy > 0 || undefined, children: _jsx(GroupSections, { groups: groups, marks: answered, byScore: answers.byScore, choose: chooseFromList, hold: hold, heldKey: menu?.key ?? null, rowContent: rowContent, groupContent: groupContent }) }));
     const emptyNote = (_jsx("p", { className: "dl-phone-search-note", children: emptyText ? emptyText(query.trim()) : query.trim() ? `No results for “${query.trim()}”.` : "No results." }));
     const keyDown = (event) => {
-        if (!completion || event.nativeEvent.isComposing)
+        // An IME confirming a candidate sends these keys too. Safari ends the
+        // composition before that keydown, so only its keyCode 229 tells.
+        if (!completion || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229)
             return;
         if ((event.key === "Tab" && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey) || (event.key === "ArrowRight" && caretAtEnd(event.currentTarget))) {
             event.preventDefault();
@@ -314,7 +333,7 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
                                                         onMouseDown: (event) => event.preventDefault(), onClick: () => {
                                                             completion.onAccept();
                                                             input.current?.focus({ preventScroll: true });
-                                                        }, children: completion.suffix })] })) : null, field] })), fieldEnd] }), _jsx(Dialog.Close, { className: "dl-phone-search-cancel", children: cancelLabel })] }), _jsx("div", { className: "dl-phone-search-body", "data-own-scroller": ownScroller ? "" : undefined, children: asked ? (children ??
+                                                        }, children: completion.suffix })] })) : null, field] })), fieldEnd] }), _jsx(Dialog.Close, { className: "dl-phone-search-cancel", children: cancelLabel })] }), _jsx("div", { className: "dl-phone-search-body", "data-own-scroller": ownScroller && asked && children != null ? "" : undefined, children: asked ? (children ??
                             (found ? (_jsx(Sections, { sections: results, choose: choose, hold: hold, heldKey: menu?.key ?? null })) : results ? (emptyNote) : searching ? (answers.groups.length > 0 ? (groupList(answers.groups)) : settled && answers.answered !== null ? (emptyNote) : null) : null)) : (_jsxs(_Fragment, { children: [action ? (_jsxs("button", { type: "button", className: "dl-phone-search-row dl-phone-search-action", onClick: () => choose(action), children: [action.icon, _jsx("span", { className: "dl-phone-search-one", children: action.label })] })) : null, searching && answers.groups.length > 0 ? groupList(answers.groups) : null, _jsx(Sections, { sections: sections, choose: choose, hold: hold, heldKey: menu?.key ?? null }), beforeQuery] })) }), _jsx(RowMenu, { state: menu, onClose: () => setMenu(null), onRun: (entry) => choose(entry), className: "dl-phone-search-menu" })] }) }) }));
 }
 const NO_SECTIONS = [];

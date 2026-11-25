@@ -256,7 +256,7 @@ describe("M5: results that scroll themselves", () => {
     const own = ruleFor(css, ".dl-phone-search-body[data-own-scroller]");
     expect(own).toContain("overflow: hidden");
     expect(own).toContain("padding-bottom: 0");
-    expect(ruleFor(css, ".dl-phone-search-body[data-own-scroller] > :only-child")).toContain("min-height: 0");
+    expect(ruleFor(css, ".dl-phone-search-body[data-own-scroller] > :last-child")).toContain("min-height: 0");
   });
 
   it("writes the bottom space once, as a variable the body and an app's scroller both read", () => {

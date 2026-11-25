@@ -952,7 +952,7 @@ A row may name its `verb`, for a row that Enter does not open: drive's "Reveal" 
 
 The palette is modal (`aria-modal="true"`), so Tab stays in it, with one exception. A toast that can take Tab joins the loop: Tab in the field goes to the toast's action and Tab there comes back. A press on a toast leaves the palette open. The palette holds Tab on the press itself, as the sheet does, because Base UI's focus guards turn it back a frame late: two quick Tabs from the filter used to leave the palette.
 
-Escape closes an open menu of the palette's own before the palette, the filter's or a row's. That holds even for an Escape pressed before focus has moved into a menu that has just opened. The next Escape closes the palette.
+Escape closes an open menu of the palette's own before the palette, the filter's or a row's. That holds even for an Escape pressed before focus has moved into a menu that has just opened. The next Escape closes the palette. A control counts as an open menu when it has a popup (`aria-haspopup`, and not `"false"`), says `aria-expanded="true"`, and is one of the kit's triggers or has its popup mounted outside the panel. A listbox drawn inline in the panel is always there and is no menu. A control that still says it is open after one Escape holds no second one, so the next Escape closes the palette.
 
 Per the curator's motion rule, opening it from the keyboard does not animate, and neither does closing it after a key. Opened by a press on a search button, it fades in over 150ms.
 
@@ -972,7 +972,7 @@ Per the curator's motion rule, opening it from the keyboard does not animate, an
 
 A source is `{ id, heading, search }`. `search(query, signal)` returns rows, or a promise of them, and the signal aborts when the query changes or the palette closes. It is called with `""` as the palette opens, for whatever the app shows before a word is typed.
 
-The list on screen always answers one query. Sources that answer at once are in the first frame. Where one answers later, the last list stays as it was until every source has answered the query in the field, and then the whole list changes together, the actions with it. Until then the old list is stale (`data-stale` on the list): its rows run nothing, the arrows move nothing, and it dims if the answer takes longer than 120ms. Enter is held and runs the first row of the answer when it arrives. Typing again lets the held Enter go.
+The list on screen always answers one query. Sources that answer at once are in the first frame. Where one answers later, the last list stays as it was until every source has answered the query in the field, and then the whole list changes together, the actions with it. Until then the old list is stale (`data-stale` on the list): its rows run nothing, the arrows move nothing, and it dims if the answer takes longer than 120ms. Enter is held and runs the first row of the answer when it arrives. Typing again lets the held Enter go. An Enter or an arrow that the app's `onKeyDownCapture` prevented is the app's, and the stale list holds none of them.
 
 A source slower than 400ms (`SOURCE_WAIT_MS`) no longer holds the list back. The rest is shown, and the slow source's group joins at the end, under the actions, when it answers. No row already on screen moves, so the highlight stays on the row it was on. Answer at once where the rows are in memory, and the groups keep the order the sources were given.
 
@@ -1046,7 +1046,7 @@ import { Palette, PaletteField, PaletteLine, PaletteList, PaletteNote, usePalett
 | `onEscape` | Asked first on Escape. Return true when the key was the app's own, and the palette stays. |
 | `finalFocus` | Base UI's, for an app that hands focus on as the palette closes. |
 | `zIndex` | Written as `--dl-palette-z` on the dim and the panel, for an app that stands the palette under a window of its own. |
-| any other attribute | Goes to the panel: a `data-*` marker, an `id`. The kit's `data-slot`, `role`, `aria-label` and `aria-modal` win over one of the same name, and `style` sits under the z-index. |
+| any other attribute | Goes to the panel: a `data-*` marker, an `id`. The kit's `data-slot`, `role`, `aria-label`, `aria-labelledby`, `aria-modal`, `tabIndex` and `hidden` win over one of the same name, and `style` sits under the z-index. |
 
 `<PaletteField>` is the field row. `glyph` replaces the magnifying glass. `start` and `end` sit inside the row before and after the words, `filter` before the Esc cap. `completion` is `{ suffix, onAccept }`, faint text after the words that Tab or ArrowRight at the end takes. While one shows in a field that isn't read only, a toast waits for the next forward Tab. Shift+Tab still reaches the toast. Pass null while there is nothing to offer, and leave it out in a palette that never offers one, since the field wraps the input for it. `onKeyDown` hears every key before the palette does, and `preventDefault()` keeps a key from the palette and from Base UI. `readOnly` and `busy` go to the input.
 
@@ -1153,9 +1153,9 @@ A toast over the sheet stays usable. A press on it leaves search open, and its a
 
 The results follow the on-screen keyboard. A phone lays its keyboard over the page without resizing it, so the sheet measures what the keyboard covers from `visualViewport` and writes it on itself as `--dl-phone-kb`. `phone.css` pads the list by that much, and the last result scrolls clear of the keys. Where the sheet has measured nothing, the list reads the app's own `--kb-inset`, the name mail, calendar and notes already use. An app that padded the results itself can delete that rule.
 
-`ownScroller` is for results that hold their own scroller, such as mail's message list. The body stops scrolling, gives its height to its one child and drops its bottom padding. That padding (the safe area, 32px and the keyboard) is written on the body as `--dl-phone-search-end`. The app's scroller ends on `var(--dl-phone-search-end)`, and the keyboard is counted once.
+`ownScroller` is for results that hold their own scroller, such as mail's message list. While the app's results show, the body stops scrolling, gives its height to its last child and drops its bottom padding. A status line may stand before the scroller and keeps its own height; the scroller must come last. Before a query the kit draws the action row, the sections and `beforeQuery`, and the body scrolls them as usual. That padding (the safe area, 32px and the keyboard) is written on the body as `--dl-phone-search-end`. The app's scroller ends on `var(--dl-phone-search-end)`, and the keyboard is counted once.
 
-`completion` lays faint words after the typed ones, as the palette's does. A tap on them takes it and leaves the caret, and the keyboard, where they were. On a keyboard, Tab and ArrowRight at the end take it. Pass null while there is nothing to offer, and leave it out where search never offers one, since the field wraps the input for it. `inputRef` hands the app the input, so no app has to find `.dl-phone-search-input` by its class.
+`completion` lays faint words after the typed ones, as the palette's does. A tap on them takes it and leaves the caret, and the keyboard, where they were. On a keyboard, Tab and ArrowRight at the end take it, except a key that confirms an IME's candidate (Safari sends it after the composition has ended, with keyCode 229). Pass null while there is nothing to offer, and leave it out where search never offers one, since the field wraps the input for it. `inputRef` hands the app the input, so no app has to find `.dl-phone-search-input` by its class. A ref swapped while search is open gets the input, and the one it replaced is cleared.
 
 ### One search for the phone and the desktop
 
