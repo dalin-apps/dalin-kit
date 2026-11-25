@@ -139,6 +139,8 @@ describe("@dalin/kit/components", () => {
     "SHEET_NO_DRAG_ATTR",
     "noSheetDrag",
     "sheetShouldDismiss",
+    "sheetReleaseVelocity",
+    "SHEET_FLING_WINDOW_MS",
     "sheetDragBlock",
     "SHEET_DISMISS_PX",
     "resolveSheetDismissDistance",
