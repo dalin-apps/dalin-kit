@@ -12,7 +12,12 @@ const LIFT_CLICK_MS = 700;
  * does not also open, and Android's own context menu, which fires for the
  * same hold.
  */
-export function useLongPress(onLongPress) {
+export function useLongPress(onLongPress, 
+/**
+ * Told when a finger's hold starts (true) and when it ends, by firing, a
+ * lift, a move or a second finger (false): the row shows it is held.
+ */
+onPressing) {
     const timer = useRef(null);
     const start = useRef(null);
     const fired = useRef(false);
@@ -22,9 +27,13 @@ export function useLongPress(onLongPress) {
     const moved = useRef(false);
     const latest = useRef(onLongPress);
     latest.current = onLongPress;
+    const pressingRef = useRef(onPressing);
+    pressingRef.current = onPressing;
     const cancel = () => {
-        if (timer.current)
+        if (timer.current) {
             clearTimeout(timer.current);
+            pressingRef.current?.(false);
+        }
         timer.current = null;
     };
     useEffect(() => cancel, []);
@@ -43,8 +52,10 @@ export function useLongPress(onLongPress) {
             }
             start.current = { x: touch.clientX, y: touch.clientY };
             cancel();
+            pressingRef.current?.(true);
             timer.current = setTimeout(() => {
                 timer.current = null;
+                pressingRef.current?.(false);
                 if (!start.current)
                     return;
                 fired.current = true;

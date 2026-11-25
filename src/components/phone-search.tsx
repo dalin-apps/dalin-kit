@@ -1,6 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+  type Ref,
+} from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { registerToastDock } from "../toast/toast-dock.js";
 import { pushBackEntry, type BackEntry } from "./back-entry.js";
@@ -11,6 +21,7 @@ import { RowMenu, pointAnchor, type RowMenuState } from "./palette-menu.js";
 import { matchParts, scoreParts } from "./palette-match.js";
 import { usePaletteResults } from "./palette-results.js";
 import type { PaletteGroup, PaletteItem, PaletteMenuEntry, PaletteSource } from "./palette-types.js";
+import type { PaletteCompletion } from "./palette.js";
 import { useToasterTab } from "./toaster-tab.js";
 
 /** One row of the phone's search: a suggestion before a query, or a result after one. */
@@ -35,6 +46,20 @@ export type PhoneSearchRow = {
   menu?: () => readonly PaletteMenuEntry[];
   /** A long press of the app's own, for a row whose hold does something other than a menu. `menu` wins. */
   onLongPress?: (point: { x: number; y: number }) => void;
+  /**
+   * Keeps the row lit, for a hold of the app's own (`onLongPress`) whose
+   * menu is up. A row's `menu` lights it by itself.
+   */
+  held?: boolean;
+  /**
+   * Steps the row back, at a palette row's steps: `true` is 85%, for a row
+   * the app no longer vouches for, `"waiting"` 60%, for a row left from
+   * the last answer. Both at once, since nothing on the sheet fades. A tap
+   * still runs it.
+   */
+  dim?: boolean | "waiting";
+  /** Extra classes for the row, beside `dl-phone-search-row`. */
+  className?: string;
   /** What tapping the row does. Search has closed by the time it runs, unless `keepOpen`. */
   onSelect: () => void;
 };
@@ -144,9 +169,54 @@ export type PhoneSearchProps = {
   fieldStart?: ReactNode;
   /** Something inside the field after the words, such as a filter icon. The same rule holds. */
   fieldEnd?: ReactNode;
+  /**
+   * The insides of a row drawn from `sources` or `actions`, for a row the
+   * kit's anatomy does not fit: drive's names cut in the middle. Return
+   * undefined to keep the kit's. The row's tap, long press, `dim` and
+   * `className` stay the kit's.
+   */
+  rowContent?: (item: PaletteItem, state: PhoneSearchRowState) => ReactNode | undefined;
+  /**
+   * A source's group laid out by the app, under the group's heading:
+   * calendar's day headings and its Past divider between the rows. `row`
+   * draws one of the kit's rows for an item (keyed by its id); the app puts
+   * its own lines between them, each with a key of its own. Return
+   * undefined to keep the kit's plain run of rows.
+   */
+  groupContent?: (group: PaletteGroup, row: (item: PaletteItem) => ReactNode) => ReactNode | undefined;
+  /**
+   * A ghost completion in the field, the palette's: faint words after the
+   * typed ones. A tap on them takes it, and so do Tab and ArrowRight at the
+   * end on a keyboard. Pass null while there is nothing to offer, and leave
+   * it out where search never offers one: the field wraps the input for it.
+   */
+  completion?: PhoneSearchCompletion | null;
+  /** The field's input, for an app that focuses, blurs or measures it. */
+  inputRef?: Ref<HTMLInputElement>;
+  /**
+   * The app's results scroll themselves (mail's message list). The body
+   * then stops scrolling and gives its height to them, and leaves its
+   * bottom space (the safe area, 32px and the keyboard) to that scroller:
+   * pad it by `var(--dl-phone-search-end)`, which the body writes, so the
+   * keyboard is counted once.
+   */
+  ownScroller?: boolean;
   /** Extra classes for the sheet, beside `dl-phone-search`. */
   className?: string;
 };
+
+/** What a row drawn from `sources` is, for an app that draws its insides itself. */
+export type PhoneSearchRowState = {
+  /** The words to mark in it: the words the list answers. */
+  marks: string;
+  /** Whether only the score found it, so its letters are marked and not whole words. */
+  byScore: boolean;
+  /** Whether its menu is up. */
+  held: boolean;
+};
+
+/** What a ghost completion on the phone is: the palette's, and a tap on the faint words takes it too. */
+export type PhoneSearchCompletion = PaletteCompletion;
 
 /** What Base UI says about a close: `reason` is `"escape-key"`, `"close-press"` and so on. */
 export type PhoneSearchChangeDetails = Parameters<NonNullable<Dialog.Root.Props["onOpenChange"]>>[1];
@@ -212,21 +282,48 @@ function PhoneRow({
   subtitle,
   leading,
   meta,
+  content,
   onTap,
   onHold,
   held,
+  dim,
+  className,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
   leading?: ReactNode;
   meta?: ReactNode;
+  /** The app's own insides, in place of the four above. */
+  content?: ReactNode;
   onTap: () => void;
   onHold?: (point: { x: number; y: number }) => void;
   held?: boolean;
+  dim?: boolean | "waiting";
+  className?: string;
 }): ReactNode {
-  const hold = useLongPress(onHold);
+  // While a finger's hold runs, the row says so: phone.css lights it as it
+  // lights the row whose menu is up.
+  const [pressing, setPressing] = useState(false);
+  const hold = useLongPress(onHold, setPressing);
   return (
-    <button type="button" className="dl-phone-search-row" data-held={held ? "" : undefined} onClick={onTap} {...hold}>
+    <button
+      type="button"
+      className={cx("dl-phone-search-row", className)}
+      data-held={held ? "" : undefined}
+      data-pressing={pressing ? "" : undefined}
+      data-dim={dim === "waiting" ? "waiting" : dim ? "" : undefined}
+      onClick={onTap}
+      {...hold}
+    >
+      {content !== undefined ? content : <RowInsides title={title} subtitle={subtitle} leading={leading} meta={meta} />}
+    </button>
+  );
+}
+
+/** The kit's anatomy of a row: the lead, one line or two, and the meta. */
+function RowInsides({ title, subtitle, leading, meta }: { title: ReactNode; subtitle?: ReactNode; leading?: ReactNode; meta?: ReactNode }): ReactNode {
+  return (
+    <>
       {leading}
       {subtitle ? (
         <span className="dl-phone-search-two">
@@ -237,7 +334,7 @@ function PhoneRow({
         <span className="dl-phone-search-one">{title}</span>
       )}
       {meta !== undefined && meta !== null && meta !== false ? <span className="dl-phone-search-meta">{meta}</span> : null}
-    </button>
+    </>
   );
 }
 
@@ -275,7 +372,9 @@ function Sections({
                 meta={row.meta}
                 onTap={() => choose(row)}
                 onHold={hold(key, row)}
-                held={heldKey === key}
+                held={heldKey === key || row.held}
+                dim={row.dim}
+                className={row.className}
               />
             );
           })}
@@ -292,6 +391,8 @@ function GroupSections({
   choose,
   hold,
   heldKey,
+  rowContent,
+  groupContent,
 }: {
   groups: readonly PaletteGroup[];
   marks: string;
@@ -300,29 +401,51 @@ function GroupSections({
   choose: (row: Chosen) => void;
   hold: Hold;
   heldKey: string | null;
+  rowContent?: PhoneSearchProps["rowContent"];
+  groupContent?: PhoneSearchProps["groupContent"];
 }): ReactNode {
-  return groups.map((group) => (
-    <section key={group.id} className="dl-phone-search-section">
-      {group.heading ? <h2 className="dl-phone-search-heading">{group.heading}</h2> : null}
-      {group.items.map((item) => {
-        const key = `${group.id}:${item.id}`;
-        const scored = byScore.has(item);
-        return (
-          <PhoneRow
-            key={item.id}
-            title={<PhoneMarked text={item.title} query={marks} byScore={scored} />}
-            subtitle={item.subtitle ? <PhoneMarked text={item.subtitle} query={marks} /> : undefined}
-            leading={item.icon}
-            meta={item.meta}
-            onTap={() => choose(item)}
-            onHold={hold(key, item)}
-            held={heldKey === key}
-          />
-        );
-      })}
-      {group.note ? <p className="dl-phone-search-note">{group.note}</p> : null}
-    </section>
-  ));
+  return groups.map((group) => {
+    const row = (item: PaletteItem): ReactNode => {
+      const key = `${group.id}:${item.id}`;
+      const scored = byScore.has(item);
+      const held = heldKey === key;
+      const own = rowContent?.(item, { marks, byScore: scored, held });
+      return (
+        <PhoneRow
+          key={item.id}
+          title={<PhoneMarked text={item.title} query={marks} byScore={scored} />}
+          subtitle={item.subtitle ? <PhoneMarked text={item.subtitle} query={marks} /> : undefined}
+          leading={item.icon}
+          meta={item.meta}
+          content={own}
+          onTap={() => choose(item)}
+          onHold={hold(key, item)}
+          held={held}
+          dim={item.dim}
+          className={item.className}
+        />
+      );
+    };
+    const laid = groupContent?.(group, row);
+    return (
+      <section key={group.id} className="dl-phone-search-section">
+        {group.heading ? <h2 className="dl-phone-search-heading">{group.heading}</h2> : null}
+        {laid !== undefined ? laid : group.items.map(row)}
+        {group.note ? <p className="dl-phone-search-note">{group.note}</p> : null}
+      </section>
+    );
+  });
+}
+
+/** Whether the caret sits at the end of the field, with nothing selected. */
+function caretAtEnd(input: HTMLInputElement): boolean {
+  return input.selectionStart === input.value.length && input.selectionEnd === input.value.length;
+}
+
+/** Hands a node to an app's ref, a function or an object. */
+function assignRef<T>(ref: Ref<T> | undefined, node: T | null): void {
+  if (typeof ref === "function") ref(node);
+  else if (ref) (ref as { current: T | null }).current = node;
 }
 
 /**
@@ -388,6 +511,11 @@ export function PhoneSearch({
   emptyText,
   fieldStart,
   fieldEnd,
+  rowContent,
+  groupContent,
+  completion,
+  inputRef,
+  ownScroller = false,
   className,
 }: PhoneSearchProps): ReactNode {
   const [ownQuery, setOwnQuery] = useState("");
@@ -416,8 +544,11 @@ export function PhoneSearch({
   // The caret goes in as the field mounts, which is as the tap's handler
   // returns. A phone raises its keyboard only for a focus that a touch
   // caused, and a focus set a frame later is too late for that.
+  const appInput = useRef(inputRef);
+  appInput.current = inputRef;
   const focusField = useCallback((node: HTMLInputElement | null) => {
     input.current = node;
+    assignRef(appInput.current, node);
     node?.focus({ preventScroll: true });
   }, []);
 
@@ -541,11 +672,47 @@ export function PhoneSearch({
   const settled = !answers.stale && answers.busy === 0;
   const groupList = (groups: readonly PaletteGroup[]) => (
     <div className="dl-phone-search-results" data-stale={answers.stale ? "" : undefined} aria-busy={answers.stale || answers.busy > 0 || undefined}>
-      <GroupSections groups={groups} marks={answered} byScore={answers.byScore} choose={chooseFromList} hold={hold} heldKey={menu?.key ?? null} />
+      <GroupSections
+        groups={groups}
+        marks={answered}
+        byScore={answers.byScore}
+        choose={chooseFromList}
+        hold={hold}
+        heldKey={menu?.key ?? null}
+        rowContent={rowContent}
+        groupContent={groupContent}
+      />
     </div>
   );
   const emptyNote = (
     <p className="dl-phone-search-note">{emptyText ? emptyText(query.trim()) : query.trim() ? `No results for “${query.trim()}”.` : "No results."}</p>
+  );
+
+  const keyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (!completion || event.nativeEvent.isComposing) return;
+    if ((event.key === "Tab" && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey) || (event.key === "ArrowRight" && caretAtEnd(event.currentTarget))) {
+      event.preventDefault();
+      completion.onAccept();
+    }
+  };
+  const field = (
+    <input
+      ref={focusField}
+      type="search"
+      className="dl-phone-search-input"
+      value={query}
+      onChange={(event) => setQuery(event.target.value)}
+      onKeyDown={keyDown}
+      placeholder={placeholder}
+      aria-label={placeholder}
+      enterKeyHint="search"
+      autoComplete="off"
+      autoCorrect="off"
+      autoCapitalize="none"
+      spellCheck={false}
+      // A forward Tab takes the completion, so the toast's place in the loop waits for that press.
+      data-dl-owns-tab={completion ? "" : undefined}
+    />
   );
 
   return (
@@ -598,25 +765,39 @@ export function PhoneSearch({
             >
               <SearchGlyph />
               {fieldStart}
-              <input
-                ref={focusField}
-                type="search"
-                className="dl-phone-search-input"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={placeholder}
-                aria-label={placeholder}
-                enterKeyHint="search"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
+              {completion === undefined ? (
+                field
+              ) : (
+                <span className="dl-phone-search-entry">
+                  {completion ? (
+                    <span className="dl-phone-search-ghost">
+                      <span className="dl-phone-search-ghost-typed" aria-hidden="true">
+                        {query}
+                      </span>
+                      <button
+                        type="button"
+                        className="dl-phone-search-ghost-rest"
+                        aria-label={`Complete as ${query}${completion.suffix}`}
+                        tabIndex={-1}
+                        // The caret stays in the field, and the keyboard up.
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => {
+                          completion.onAccept();
+                          input.current?.focus({ preventScroll: true });
+                        }}
+                      >
+                        {completion.suffix}
+                      </button>
+                    </span>
+                  ) : null}
+                  {field}
+                </span>
+              )}
               {fieldEnd}
             </div>
             <Dialog.Close className="dl-phone-search-cancel">{cancelLabel}</Dialog.Close>
           </form>
-          <div className="dl-phone-search-body">
+          <div className="dl-phone-search-body" data-own-scroller={ownScroller ? "" : undefined}>
             {asked ? (
               children ??
               (found ? (

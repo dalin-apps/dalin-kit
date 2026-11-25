@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { registerToastDock } from "../toast/toast-dock.js";
 import { pushBackEntry } from "./back-entry.js";
@@ -34,9 +34,16 @@ function PhoneMarked({ text, query, byScore = false }) {
     return (byScore ? scoreParts(text, query) : matchParts(text, query)).map((part, index) => part.match ? (_jsx("mark", { className: "dl-phone-search-mark", children: part.text }, index)) : (part.text));
 }
 /** One of the kit's rows: a tap runs it, a long press opens its menu or the app's own hold. */
-function PhoneRow({ title, subtitle, leading, meta, onTap, onHold, held, }) {
-    const hold = useLongPress(onHold);
-    return (_jsxs("button", { type: "button", className: "dl-phone-search-row", "data-held": held ? "" : undefined, onClick: onTap, ...hold, children: [leading, subtitle ? (_jsxs("span", { className: "dl-phone-search-two", children: [_jsx("b", { children: title }), _jsx("small", { children: subtitle })] })) : (_jsx("span", { className: "dl-phone-search-one", children: title })), meta !== undefined && meta !== null && meta !== false ? _jsx("span", { className: "dl-phone-search-meta", children: meta }) : null] }));
+function PhoneRow({ title, subtitle, leading, meta, content, onTap, onHold, held, dim, className, }) {
+    // While a finger's hold runs, the row says so: phone.css lights it as it
+    // lights the row whose menu is up.
+    const [pressing, setPressing] = useState(false);
+    const hold = useLongPress(onHold, setPressing);
+    return (_jsx("button", { type: "button", className: cx("dl-phone-search-row", className), "data-held": held ? "" : undefined, "data-pressing": pressing ? "" : undefined, "data-dim": dim === "waiting" ? "waiting" : dim ? "" : undefined, onClick: onTap, ...hold, children: content !== undefined ? content : _jsx(RowInsides, { title: title, subtitle: subtitle, leading: leading, meta: meta }) }));
+}
+/** The kit's anatomy of a row: the lead, one line or two, and the meta. */
+function RowInsides({ title, subtitle, leading, meta }) {
+    return (_jsxs(_Fragment, { children: [leading, subtitle ? (_jsxs("span", { className: "dl-phone-search-two", children: [_jsx("b", { children: title }), _jsx("small", { children: subtitle })] })) : (_jsx("span", { className: "dl-phone-search-one", children: title })), meta !== undefined && meta !== null && meta !== false ? _jsx("span", { className: "dl-phone-search-meta", children: meta }) : null] }));
 }
 function Sections({ sections, choose, hold, heldKey, }) {
     return sections.map((section) => {
@@ -47,17 +54,34 @@ function Sections({ sections, choose, hold, heldKey, }) {
         return (_jsxs("section", { className: "dl-phone-search-section", children: [_jsx("h2", { className: "dl-phone-search-heading", children: section.heading }), section.children ??
                     section.rows.map((row) => {
                         const key = `${sectionKey}:${row.id}`;
-                        return (_jsx(PhoneRow, { title: row.title, subtitle: row.subtitle, leading: row.leading, meta: row.meta, onTap: () => choose(row), onHold: hold(key, row), held: heldKey === key }, row.id));
+                        return (_jsx(PhoneRow, { title: row.title, subtitle: row.subtitle, leading: row.leading, meta: row.meta, onTap: () => choose(row), onHold: hold(key, row), held: heldKey === key || row.held, dim: row.dim, className: row.className }, row.id));
                     })] }, sectionKey));
     });
 }
 /** The groups the sources and actions answered, as sections of the kit's rows with the query marked. */
-function GroupSections({ groups, marks, byScore, choose, hold, heldKey, }) {
-    return groups.map((group) => (_jsxs("section", { className: "dl-phone-search-section", children: [group.heading ? _jsx("h2", { className: "dl-phone-search-heading", children: group.heading }) : null, group.items.map((item) => {
-                const key = `${group.id}:${item.id}`;
-                const scored = byScore.has(item);
-                return (_jsx(PhoneRow, { title: _jsx(PhoneMarked, { text: item.title, query: marks, byScore: scored }), subtitle: item.subtitle ? _jsx(PhoneMarked, { text: item.subtitle, query: marks }) : undefined, leading: item.icon, meta: item.meta, onTap: () => choose(item), onHold: hold(key, item), held: heldKey === key }, item.id));
-            }), group.note ? _jsx("p", { className: "dl-phone-search-note", children: group.note }) : null] }, group.id)));
+function GroupSections({ groups, marks, byScore, choose, hold, heldKey, rowContent, groupContent, }) {
+    return groups.map((group) => {
+        const row = (item) => {
+            const key = `${group.id}:${item.id}`;
+            const scored = byScore.has(item);
+            const held = heldKey === key;
+            const own = rowContent?.(item, { marks, byScore: scored, held });
+            return (_jsx(PhoneRow, { title: _jsx(PhoneMarked, { text: item.title, query: marks, byScore: scored }), subtitle: item.subtitle ? _jsx(PhoneMarked, { text: item.subtitle, query: marks }) : undefined, leading: item.icon, meta: item.meta, content: own, onTap: () => choose(item), onHold: hold(key, item), held: held, dim: item.dim, className: item.className }, item.id));
+        };
+        const laid = groupContent?.(group, row);
+        return (_jsxs("section", { className: "dl-phone-search-section", children: [group.heading ? _jsx("h2", { className: "dl-phone-search-heading", children: group.heading }) : null, laid !== undefined ? laid : group.items.map(row), group.note ? _jsx("p", { className: "dl-phone-search-note", children: group.note }) : null] }, group.id));
+    });
+}
+/** Whether the caret sits at the end of the field, with nothing selected. */
+function caretAtEnd(input) {
+    return input.selectionStart === input.value.length && input.selectionEnd === input.value.length;
+}
+/** Hands a node to an app's ref, a function or an object. */
+function assignRef(ref, node) {
+    if (typeof ref === "function")
+        ref(node);
+    else if (ref)
+        ref.current = node;
 }
 /**
  * The phone's search, the same in all four apps: a full-screen sheet that
@@ -100,7 +124,7 @@ function GroupSections({ groups, marks, byScore, choose, hold, heldKey, }) {
  *     onQueryChange={search}
  *   />
  */
-export function PhoneSearch({ open, onOpenChange, systemBack = true, query: queryProp, onQueryChange, onSubmit, placeholder = "Search", cancelLabel = "Cancel", action, sections = NO_SECTIONS, results, sources, actions, actionsHeading = "Actions", narrowed = false, children, beforeQuery, covered = false, emptyText, fieldStart, fieldEnd, className, }) {
+export function PhoneSearch({ open, onOpenChange, systemBack = true, query: queryProp, onQueryChange, onSubmit, placeholder = "Search", cancelLabel = "Cancel", action, sections = NO_SECTIONS, results, sources, actions, actionsHeading = "Actions", narrowed = false, children, beforeQuery, covered = false, emptyText, fieldStart, fieldEnd, rowContent, groupContent, completion, inputRef, ownScroller = false, className, }) {
     const [ownQuery, setOwnQuery] = useState("");
     const query = queryProp ?? ownQuery;
     // The sheet's element as state: Base UI mounts it a commit after `open`
@@ -123,8 +147,11 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
     // The caret goes in as the field mounts, which is as the tap's handler
     // returns. A phone raises its keyboard only for a focus that a touch
     // caused, and a focus set a frame later is too late for that.
+    const appInput = useRef(inputRef);
+    appInput.current = inputRef;
     const focusField = useCallback((node) => {
         input.current = node;
+        assignRef(appInput.current, node);
         node?.focus({ preventScroll: true });
     }, []);
     // The sheet hides the bottom bar, so it is a cover for the toaster. Not
@@ -249,8 +276,17 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
     const found = results?.some((section) => section.children || (section.rows && section.rows.length > 0)) ?? false;
     const answered = answers.answered ?? "";
     const settled = !answers.stale && answers.busy === 0;
-    const groupList = (groups) => (_jsx("div", { className: "dl-phone-search-results", "data-stale": answers.stale ? "" : undefined, "aria-busy": answers.stale || answers.busy > 0 || undefined, children: _jsx(GroupSections, { groups: groups, marks: answered, byScore: answers.byScore, choose: chooseFromList, hold: hold, heldKey: menu?.key ?? null }) }));
+    const groupList = (groups) => (_jsx("div", { className: "dl-phone-search-results", "data-stale": answers.stale ? "" : undefined, "aria-busy": answers.stale || answers.busy > 0 || undefined, children: _jsx(GroupSections, { groups: groups, marks: answered, byScore: answers.byScore, choose: chooseFromList, hold: hold, heldKey: menu?.key ?? null, rowContent: rowContent, groupContent: groupContent }) }));
     const emptyNote = (_jsx("p", { className: "dl-phone-search-note", children: emptyText ? emptyText(query.trim()) : query.trim() ? `No results for “${query.trim()}”.` : "No results." }));
+    const keyDown = (event) => {
+        if (!completion || event.nativeEvent.isComposing)
+            return;
+        if ((event.key === "Tab" && !event.shiftKey && !event.altKey && !event.ctrlKey && !event.metaKey) || (event.key === "ArrowRight" && caretAtEnd(event.currentTarget))) {
+            event.preventDefault();
+            completion.onAccept();
+        }
+    };
+    const field = (_jsx("input", { ref: focusField, type: "search", className: "dl-phone-search-input", value: query, onChange: (event) => setQuery(event.target.value), onKeyDown: keyDown, placeholder: placeholder, "aria-label": placeholder, enterKeyHint: "search", autoComplete: "off", autoCorrect: "off", autoCapitalize: "none", spellCheck: false, "data-dl-owns-tab": completion ? "" : undefined }));
     return (_jsx(Dialog.Root, { open: open, 
         // Covered, the sheet is no longer the screen: the page goes back to
         // what covers it, and nothing done there closes search.
@@ -273,7 +309,12 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
                                 }, onClick: (event) => {
                                     if (!onFieldControl(event))
                                         input.current?.focus({ preventScroll: true });
-                                }, children: [_jsx(SearchGlyph, {}), fieldStart, _jsx("input", { ref: focusField, type: "search", className: "dl-phone-search-input", value: query, onChange: (event) => setQuery(event.target.value), placeholder: placeholder, "aria-label": placeholder, enterKeyHint: "search", autoComplete: "off", autoCorrect: "off", autoCapitalize: "none", spellCheck: false }), fieldEnd] }), _jsx(Dialog.Close, { className: "dl-phone-search-cancel", children: cancelLabel })] }), _jsx("div", { className: "dl-phone-search-body", children: asked ? (children ??
+                                }, children: [_jsx(SearchGlyph, {}), fieldStart, completion === undefined ? (field) : (_jsxs("span", { className: "dl-phone-search-entry", children: [completion ? (_jsxs("span", { className: "dl-phone-search-ghost", children: [_jsx("span", { className: "dl-phone-search-ghost-typed", "aria-hidden": "true", children: query }), _jsx("button", { type: "button", className: "dl-phone-search-ghost-rest", "aria-label": `Complete as ${query}${completion.suffix}`, tabIndex: -1, 
+                                                        // The caret stays in the field, and the keyboard up.
+                                                        onMouseDown: (event) => event.preventDefault(), onClick: () => {
+                                                            completion.onAccept();
+                                                            input.current?.focus({ preventScroll: true });
+                                                        }, children: completion.suffix })] })) : null, field] })), fieldEnd] }), _jsx(Dialog.Close, { className: "dl-phone-search-cancel", children: cancelLabel })] }), _jsx("div", { className: "dl-phone-search-body", "data-own-scroller": ownScroller ? "" : undefined, children: asked ? (children ??
                             (found ? (_jsx(Sections, { sections: results, choose: choose, hold: hold, heldKey: menu?.key ?? null })) : results ? (emptyNote) : searching ? (answers.groups.length > 0 ? (groupList(answers.groups)) : settled && answers.answered !== null ? (emptyNote) : null) : null)) : (_jsxs(_Fragment, { children: [action ? (_jsxs("button", { type: "button", className: "dl-phone-search-row dl-phone-search-action", onClick: () => choose(action), children: [action.icon, _jsx("span", { className: "dl-phone-search-one", children: action.label })] })) : null, searching && answers.groups.length > 0 ? groupList(answers.groups) : null, _jsx(Sections, { sections: sections, choose: choose, hold: hold, heldKey: menu?.key ?? null }), beforeQuery] })) }), _jsx(RowMenu, { state: menu, onClose: () => setMenu(null), onRun: (entry) => choose(entry), className: "dl-phone-search-menu" })] }) }) }));
 }
 const NO_SECTIONS = [];

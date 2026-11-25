@@ -286,6 +286,9 @@ html[data-dl-motion="reduce"] :is(.dl-phone-icon, .dl-phone-search-cancel, .dl-p
    covers and writes it on the sheet as --dl-phone-kb, and where it has
    written nothing the app's own --kb-inset is read. */
 .dl-phone-search-body {
+  /* The space the list ends with, the padding below: the safe area, 32px
+     and the keyboard. Results that scroll themselves end on it instead. */
+  --dl-phone-search-end: calc(env(safe-area-inset-bottom, 0px) + 32px + var(--dl-phone-kb, var(--kb-inset, 0px)));
   box-sizing: border-box;
   flex: 1;
   min-height: 0;
@@ -293,6 +296,19 @@ html[data-dl-motion="reduce"] :is(.dl-phone-icon, .dl-phone-search-cancel, .dl-p
   scroll-padding-bottom: var(--dl-phone-kb, var(--kb-inset, 0px));
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+/* Results that scroll themselves (`ownScroller`): the body holds still and
+   gives them its height, and their scroller ends on --dl-phone-search-end,
+   so the keyboard is counted once. */
+.dl-phone-search-body[data-own-scroller] {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+.dl-phone-search-body[data-own-scroller] > :only-child {
+  flex: 1;
+  min-height: 0;
 }
 .dl-phone-search-row {
   box-sizing: border-box;
@@ -410,6 +426,65 @@ html[data-dl-motion="reduce"] :is(.dl-phone-icon, .dl-phone-search-cancel, .dl-p
 /* The row whose menu a long press opened stays lit while the menu is up. */
 .dl-phone-search-row[data-held] {
   background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
+}
+/* A finger holding the row, until the hold fires or lets go: lit as the
+   row whose menu is up, at once, since nothing on the sheet fades. */
+.dl-phone-search-row[data-pressing] {
+  background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
+}
+/* A row the app steps back, at the palette's steps: 85%, and 60% for a row
+   left from the last answer. At once, with no wait, as nothing on the
+   sheet fades. */
+.dl-phone-search-row[data-dim] {
+  opacity: 0.85;
+}
+.dl-phone-search-row[data-dim="waiting"] {
+  opacity: 0.6;
+}
+/* A row's menu on the phone: the family's 44px target, in the rows' 16px
+   type. */
+.dl-menu.dl-phone-search-menu {
+  font-size: 16px;
+  line-height: 24px;
+}
+.dl-phone-search-menu .dl-menu-item {
+  min-height: 44px;
+  padding: 0 12px;
+}
+/* The field with a ghost completion over it: the typed words drawn unseen,
+   so the rest starts where they end. The rest is a button, since a tap on
+   it takes the completion. */
+.dl-phone-search-entry {
+  position: relative;
+  flex: 1;
+  min-width: 4rem;
+  display: flex;
+  height: 100%;
+}
+.dl-phone-search-ghost {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: pre;
+  pointer-events: none;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+.dl-phone-search-ghost-typed {
+  visibility: hidden;
+}
+.dl-phone-search-ghost-rest {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dl-fg-faint, #8f97a0);
+  font: inherit;
+  white-space: pre;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
 }
 /* A list that answers an earlier query takes no tap. It does not dim:
    nothing on the sheet moves or fades, and the answer usually lands within

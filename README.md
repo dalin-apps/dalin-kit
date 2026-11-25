@@ -73,7 +73,7 @@ Then delete the app's own copy of whatever the kit now covers. Two copies of a t
 
 0.12 takes the command palette apart into parts an app can build on, ranks the actions by cmdk's command-score, adds Ctrl N and Ctrl P and nested pages, and lets `<PhoneSearch>` take the palette's own `sources` and `actions`. The owner approved the plan on 2026-11-24, after a research page that compared the palette with cmdk: the palette stays on Base UI, the kit copies cmdk's ideas and not its package, and one search definition per app drives both the desktop palette and the phone search.
 
-An app that keeps `<CommandPalette>` as it is changes its pin and nothing else. The markup, the classes and the keys it had in 0.11 are the same, and the kit's own palette tests pass unchanged. Two things move under it:
+An app that keeps `<CommandPalette>` as it is changes its pin and nothing else. The markup, the classes and the keys it had in 0.11 are the same. The kit's own palette tests pass with one assertion changed, for the Tab hold under "What the app ports found". Two things move under it:
 
 - The actions come in a new order once a word is typed. The rows that hold every word still come first, now ranked by cmdk's command-score where they kept the app's order, and after them come rows only the score finds, such as "New page" for "np". With an empty field the order is the app's, as before.
 - Ctrl N and Ctrl P move the highlight down and up, the way the arrows do.
@@ -116,6 +116,34 @@ Mail and calendar can now move their own desktop palettes onto the kit's parts, 
 Three features have a home and change as they move. Mail's per-row Enter waits for the highlighted row to stop waiting and then runs that row, as mail's does, but a whole list from an earlier query is the kit's stale list, which dims after 120ms and holds the arrows too. Calendar's Say it row keeps its Enter cap only while it is highlighted, which it is as the list appears. Calendar's actions pick up the score's finds, which the owner chose for every app.
 
 `<PhoneSearch>` takes `sources`, `actions` and `actionsHeading`, the same types the palette takes. An app can hand both surfaces one search and delete the second copy it wrote for the phone. `sections`, `results` and `children` work as they did, and win over the sources, so an app can move one surface at a time. A row of either kind takes a long press: a `menu` opens the family's menu at the finger, and `onLongPress` is the app's own hold. Mail can drop the copy of the kit's row it drew to give People one. A second finger, or a finger that moves 10px, ends a hold, and the browser's own menu for a finger that moved is no hold.
+
+### What the app ports found
+
+Drive, calendar, mail and notes each moved onto 0.12 and kept their own code wherever the kit had no slot. This round, still 0.12.0, fixes the defects they found and adds those slots. Drive and notes, on `<CommandPalette>`, see the fixes and nothing else:
+
+- An IME's Enter no longer runs the highlighted row, and its arrows no longer move the highlight.
+- Tab is held on the press, so two quick Tabs stay in the palette. A Tab with no toast to reach is now cancelled on the press, and focus stays in the field as before.
+- A list with other rows, such as the one a filter pick brings, starts on its first row.
+- The dialog says `aria-modal="true"`, and the field says `aria-expanded="false"` over an empty list.
+- Escape right after the filter's menu opens closes only the menu.
+
+Each app can now delete the code it kept:
+
+| Code an app kept | What replaces it |
+| --- | --- |
+| preventDefault on an IME's Enter and arrows in `onKeyDown` (mail) | Nothing: the field holds them back |
+| Its own Tab hold, stepping aside for a toast (calendar) | Nothing: the palette holds Tab, and the toast keeps its place in the loop |
+| Moving the highlight back to the first row after a filter pick (calendar) | Nothing |
+| Making the filter menu take Escape first (calendar) | Nothing |
+| Markers on a `display: contents` wrapper inside `<Palette>` (mail) | The same attributes on `<Palette>`, which puts them on the panel |
+| Phone rows drawn as `sections` and `results` from the sources it built (drive) | `sources`, with `rowContent` for the names cut in the middle |
+| `usePaletteResults` run a second time, and its own phone list (calendar) | `sources`, with `groupContent` for the day headings and the Past divider, and `rowContent` for the agenda rows |
+| Its own typed rows on the phone (mail) | `dim` and `className` on the kit's rows |
+| Its own People row and phone menu (mail) | `menu` on the row, or `onLongPress` with `held`; the menu's entries are 44px in 16px type |
+| A ghost that measures `.dl-phone-search-input`, and blur and focus that find the field by that class (mail) | `completion` and `inputRef` |
+| The keyboard padding copied onto its results list, and its class overrides on the body (mail) | `ownScroller`, and `var(--dl-phone-search-end)` as the list's bottom padding |
+
+The phone draws `dim` at once, where mail's rows faded over 150ms. Mail's own transition in `className` keeps that fade.
 
 ## Moving an app from 0.10.6 to 0.11
 
@@ -916,13 +944,15 @@ import { CommandPalette } from "@dalin/kit/components";
 
 One palette for the four apps: a Base UI Dialog holding an inline Autocomplete, 600px wide and frosted, with the app dimmed behind it. It starts from calendar's palette and takes mail's search palette look. Mount it once at the app's root. It needs `palette.css` and `menu.css`. It is built from parts an app can build its own palette on (see "Building a palette from its parts" below).
 
-Ctrl K opens and closes it (Cmd K on a Mac). The app's own key opens it too, when pressed outside a text field. The caret is in the field as it opens. The arrows move the focus, and so do Ctrl N and Ctrl P, as in cmdk, except while an IME is composing. Chrome on Windows and Linux keeps Ctrl N for a new window and never hands it to the page, so there only Ctrl P moves the highlight. Caps Lock changes neither. The focus always rests on a row, Enter runs that row, and Escape or a press outside closes the palette.
+Ctrl K opens and closes it (Cmd K on a Mac). The app's own key opens it too, when pressed outside a text field. The caret is in the field as it opens. The arrows move the focus, and so do Ctrl N and Ctrl P, as in cmdk, except while an IME is composing. Chrome on Windows and Linux keeps Ctrl N for a new window and never hands it to the page, so there only Ctrl P moves the highlight. Caps Lock changes neither. The focus always rests on a row, Enter runs that row, and Escape or a press outside closes the palette. While an IME is composing, its Enter and arrows are the IME's: none of them runs a row or moves the focus.
 
 Results come in groups under sentence-case headings, and the words of the query are marked in each row's title and second line. The focused row shows an Enter keycap in the slot its own shortcut sits in. That slot is on every row, so nothing in a row moves as the focus does.
 
 A row may name its `verb`, for a row that Enter does not open: drive's "Reveal" for a file shown in its folder. The word sits before the Enter cap on the focused row, small and muted. The hint a screen reader hears on the field says it too: "Press Enter to reveal the highlighted result", where it says "open" for a row that names none. A row with a verb holds the word's width open at its right end, focused or not.
 
-The palette is modal, so Tab stays in it, with one exception. A toast that can take Tab joins the loop: Tab in the field goes to the toast's action and Tab there comes back. A press on a toast leaves the palette open.
+The palette is modal (`aria-modal="true"`), so Tab stays in it, with one exception. A toast that can take Tab joins the loop: Tab in the field goes to the toast's action and Tab there comes back. A press on a toast leaves the palette open. The palette holds Tab on the press itself, as the sheet does, because Base UI's focus guards turn it back a frame late: two quick Tabs from the filter used to leave the palette.
+
+Escape closes an open menu of the palette's own before the palette, the filter's or a row's. That holds even for an Escape pressed before focus has moved into a menu that has just opened. The next Escape closes the palette.
 
 Per the curator's motion rule, opening it from the keyboard does not animate, and neither does closing it after a key. Opened by a press on a search button, it fades in over 150ms.
 
@@ -945,6 +975,8 @@ A source is `{ id, heading, search }`. `search(query, signal)` returns rows, or 
 The list on screen always answers one query. Sources that answer at once are in the first frame. Where one answers later, the last list stays as it was until every source has answered the query in the field, and then the whole list changes together, the actions with it. Until then the old list is stale (`data-stale` on the list): its rows run nothing, the arrows move nothing, and it dims if the answer takes longer than 120ms. Enter is held and runs the first row of the answer when it arrives. Typing again lets the held Enter go.
 
 A source slower than 400ms (`SOURCE_WAIT_MS`) no longer holds the list back. The rest is shown, and the slow source's group joins at the end, under the actions, when it answers. No row already on screen moves, so the highlight stays on the row it was on. Answer at once where the rows are in memory, and the groups keep the order the sources were given.
+
+A list with other rows starts on its first row: a filter pick that changes the sources moves the highlight to the top, and it never lands on whatever row took the old one's place. The same rows coming back, as new objects or not, keep it where it was. The field says `aria-expanded="true"` only while the list holds a row.
 
 A row, whether a result or an action, is a `PaletteItem`:
 
@@ -1014,6 +1046,7 @@ import { Palette, PaletteField, PaletteLine, PaletteList, PaletteNote, usePalett
 | `onEscape` | Asked first on Escape. Return true when the key was the app's own, and the palette stays. |
 | `finalFocus` | Base UI's, for an app that hands focus on as the palette closes. |
 | `zIndex` | Written as `--dl-palette-z` on the dim and the panel, for an app that stands the palette under a window of its own. |
+| any other attribute | Goes to the panel: a `data-*` marker, an `id`. The kit's `data-slot`, `role`, `aria-label` and `aria-modal` win over one of the same name, and `style` sits under the z-index. |
 
 `<PaletteField>` is the field row. `glyph` replaces the magnifying glass. `start` and `end` sit inside the row before and after the words, `filter` before the Esc cap. `completion` is `{ suffix, onAccept }`, faint text after the words that Tab or ArrowRight at the end takes. While one shows in a field that isn't read only, a toast waits for the next forward Tab. Shift+Tab still reaches the toast. Pass null while there is nothing to offer, and leave it out in a palette that never offers one, since the field wraps the input for it. `onKeyDown` hears every key before the palette does, and `preventDefault()` keeps a key from the palette and from Base UI. `readOnly` and `busy` go to the input.
 
@@ -1089,12 +1122,16 @@ Before a word is typed it shows what calendar's search shows. First comes the ap
 | `query`, `onQueryChange` | the sheet owns the words | For an app that owns them, or wants to hear them change. |
 | `onSubmit` | none | Called when the keyboard's Search key is pressed. |
 | `fieldStart`, `fieldEnd` | none | The app's own pieces inside the field, such as calendar's calendar picker. |
+| `completion` | none | The palette's ghost completion, `{ suffix, onAccept }`: faint words after the typed ones. |
+| `inputRef` | none | The field's input, for an app that focuses, blurs or measures it. |
+| `ownScroller` | `false` | The app's results scroll themselves, and the body holds still. |
+| `rowContent`, `groupContent` | none | A source row's own insides, and a source group laid out by the app (see "One search for the phone and the desktop"). |
 | `narrowed` | `false` | Whether a filter in `fieldEnd` is on. The sheet then shows `results` before a word is typed. |
 | `className` | none | The app's own, beside `dl-phone-search`. |
 
 The field is a plain box around the input, never a `<label>`, since a label hands every tap to its first control. A tap on a control the app put in `fieldStart` or `fieldEnd` belongs to that control. A tap anywhere else on the field puts the caret in the input.
 
-A section is `{ heading, rows }`, or `{ heading, children }` for rows the kit has no shape for, such as calendar's agenda lines. A row is `{ id, title, subtitle, leading, meta, keepOpen, onSelect }`. `leading` is a 20px glyph or a `<PhoneSearchAvatar initials color>`, a 28px circle. `meta` ends the row at the right, small and faint: a file's size, "7 items". A section with no rows is not drawn.
+A section is `{ heading, rows }`, or `{ heading, children }` for rows the kit has no shape for, such as calendar's agenda lines. A row is `{ id, title, subtitle, leading, meta, keepOpen, onSelect }`. `leading` is a 20px glyph or a `<PhoneSearchAvatar initials color>`, a 28px circle. `meta` ends the row at the right, small and faint: a file's size, "7 items". A section with no rows is not drawn. A row may also carry `dim`, at the palette's steps (`true` for 85%, `"waiting"` for 60%), drawn at once since nothing on the sheet fades. It takes `className` too, and `held`, which keeps a row lit while the menu of the app's own hold is up.
 
 `beforeQuery` is the app's own content before a word is typed, drawn under the sections. Calendar's line that says what search finds goes there, in the kit's note class:
 
@@ -1116,6 +1153,10 @@ A toast over the sheet stays usable. A press on it leaves search open, and its a
 
 The results follow the on-screen keyboard. A phone lays its keyboard over the page without resizing it, so the sheet measures what the keyboard covers from `visualViewport` and writes it on itself as `--dl-phone-kb`. `phone.css` pads the list by that much, and the last result scrolls clear of the keys. Where the sheet has measured nothing, the list reads the app's own `--kb-inset`, the name mail, calendar and notes already use. An app that padded the results itself can delete that rule.
 
+`ownScroller` is for results that hold their own scroller, such as mail's message list. The body stops scrolling, gives its height to its one child and drops its bottom padding. That padding (the safe area, 32px and the keyboard) is written on the body as `--dl-phone-search-end`. The app's scroller ends on `var(--dl-phone-search-end)`, and the keyboard is counted once.
+
+`completion` lays faint words after the typed ones, as the palette's does. A tap on them takes it and leaves the caret, and the keyboard, where they were. On a keyboard, Tab and ArrowRight at the end take it. Pass null while there is nothing to offer, and leave it out where search never offers one, since the field wraps the input for it. `inputRef` hands the app the input, so no app has to find `.dl-phone-search-input` by its class.
+
 ### One search for the phone and the desktop
 
 `<PhoneSearch>` takes the palette's own `sources`, `actions` and `actionsHeading`, with the same types, so one definition drives both surfaces:
@@ -1131,7 +1172,9 @@ Before a word is typed, each source's answer to `""` is a section, under the act
 
 `results` and `children` win over the sources, and `sections` is still drawn after them, so an app moves over one surface at a time. A row with a `page` runs only its `onSelect` on the phone, which has no pages.
 
-A row takes a long press: 450ms of a still finger, or a right click. A `menu`, on a source's row or on a `PhoneSearchRow`, opens the family's menu at the finger, and the row stays lit while it is up. The click the lifting finger makes is swallowed, so the row does not also open. `onLongPress` on a `PhoneSearchRow` is a hold of the app's own, for a row whose hold is no menu.
+A source's row takes the app's own insides from `rowContent(item, { marks, byScore, held })`, as the palette's list does. Drive draws its names cut in the middle there. Return undefined to keep the kit's row; the tap, the long press, `dim` and `className` stay the kit's either way. `groupContent(group, row)` lays out a group's rows under its heading, so calendar can put its day headings and its Past divider between them. `row(item)` draws one of the kit's rows keyed by the item's id, and the app keys its own lines. Return undefined for the kit's plain run.
+
+A row takes a long press: 450ms of a still finger, or a right click. A `menu`, on a source's row or on a `PhoneSearchRow`, opens the family's menu at the finger, and the row stays lit while it is up. The click the lifting finger makes is swallowed, so the row does not also open. `onLongPress` on a `PhoneSearchRow` is a hold of the app's own, for a row whose hold is no menu. While a finger holds a row it is lit (`data-pressing`), as it is while its menu is up, and it goes out when the hold fires or the finger lifts or moves. The menu's entries are 44px tall in 16px type: the family's phone target, at the rows' size.
 
 `phone.css` reads three variables: `--dl-phone-inset` (16px), `--dl-phone-fill` (the sheet's fill, `#151515`) and `--dl-phone-search-z` (50, over the bottom bar).
 

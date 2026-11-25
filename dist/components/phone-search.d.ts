@@ -1,6 +1,7 @@
-import { type ReactNode } from "react";
+import { type ReactNode, type Ref } from "react";
 import { Dialog } from "@base-ui/react/dialog";
-import type { PaletteItem, PaletteMenuEntry, PaletteSource } from "./palette-types.js";
+import type { PaletteGroup, PaletteItem, PaletteMenuEntry, PaletteSource } from "./palette-types.js";
+import type { PaletteCompletion } from "./palette.js";
 /** One row of the phone's search: a suggestion before a query, or a result after one. */
 export type PhoneSearchRow = {
     /** Unique within its section. */
@@ -26,6 +27,20 @@ export type PhoneSearchRow = {
         x: number;
         y: number;
     }) => void;
+    /**
+     * Keeps the row lit, for a hold of the app's own (`onLongPress`) whose
+     * menu is up. A row's `menu` lights it by itself.
+     */
+    held?: boolean;
+    /**
+     * Steps the row back, at a palette row's steps: `true` is 85%, for a row
+     * the app no longer vouches for, `"waiting"` 60%, for a row left from
+     * the last answer. Both at once, since nothing on the sheet fades. A tap
+     * still runs it.
+     */
+    dim?: boolean | "waiting";
+    /** Extra classes for the row, beside `dl-phone-search-row`. */
+    className?: string;
     /** What tapping the row does. Search has closed by the time it runs, unless `keepOpen`. */
     onSelect: () => void;
 };
@@ -132,9 +147,52 @@ export type PhoneSearchProps = {
     fieldStart?: ReactNode;
     /** Something inside the field after the words, such as a filter icon. The same rule holds. */
     fieldEnd?: ReactNode;
+    /**
+     * The insides of a row drawn from `sources` or `actions`, for a row the
+     * kit's anatomy does not fit: drive's names cut in the middle. Return
+     * undefined to keep the kit's. The row's tap, long press, `dim` and
+     * `className` stay the kit's.
+     */
+    rowContent?: (item: PaletteItem, state: PhoneSearchRowState) => ReactNode | undefined;
+    /**
+     * A source's group laid out by the app, under the group's heading:
+     * calendar's day headings and its Past divider between the rows. `row`
+     * draws one of the kit's rows for an item (keyed by its id); the app puts
+     * its own lines between them, each with a key of its own. Return
+     * undefined to keep the kit's plain run of rows.
+     */
+    groupContent?: (group: PaletteGroup, row: (item: PaletteItem) => ReactNode) => ReactNode | undefined;
+    /**
+     * A ghost completion in the field, the palette's: faint words after the
+     * typed ones. A tap on them takes it, and so do Tab and ArrowRight at the
+     * end on a keyboard. Pass null while there is nothing to offer, and leave
+     * it out where search never offers one: the field wraps the input for it.
+     */
+    completion?: PhoneSearchCompletion | null;
+    /** The field's input, for an app that focuses, blurs or measures it. */
+    inputRef?: Ref<HTMLInputElement>;
+    /**
+     * The app's results scroll themselves (mail's message list). The body
+     * then stops scrolling and gives its height to them, and leaves its
+     * bottom space (the safe area, 32px and the keyboard) to that scroller:
+     * pad it by `var(--dl-phone-search-end)`, which the body writes, so the
+     * keyboard is counted once.
+     */
+    ownScroller?: boolean;
     /** Extra classes for the sheet, beside `dl-phone-search`. */
     className?: string;
 };
+/** What a row drawn from `sources` is, for an app that draws its insides itself. */
+export type PhoneSearchRowState = {
+    /** The words to mark in it: the words the list answers. */
+    marks: string;
+    /** Whether only the score found it, so its letters are marked and not whole words. */
+    byScore: boolean;
+    /** Whether its menu is up. */
+    held: boolean;
+};
+/** What a ghost completion on the phone is: the palette's, and a tap on the faint words takes it too. */
+export type PhoneSearchCompletion = PaletteCompletion;
 /** What Base UI says about a close: `reason` is `"escape-key"`, `"close-press"` and so on. */
 export type PhoneSearchChangeDetails = Parameters<NonNullable<Dialog.Root.Props["onOpenChange"]>>[1];
 export type PhoneSearchAvatarProps = {
@@ -187,5 +245,5 @@ export declare function PhoneSearchAvatar({ initials, color, className }: PhoneS
  *     onQueryChange={search}
  *   />
  */
-export declare function PhoneSearch({ open, onOpenChange, systemBack, query: queryProp, onQueryChange, onSubmit, placeholder, cancelLabel, action, sections, results, sources, actions, actionsHeading, narrowed, children, beforeQuery, covered, emptyText, fieldStart, fieldEnd, className, }: PhoneSearchProps): ReactNode;
+export declare function PhoneSearch({ open, onOpenChange, systemBack, query: queryProp, onQueryChange, onSubmit, placeholder, cancelLabel, action, sections, results, sources, actions, actionsHeading, narrowed, children, beforeQuery, covered, emptyText, fieldStart, fieldEnd, rowContent, groupContent, completion, inputRef, ownScroller, className, }: PhoneSearchProps): ReactNode;
 //# sourceMappingURL=phone-search.d.ts.map

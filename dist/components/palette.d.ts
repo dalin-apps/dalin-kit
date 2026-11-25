@@ -1,4 +1,4 @@
-import { type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
+import { type HTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { type PaletteResults } from "./palette-results.js";
 import type { PaletteGroup, PaletteItem, PalettePage, PaletteSource } from "./palette-types.js";
@@ -32,7 +32,8 @@ export type PaletteControls = {
 };
 /** The palette's state, for a part an app draws itself inside a `<Palette>`. */
 export declare function usePalette(): PaletteControls;
-export type PaletteProps = {
+/** The palette's own props, which an attribute passed through to the panel may not name. */
+type PaletteOwnProps = {
     /** Whether the palette is open, for an app that owns that. Leave it out and the palette owns it. */
     open?: boolean;
     /** Called when the palette opens or closes, from a key, a row, Escape or a press outside. */
@@ -93,6 +94,14 @@ export type PaletteProps = {
     children?: ReactNode;
 };
 /**
+ * `<Palette>`'s props. Any other attribute (a `data-*` marker, an `id`)
+ * goes to the panel, Base UI's popup, beside the kit's own: mail's
+ * shortcut gating and compose fold read their markers there. The kit's
+ * `data-slot`, `role`, `aria-label` and `aria-modal` win over one of the
+ * same name, and `style` is laid under the palette's z-index.
+ */
+export type PaletteProps = PaletteOwnProps & Omit<HTMLAttributes<HTMLDivElement>, keyof PaletteOwnProps | "role" | "aria-modal">;
+/**
  * The root of the family's command palette: the dialog, its open state,
  * Ctrl K and the app's key, the motion rule, the toast's place in Tab, the
  * pages, and the list machinery. The parts inside it draw the field and
@@ -106,7 +115,7 @@ export type PaletteProps = {
  *     </PaletteList>
  *   </Palette>
  */
-export declare function Palette({ open: openProp, onOpenChange, query: queryProp, onQueryChange, sources, actions, actionsHeading, tail, results: ownResults, marks: marksOf, placeholder, label, emptyText, hotkey, appKey, onEscape, finalFocus, zIndex, className, children, }: PaletteProps): ReactNode;
+export declare function Palette({ open: openProp, onOpenChange, query: queryProp, onQueryChange, sources, actions, actionsHeading, tail, results: ownResults, marks: marksOf, placeholder, label, emptyText, hotkey, appKey, onEscape, finalFocus, zIndex, className, children, style, onKeyDownCapture, onPointerDownCapture, ...attributes }: PaletteProps): ReactNode;
 /** A ghost completion over the field: the rest of a name, laid after the words in a fainter ink. */
 export type PaletteCompletion = {
     /** What would follow the words: "na Ito" after "da". */
@@ -215,4 +224,5 @@ export type PaletteBodyProps = {
  * and the status region says `status`.
  */
 export declare function PaletteBody({ status, children, className }: PaletteBodyProps): ReactNode;
+export {};
 //# sourceMappingURL=palette.d.ts.map

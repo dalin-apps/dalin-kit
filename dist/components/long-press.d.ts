@@ -19,5 +19,10 @@ export type LongPressHandlers = {
 export declare function useLongPress(onLongPress: ((point: {
     x: number;
     y: number;
-}) => void) | undefined): LongPressHandlers;
+}) => void) | undefined, 
+/**
+ * Told when a finger's hold starts (true) and when it ends, by firing, a
+ * lift, a move or a second finger (false): the row shows it is held.
+ */
+onPressing?: (pressing: boolean) => void): LongPressHandlers;
 //# sourceMappingURL=long-press.d.ts.map

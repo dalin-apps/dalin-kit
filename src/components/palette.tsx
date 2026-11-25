@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type HTMLAttributes,
   type KeyboardEvent as ReactKeyboardEvent,
   type MutableRefObject,
   type ReactNode,
@@ -70,6 +71,8 @@ type OpenPage = { page: PalettePage; parentQuery: string };
 type BodyState = { status?: string };
 
 type PaletteContextValue = {
+  /** How many rows the list hands Base UI, for `aria-expanded`. */
+  rowCount: number;
   open: boolean;
   setOpen: (open: boolean) => void;
   query: string;
@@ -132,7 +135,8 @@ export function usePalette(): PaletteControls {
   };
 }
 
-export type PaletteProps = {
+/** The palette's own props, which an attribute passed through to the panel may not name. */
+type PaletteOwnProps = {
   /** Whether the palette is open, for an app that owns that. Leave it out and the palette owns it. */
   open?: boolean;
   /** Called when the palette opens or closes, from a key, a row, Escape or a press outside. */
@@ -194,6 +198,15 @@ export type PaletteProps = {
 };
 
 /**
+ * `<Palette>`'s props. Any other attribute (a `data-*` marker, an `id`)
+ * goes to the panel, Base UI's popup, beside the kit's own: mail's
+ * shortcut gating and compose fold read their markers there. The kit's
+ * `data-slot`, `role`, `aria-label` and `aria-modal` win over one of the
+ * same name, and `style` is laid under the palette's z-index.
+ */
+export type PaletteProps = PaletteOwnProps & Omit<HTMLAttributes<HTMLDivElement>, keyof PaletteOwnProps | "role" | "aria-modal">;
+
+/**
  * The root of the family's command palette: the dialog, its open state,
  * Ctrl K and the app's key, the motion rule, the toast's place in Tab, the
  * pages, and the list machinery. The parts inside it draw the field and
@@ -228,6 +241,10 @@ export function Palette({
   zIndex,
   className,
   children,
+  style,
+  onKeyDownCapture,
+  onPointerDownCapture,
+  ...attributes
 }: PaletteProps): ReactNode {
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
@@ -248,7 +265,9 @@ export function Palette({
   // The panel's element as state: a toast over the dim keeps its action in
   // reach of Tab while the panel is up (toaster-tab.ts).
   const [panel, setPanel] = useState<HTMLDivElement | null>(null);
-  useToasterTab(open ? panel : null);
+  // Held, as the sheet's is: Base UI's focus guards turn Tab back a frame
+  // late, and two quick presses from the filter left the palette.
+  useToasterTab(open ? panel : null, PALETTE_TAB);
   const hintId = useId();
   // Whether the palette lands, and leaves, without animation: the keyboard
   // opened it, or the last thing done in it was a key.
@@ -338,6 +357,35 @@ export function Palette({
     };
   }, [ownResults, top, asked, query]);
   const { stale } = results;
+  const keys = useRef(new WeakMap<PaletteItem, string>());
+  const keyOf = useCallback((item: PaletteItem) => keys.current.get(item) ?? item.id, []);
+
+  // A new list starts on its first row. Base UI keeps the highlight's
+  // index, so a list whose rows changed under it (a filter pick) put the
+  // highlight on whatever row now stood there. The same rows coming back,
+  // or a late group joining at the end, keep it where it is. Base UI has no
+  // way to set the highlight, so the list is handed to it empty for one
+  // commit, before paint, and it comes back to the first row on its own.
+  const shownRows = body ? NO_ROWS : results.groups.flatMap((group) => group.items.map((item) => `${group.id}:${item.id}`));
+  const rowSignature = shownRows.join("\n");
+  const [lastRows, setLastRows] = useState<{ signature: string; rows: readonly string[] }>({ signature: rowSignature, rows: shownRows });
+  const [rehighlight, setRehighlight] = useState(false);
+  if (lastRows.signature !== rowSignature) {
+    setLastRows({ signature: rowSignature, rows: shownRows });
+    // Found by its key: an app that builds its own list may hand new objects for the same rows.
+    const activeKey = active ? keys.current.get(active) : undefined;
+    const at = activeKey === undefined ? -1 : lastRows.rows.indexOf(activeKey);
+    const kept = at >= 0 && shownRows[at] === activeKey;
+    if (at > 0 && !kept && shownRows.length > 0) {
+      setRehighlight(true);
+      // An Enter held on a row the list no longer has is for nothing on it.
+      heldRow.current = false;
+    }
+  }
+  useLayoutEffect(() => {
+    if (rehighlight) setRehighlight(false);
+  }, [rehighlight]);
+
   const staleRef = useRef(stale);
   staleRef.current = stale;
 
@@ -403,8 +451,6 @@ export function Palette({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results.groups, active, stale]);
 
-  const keys = useRef(new WeakMap<PaletteItem, string>());
-  const keyOf = useCallback((item: PaletteItem) => keys.current.get(item) ?? item.id, []);
   // Each row's key in its group, so a menu knows which row is its own.
   for (const group of results.groups) for (const item of group.items) keys.current.set(item, `${group.id}:${item.id}`);
 
@@ -427,6 +473,7 @@ export function Palette({
   const zStyle = zIndex === undefined ? undefined : ({ "--dl-palette-z": String(zIndex) } as CSSProperties);
 
   const value: PaletteContextValue = {
+    rowCount: rehighlight ? 0 : shownRows.length,
     open,
     setOpen,
     query,
@@ -455,6 +502,14 @@ export function Palette({
       open={open}
       onOpenChange={(next, details) => {
         if (!next && details.reason === "escape-key") {
+          // A menu of the palette's own that is open takes Escape first: the
+          // filter's, pressed before focus has moved into it, and a row's.
+          // The key goes on to the menu, which closes on it.
+          if (menu || (panel && ownMenuOpen(panel, inputRef.current))) {
+            details.cancel();
+            details.allowPropagation();
+            return;
+          }
           // The app's own Escape first, then one page back.
           if (onEscape?.()) {
             details.cancel();
@@ -472,24 +527,29 @@ export function Palette({
       <Dialog.Portal>
         <Dialog.Backdrop className="dl-palette-dim" data-instant={instant ? "" : undefined} style={zStyle} />
         <Dialog.Popup
+          {...attributes}
           ref={setPanel}
           data-slot="command-palette"
           className={cx("dl-palette", className)}
-          style={zStyle}
+          style={zStyle ? { ...style, ...zStyle } : style}
           data-instant={instant ? "" : undefined}
           aria-label={label}
+          aria-modal="true"
           initialFocus={inputRef}
           finalFocus={finalFocus}
           // A key pressed inside means the keyboard is driving, and what it
           // does next (Enter, Escape) should not animate. A press hands the
           // turn back to the pointer. Heard on the way down: the field
           // handles its own keys and does not always let them bubble.
-          onKeyDownCapture={(event: ReactKeyboardEvent) => {
+          onKeyDownCapture={(event: ReactKeyboardEvent<HTMLDivElement>) => {
+            onKeyDownCapture?.(event);
             if (event.key !== "Shift" && event.key !== "Control" && event.key !== "Alt" && event.key !== "Meta") setInstant(true);
+            // An IME's Enter and arrows are its own, stale list or not.
+            if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
             if (!stale || body) return;
             // The rows on screen answer an earlier query. Enter waits for
             // this one's answer, and the arrows have nothing to move through.
-            if (event.key === "Enter" && !event.nativeEvent.isComposing) {
+            if (event.key === "Enter") {
               // A key meant for a menu or a control of the app's own is theirs.
               if (event.target !== inputRef.current) return;
               event.preventDefault();
@@ -500,13 +560,16 @@ export function Palette({
               event.stopPropagation();
             }
           }}
-          onPointerDownCapture={() => setInstant(false)}
+          onPointerDownCapture={(event) => {
+            onPointerDownCapture?.(event);
+            setInstant(false);
+          }}
         >
           <PaletteContext.Provider value={value}>
             <Autocomplete.Root
               open
               inline
-              items={body ? NO_GROUPS : results.groups}
+              items={body || rehighlight ? NO_GROUPS : results.groups}
               value={query}
               onValueChange={(next, details) => {
                 // Choosing a row would write its title into the field.
@@ -593,8 +656,14 @@ export function PaletteField({ glyph, start, end, filter, completion, onKeyDown,
       return;
     }
     const native = event.nativeEvent;
-    // An IME confirming a candidate sends Enter and arrows too; those belong to the IME.
-    if (native.isComposing || native.keyCode === 229) return;
+    // An IME confirming a candidate sends Enter and arrows too; those belong
+    // to the IME. Base UI would run the highlighted row on that Enter and
+    // move the highlight on those arrows, so its handler is held back. The
+    // key itself is not cancelled: the IME still needs it.
+    if (native.isComposing || native.keyCode === 229) {
+      (event as unknown as { preventBaseUIHandler?: () => void }).preventBaseUIHandler?.();
+      return;
+    }
     const input = event.currentTarget;
     const stop = () => {
       event.preventDefault();
@@ -637,6 +706,9 @@ export function PaletteField({ glyph, start, end, filter, completion, onKeyDown,
       aria-label={ctx.placeholder}
       aria-describedby={ctx.hintId}
       aria-busy={results.stale || results.busy > 0 || busy || undefined}
+      // The list is always open to Base UI; a screen reader hears it
+      // expanded only while it holds a row.
+      aria-expanded={ctx.rowCount > 0}
       autoComplete="off"
       autoCorrect="off"
       spellCheck={false}
@@ -894,10 +966,24 @@ export function PaletteBody({ status, children, className }: PaletteBodyProps): 
   );
 }
 
+/** The palette's place in the toaster's Tab loop: held, so Tab never leaves it. */
+const PALETTE_TAB = { hold: true } as const;
+
+/**
+ * Whether a menu of the palette's own is open: a trigger inside the panel
+ * that says its popup is expanded. The field says expanded for its list,
+ * and is not one.
+ */
+function ownMenuOpen(panel: HTMLElement, input: HTMLInputElement | null): boolean {
+  for (const el of panel.querySelectorAll('[aria-haspopup][aria-expanded="true"]')) if (el !== input) return true;
+  return false;
+}
+
 /** One array each for "none", so a palette given neither does not search again on every render. */
 const NO_SOURCES: readonly PaletteSource[] = [];
 const NO_ACTIONS: readonly PaletteItem[] = [];
 const NO_PAGES: readonly OpenPage[] = [];
 const NO_GROUPS: PaletteGroup[] = [];
+const NO_ROWS: readonly string[] = [];
 const NO_FAILED: readonly string[] = [];
 const NO_SCORED: ReadonlySet<PaletteItem> = new Set();

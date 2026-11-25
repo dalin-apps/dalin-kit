@@ -486,7 +486,9 @@ describe("under a toast", () => {
     await mountPalette();
     await press({ key: "k", ctrlKey: true });
     const event = await press({ key: "Tab" }, field()!);
-    expect(event.defaultPrevented).toBe(false);
+    // The palette holds Tab on the press itself, as the sheet does, so two
+    // quick presses cannot outrun Base UI's focus guards.
+    expect(event.defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(field());
   });
 });

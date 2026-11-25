@@ -29,10 +29,11 @@ export type PaletteItem = {
      * failed. `"waiting"` is 60%, after 120ms, for a row left from the last
      * answer while this one is on its way: a press still runs it, and Enter
      * on it waits until the highlighted row is no longer waiting, then runs
-     * that row. Typing again lets the held Enter go.
+     * that row. Typing again lets the held Enter go. The phone's search
+     * draws the same steps, at once.
      */
     dim?: boolean | "waiting";
-    /** Extra classes for the row, beside `dl-palette-row`: calendar's past events. */
+    /** Extra classes for the row, beside `dl-palette-row` (`dl-phone-search-row` on the phone): calendar's past events. */
     className?: string;
     /** Leaves the palette open after the row is chosen. It closes by default. */
     keepOpen?: boolean;

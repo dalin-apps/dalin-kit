@@ -42,9 +42,9 @@ function precedes(el: Element, from: Element): boolean {
 export type ToasterTabOptions = {
   /**
    * Whether the hook also holds Tab inside the surface, at once, on the
-   * press itself. A sheet asks for it: Base UI's focus guards turn Tab back
-   * a frame late, so two quick presses left the sheet. Off for the palette
-   * and the phone's search, whose dialogs hold Tab themselves.
+   * press itself. The sheet and the palette ask for it: Base UI's focus
+   * guards turn Tab back a frame late, so two quick presses left them. Off
+   * for the phone's search.
    */
   hold?: boolean;
 };

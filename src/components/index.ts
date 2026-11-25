@@ -110,8 +110,10 @@ export {
   type PhoneSearchAction,
   type PhoneSearchAvatarProps,
   type PhoneSearchChangeDetails,
+  type PhoneSearchCompletion,
   type PhoneSearchProps,
   type PhoneSearchRow,
+  type PhoneSearchRowState,
   type PhoneSearchSection,
 } from "./phone-search.js";
 export {
