@@ -49,12 +49,11 @@ export declare function rankActions<T extends {
 }>(items: readonly T[], query: string): RankedItem<T>[];
 /**
  * The text cut into runs, with the letters of the query marked where a row
- * found by its score alone took them. The query's letters are walked along
- * the text in order: a letter that follows the last one marked is taken
- * there, otherwise at the next word that starts with it, otherwise at its
- * next place anywhere. So "todo" marks "to" and "do" in "New to-do list",
- * and "np" marks the N and the P of "New page". Where the letters do not
- * all fall in the text (they matched the keywords) nothing is marked.
+ * found by its score alone took them: the alignment command-score itself
+ * chose (`scorePath`), so "todo" marks "to" and "do" in "New to-do list",
+ * "np" the N and the P of "New page", "ol" the O of "Copy" and the L of
+ * "link", and the transposed "pgae" the whole of "Page". Where the letters
+ * do not all fall in the text (they matched the keywords) nothing is marked.
  */
 export declare function scoreParts(text: string, query: string): MatchPart[];
 //# sourceMappingURL=palette-match.d.ts.map

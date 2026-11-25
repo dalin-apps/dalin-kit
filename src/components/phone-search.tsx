@@ -8,7 +8,7 @@ import { cx } from "./cx.js";
 import { SearchGlyph } from "./icons.js";
 import { useLongPress } from "./long-press.js";
 import { RowMenu, pointAnchor, type RowMenuState } from "./palette-menu.js";
-import { matchParts } from "./palette-match.js";
+import { matchParts, scoreParts } from "./palette-match.js";
 import { usePaletteResults } from "./palette-results.js";
 import type { PaletteGroup, PaletteItem, PaletteMenuEntry, PaletteSource } from "./palette-types.js";
 import { useToasterTab } from "./toaster-tab.js";
@@ -193,9 +193,9 @@ const COVER_RANK = 50;
 /** What a row hands `choose`: whether search stays open, and what to run. */
 type Chosen = { keepOpen?: boolean; onSelect?: () => void };
 
-/** A row's words with the query's words marked. */
-function PhoneMarked({ text, query }: { text: string; query: string }): ReactNode {
-  return matchParts(text, query).map((part, index) =>
+/** A row's words with the query's words marked, or, for a row only the score found, the letters it took. */
+function PhoneMarked({ text, query, byScore = false }: { text: string; query: string; byScore?: boolean }): ReactNode {
+  return (byScore ? scoreParts(text, query) : matchParts(text, query)).map((part, index) =>
     part.match ? (
       <mark key={index} className="dl-phone-search-mark">
         {part.text}
@@ -288,12 +288,15 @@ function Sections({
 function GroupSections({
   groups,
   marks,
+  byScore,
   choose,
   hold,
   heldKey,
 }: {
   groups: readonly PaletteGroup[];
   marks: string;
+  /** The rows only the score found. */
+  byScore: ReadonlySet<PaletteItem>;
   choose: (row: Chosen) => void;
   hold: Hold;
   heldKey: string | null;
@@ -303,10 +306,11 @@ function GroupSections({
       {group.heading ? <h2 className="dl-phone-search-heading">{group.heading}</h2> : null}
       {group.items.map((item) => {
         const key = `${group.id}:${item.id}`;
+        const scored = byScore.has(item);
         return (
           <PhoneRow
             key={item.id}
-            title={<PhoneMarked text={item.title} query={marks} />}
+            title={<PhoneMarked text={item.title} query={marks} byScore={scored} />}
             subtitle={item.subtitle ? <PhoneMarked text={item.subtitle} query={marks} /> : undefined}
             leading={item.icon}
             meta={item.meta}
@@ -537,7 +541,7 @@ export function PhoneSearch({
   const settled = !answers.stale && answers.busy === 0;
   const groupList = (groups: readonly PaletteGroup[]) => (
     <div className="dl-phone-search-results" data-stale={answers.stale ? "" : undefined} aria-busy={answers.stale || answers.busy > 0 || undefined}>
-      <GroupSections groups={groups} marks={answered} choose={chooseFromList} hold={hold} heldKey={menu?.key ?? null} />
+      <GroupSections groups={groups} marks={answered} byScore={answers.byScore} choose={chooseFromList} hold={hold} heldKey={menu?.key ?? null} />
     </div>
   );
   const emptyNote = (

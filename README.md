@@ -115,7 +115,7 @@ Mail and calendar can now move their own desktop palettes onto the kit's parts, 
 
 Three features have a home and change as they move. Mail's per-row Enter waits for the highlighted row to stop waiting and then runs that row, as mail's does, but a whole list from an earlier query is the kit's stale list, which dims after 120ms and holds the arrows too. Calendar's Say it row keeps its Enter cap only while it is highlighted, which it is as the list appears. Calendar's actions pick up the score's finds, which the owner chose for every app.
 
-`<PhoneSearch>` takes `sources`, `actions` and `actionsHeading`, the same types the palette takes. An app can hand both surfaces one search and delete the second copy it wrote for the phone. `sections`, `results` and `children` work as they did, and win over the sources, so an app can move one surface at a time. A row of either kind takes a long press: a `menu` opens the family's menu at the finger, and `onLongPress` is the app's own hold. Mail can drop the copy of the kit's row it drew to give People one.
+`<PhoneSearch>` takes `sources`, `actions` and `actionsHeading`, the same types the palette takes. An app can hand both surfaces one search and delete the second copy it wrote for the phone. `sections`, `results` and `children` work as they did, and win over the sources, so an app can move one surface at a time. A row of either kind takes a long press: a `menu` opens the family's menu at the finger, and `onLongPress` is the app's own hold. Mail can drop the copy of the kit's row it drew to give People one. A second finger, or a finger that moves 10px, ends a hold, and the browser's own menu for a finger that moved is no hold.
 
 ## Moving an app from 0.10.6 to 0.11
 
@@ -916,7 +916,7 @@ import { CommandPalette } from "@dalin/kit/components";
 
 One palette for the four apps: a Base UI Dialog holding an inline Autocomplete, 600px wide and frosted, with the app dimmed behind it. It starts from calendar's palette and takes mail's search palette look. Mount it once at the app's root. It needs `palette.css` and `menu.css`. It is built from parts an app can build its own palette on (see "Building a palette from its parts" below).
 
-Ctrl K opens and closes it (Cmd K on a Mac). The app's own key opens it too, when pressed outside a text field. The caret is in the field as it opens. The arrows move the focus, and so do Ctrl N and Ctrl P, as in cmdk, except while an IME is composing. Chrome on Windows and Linux keeps Ctrl N for a new window and never hands it to the page, so there only Ctrl P moves the highlight. The focus always rests on a row, Enter runs that row, and Escape or a press outside closes the palette.
+Ctrl K opens and closes it (Cmd K on a Mac). The app's own key opens it too, when pressed outside a text field. The caret is in the field as it opens. The arrows move the focus, and so do Ctrl N and Ctrl P, as in cmdk, except while an IME is composing. Chrome on Windows and Linux keeps Ctrl N for a new window and never hands it to the page, so there only Ctrl P moves the highlight. Caps Lock changes neither. The focus always rests on a row, Enter runs that row, and Escape or a press outside closes the palette.
 
 Results come in groups under sentence-case headings, and the words of the query are marked in each row's title and second line. The focused row shows an Enter keycap in the slot its own shortcut sits in. That slot is on every row, so nothing in a row moves as the focus does.
 
@@ -965,7 +965,7 @@ A row, whether a result or an action, is a `PaletteItem`:
 
 The actions are ranked as well as filtered. A row that holds every word of the query, in any order, in its title or keywords comes first, as in 0.11, and these rows are ordered by cmdk's command-score: "arch" puts "Archive" above "Show the archive". After them come the rows that do not hold every word but score 0.1 or more (`SCORE_FLOOR`), so "np" finds "New page", "swm" finds "Switch to Month view" and "todo" finds "New to-do list". Rows that score the same keep the app's order, and the matching ignores case and accents. A source keeps its own ranking. `rankActions`, `scoreQuery` and `commandScore` are exported for one that wants the palette's, beside `matchesQuery`, `matchParts`, `queryTerms` and `fold`.
 
-A row the score found marks letters, since it may hold none of the words. The query's letters are walked along the title in order: a letter that follows the last one marked is taken there, otherwise at the next word that starts with it, otherwise wherever it next appears. "todo" marks "to" and "do" in "New to-do list", and "np" marks the N and the P of "New page". When the letters matched the keywords and not the title, nothing is marked. `scoreParts` is that rule.
+A row the score found marks letters, since it may hold none of the words. The marks are the letters command-score itself took for its best score, so every row it finds in its title draws them. "todo" marks "to" and "do" in "New to-do list", "np" the N and the P of "New page", "ol" the O of "Copy" and the L of "link" in "Copy link - open", and the transposed "pgae" the whole of "Page". A letter outside the basic plane, an emoji, counts as one letter. When the letters matched the keywords and not the title, nothing is marked. `scoreParts` is that rule, and the phone's search marks the same letters.
 
 command-score is copied from cmdk 1.1.1 into `src/components/command-score.ts`, under its MIT notice (Paco Coursey, from Superhuman's command-score). The kit adds types and one non-null assertion, and changes nothing else.
 
@@ -973,7 +973,9 @@ command-score is copied from cmdk 1.1.1 into `src/components/command-score.ts`, 
 
 ### Pages
 
-A row can open a page in the same field, as cmdk's nested pages do: "Move to…", then the folders. Give the row a `page`, `{ id, crumb, placeholder, sources, actions, actionsHeading, emptyText }`. Choosing the row opens the page with an empty field, its own placeholder and its own list, and the page's name sits before the words as a crumb. Backspace in an empty field goes back one page with the words the parent had, and so does Escape. Pressing a crumb goes back to it. Escape on the first page closes the palette. The stale list and the held Enter work the same on every page: a list from the page before is stale until the new page's sources answer.
+A row can open a page in the same field, as cmdk's nested pages do: "Move to…", then the folders. Give the row a `page`, `{ id, crumb, placeholder, sources, actions, actionsHeading, emptyText }`. Choosing the row opens the page with an empty field, its own placeholder and its own list, and the page's name sits before the words as a crumb. Backspace in an empty field goes back one page with the words the parent had, and so does Escape. Pressing a crumb goes back to it. Escape on the first page closes the palette.
+
+The stale list and the held Enter work the same on every page: a list from the page before is stale until the new page's sources answer. A palette that passes its own `results` still lists a page's own sources and actions once the page opens.
 
 ### A row's menu
 
@@ -1006,18 +1008,20 @@ import { Palette, PaletteField, PaletteLine, PaletteList, PaletteNote, usePalett
 | Prop | What it does |
 | --- | --- |
 | `query`, `onQueryChange` | For an app that owns the words. The palette clears its own words as it closes; an app that owns them decides what an opening starts from. |
-| `results` | The app's own list, `{ groups, query, busy }`, in place of `sources` and `actions`. While `query` differs from the words in the field, the list is stale and Enter is held. |
+| `results` | The app's own list, `{ groups, query, busy }`, in place of `sources` and `actions` on the first page. While `query` differs from the words in the field, the list is stale and Enter is held. A page that opens lists its own sources and actions. |
 | `tail` | Rows that end the list under no heading, after any late group: mail's "Show all". A function of the words the list answers. |
 | `marks` | The words to mark, from the words the list answers. |
 | `onEscape` | Asked first on Escape. Return true when the key was the app's own, and the palette stays. |
 | `finalFocus` | Base UI's, for an app that hands focus on as the palette closes. |
 | `zIndex` | Written as `--dl-palette-z` on the dim and the panel, for an app that stands the palette under a window of its own. |
 
-`<PaletteField>` is the field row. `glyph` replaces the magnifying glass. `start` and `end` sit inside the row before and after the words, `filter` before the Esc cap. `completion` is `{ suffix, onAccept }`, faint text after the words that Tab or ArrowRight at the end takes. Pass null while there is nothing to offer, and leave it out in a palette that never offers one, since the field wraps the input for it. `onKeyDown` hears every key before the palette does, and `preventDefault()` keeps a key from the palette and from Base UI. `readOnly` and `busy` go to the input.
+`<PaletteField>` is the field row. `glyph` replaces the magnifying glass. `start` and `end` sit inside the row before and after the words, `filter` before the Esc cap. `completion` is `{ suffix, onAccept }`, faint text after the words that Tab or ArrowRight at the end takes. While one shows in a field that isn't read only, a toast waits for the next forward Tab. Shift+Tab still reaches the toast. Pass null while there is nothing to offer, and leave it out in a palette that never offers one, since the field wraps the input for it. `onKeyDown` hears every key before the palette does, and `preventDefault()` keeps a key from the palette and from Base UI. `readOnly` and `busy` go to the input.
 
-`<PaletteList>` is the list, with `emptyText`, `rowContent` for a row whose insides the kit's anatomy does not fit (the keys and the Enter hint still end it), and children drawn under the rows. `<PaletteNote>` is a line there, `tone="error"` for the red alert and `action` for its button. `<PaletteLine>` is a line under the field row. `<PaletteBody status>` takes the list's place, for calendar's questions about a sentence: draw it instead of `<PaletteList>`, answer its keys in the field's `onKeyDown`, and the status region says `status`. `usePalette()` reads the words, the list, the failed sources and `retry` from inside the palette.
+`<PaletteList>` is the list, with `emptyText`, which shows only once words have been answered: a palette with chips and no words, as mail's can be, draws its own empty line as a `<PaletteNote>` child.
 
-A group, whether a source's or the app's, may carry a `note`, a line under its rows ("Showing 30 of 112"). A source can answer `{ items, note }` for that. A group with no heading draws none. A row may carry `dim` (`true` for 85%, `"waiting"` for 60% after 120ms, with Enter on it held until it is current), `className`, and `data`, which the kit never reads.
+`<PaletteList>` also takes `rowContent` for a row whose insides the kit's anatomy does not fit (the keys and the Enter hint still end it), and children drawn under the rows. `<PaletteNote>` is a line there, `tone="error"` for the red alert and `action` for its button. `<PaletteLine>` is a line under the field row. `<PaletteBody status>` takes the list's place, for calendar's questions about a sentence: draw it instead of `<PaletteList>`, answer its keys in the field's `onKeyDown`, and the status region says `status`. `usePalette()` reads the words, the list, the failed sources and `retry` from inside the palette.
+
+A group, whether a source's or the app's, may carry a `note`, a line under its rows ("Showing 30 of 112"). A source can answer `{ items, note }` for that. A group with no heading draws none. A row may carry `dim` (`true` for 85%, `"waiting"` for 60% after 120ms, with Enter on it held until it is current), `className`, and `data`, which the kit never reads. A held Enter is for the place the highlight was: moving the highlight by a key or the pointer, new words, a page, a close, or an answer with nothing in it lets it go.
 
 ## The phone header and search
 

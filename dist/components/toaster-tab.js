@@ -66,9 +66,9 @@ export function useToasterTab(surface, options = {}) {
             const active = doc.activeElement;
             if (!(active instanceof HTMLElement))
                 return;
-            // A field whose Tab means something of its own (the palette's ghost
-            // completion) keeps it.
-            if (active.closest("[data-dl-owns-tab]"))
+            // A field whose forward Tab means something of its own (the
+            // palette's ghost completion) keeps it. Shift+Tab stays the loop's.
+            if (!event.shiftKey && active.closest("[data-dl-owns-tab]"))
                 return;
             const toasts = tabStops([...doc.querySelectorAll(TOASTER)]);
             if (toasts.length === 0 && !hold)

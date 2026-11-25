@@ -612,6 +612,143 @@ describe("rows the app steps back", () => {
   });
 });
 
+describe("a held Enter belongs to its row", () => {
+  type State = "waiting" | "empty" | "live" | "later";
+  function Held({ state, words = "lunch" }: { state: State; words?: string }) {
+    const people = [row("dana", "Dana Ito")];
+    const messages =
+      state === "waiting"
+        ? [row("old", "Lunch last week", { dim: "waiting" })]
+        : state === "live"
+          ? [row("new", "Lunch on Friday")]
+          : state === "later"
+            ? [row("later", "Lunch in May")]
+            : [];
+    const groups = [{ id: "messages", heading: "Messages", items: messages }];
+    if (state !== "empty" && state !== "later") groups.push({ id: "people", heading: "People", items: people });
+    return (
+      <Palette open query={words} results={{ query: words, groups }}>
+        <PaletteField />
+        <PaletteList />
+      </Palette>
+    );
+  }
+
+  it("runs nothing when an arrow moves the highlight off the waiting row", async () => {
+    ran.mockClear();
+    await mount(<Held state="waiting" />);
+    await key("Enter", field());
+    await key("ArrowDown", field());
+    expect(ran).not.toHaveBeenCalled();
+    await mount(<Held state="live" />);
+    expect(ran).not.toHaveBeenCalled();
+  });
+
+  it("runs nothing when the pointer moves the highlight", async () => {
+    ran.mockClear();
+    await mount(<Held state="waiting" />);
+    await key("Enter", field());
+    const dana = rows()[1]!;
+    await act(async () => {
+      for (const name of ["pointerenter", "pointermove", "mousemove", "mouseover"]) {
+        dana.dispatchEvent(new MouseEvent(name, { bubbles: true, cancelable: true }));
+      }
+    });
+    await settle();
+    expect(ran).not.toHaveBeenCalled();
+    await mount(<Held state="live" />);
+    expect(ran).not.toHaveBeenCalled();
+  });
+
+  it("drops it when the answer comes back with nothing, so a later list runs nothing", async () => {
+    ran.mockClear();
+    await mount(<Held state="waiting" />);
+    await key("Enter", field());
+    await mount(<Held state="empty" />);
+    await mount(<Held state="later" />);
+    expect(ran).not.toHaveBeenCalled();
+  });
+
+  it("drops it on going back a page", async () => {
+    ran.mockClear();
+    const slow: PalettePage = {
+      id: "older",
+      crumb: "Older mail",
+      sources: [{ id: "o", heading: "Older", search: () => [row("held", "Lunch in 2019", { dim: "waiting" })] }],
+    };
+    await plain({ actions: [row("go", "Older mail", { page: slow }), row("first", "New message")] });
+    await key("Enter", field());
+    ran.mockClear();
+    expect(titles()).toEqual(["Lunch in 2019"]);
+    await key("Enter", field());
+    await press({ key: "Backspace" });
+    expect(one(".dl-palette-crumb")).toBeNull();
+    expect(ran).not.toHaveBeenCalled();
+  });
+});
+
+describe("a page in a palette that builds its own list", () => {
+  it("lists the page's own sources and actions", async () => {
+    const folders: PalettePage = {
+      id: "move",
+      crumb: "Move to",
+      sources: [{ id: "folders", heading: "Folders", search: () => [row("work", "Work")] }],
+      actions: [row("make", "New folder")],
+    };
+    await mount(
+      <Palette open query="" results={{ query: "", groups: [{ id: "cmd", heading: "Commands", items: [row("move", "Move to…", { page: folders })] }] }}>
+        <PaletteField />
+        <PaletteList />
+      </Palette>,
+    );
+    await key("Enter", field());
+    expect(one(".dl-palette-crumb")?.textContent).toBe("Move to");
+    expect(titles()).toEqual(["Work", "New folder"]);
+  });
+});
+
+describe("the field's claim on Tab", () => {
+  function Offer({ readOnly }: { readOnly?: boolean }) {
+    return (
+      <Palette open query="da" sources={[{ id: "p", heading: "People", search: () => [row("d", "Dana Ito")] }]}>
+        <PaletteField completion={{ suffix: "na Ito", onAccept: () => {} }} readOnly={readOnly} />
+        <PaletteList />
+      </Palette>
+    );
+  }
+
+  it("leaves Shift+Tab to the toast loop while a completion shows", async () => {
+    const { action } = withToast();
+    await mount(<Offer />);
+    await settle(60);
+    field()!.focus();
+    expect(field()!.hasAttribute("data-dl-owns-tab")).toBe(true);
+    await press({ key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(action);
+  });
+
+  it("claims nothing in a field that is read only", async () => {
+    const { toast } = withToast();
+    await mount(<Offer readOnly />);
+    await settle(60);
+    field()!.focus();
+    expect(field()!.hasAttribute("data-dl-owns-tab")).toBe(false);
+    await press({ key: "Tab" });
+    expect(document.activeElement).toBe(toast);
+  });
+});
+
+describe("Ctrl N and Ctrl P under Caps Lock", () => {
+  it("move the highlight with the capital letters too", async () => {
+    await plain({ sources: [{ id: "p", heading: "Pages", search: () => [row("a", "One"), row("b", "Two")] }] });
+    const down = await press({ key: "N", ctrlKey: true });
+    expect(down.defaultPrevented).toBe(true);
+    expect(focused()).toEqual([rows()[1]]);
+    await press({ key: "P", ctrlKey: true });
+    expect(focused()).toEqual([rows()[0]]);
+  });
+});
+
 describe("palette.css, the parts", () => {
   const css = readCss("palette");
 

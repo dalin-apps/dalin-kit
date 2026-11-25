@@ -8,7 +8,7 @@ import { cx } from "./cx.js";
 import { SearchGlyph } from "./icons.js";
 import { useLongPress } from "./long-press.js";
 import { RowMenu, pointAnchor } from "./palette-menu.js";
-import { matchParts } from "./palette-match.js";
+import { matchParts, scoreParts } from "./palette-match.js";
 import { usePaletteResults } from "./palette-results.js";
 import { useToasterTab } from "./toaster-tab.js";
 /** A person's circle as a row's lead: 28px, white initials. */
@@ -29,9 +29,9 @@ function onFieldControl(event) {
 }
 /** How far a search sheet ranks as a toast dock: over the bar and a parked chip, with the other sheets. */
 const COVER_RANK = 50;
-/** A row's words with the query's words marked. */
-function PhoneMarked({ text, query }) {
-    return matchParts(text, query).map((part, index) => part.match ? (_jsx("mark", { className: "dl-phone-search-mark", children: part.text }, index)) : (part.text));
+/** A row's words with the query's words marked, or, for a row only the score found, the letters it took. */
+function PhoneMarked({ text, query, byScore = false }) {
+    return (byScore ? scoreParts(text, query) : matchParts(text, query)).map((part, index) => part.match ? (_jsx("mark", { className: "dl-phone-search-mark", children: part.text }, index)) : (part.text));
 }
 /** One of the kit's rows: a tap runs it, a long press opens its menu or the app's own hold. */
 function PhoneRow({ title, subtitle, leading, meta, onTap, onHold, held, }) {
@@ -52,10 +52,11 @@ function Sections({ sections, choose, hold, heldKey, }) {
     });
 }
 /** The groups the sources and actions answered, as sections of the kit's rows with the query marked. */
-function GroupSections({ groups, marks, choose, hold, heldKey, }) {
+function GroupSections({ groups, marks, byScore, choose, hold, heldKey, }) {
     return groups.map((group) => (_jsxs("section", { className: "dl-phone-search-section", children: [group.heading ? _jsx("h2", { className: "dl-phone-search-heading", children: group.heading }) : null, group.items.map((item) => {
                 const key = `${group.id}:${item.id}`;
-                return (_jsx(PhoneRow, { title: _jsx(PhoneMarked, { text: item.title, query: marks }), subtitle: item.subtitle ? _jsx(PhoneMarked, { text: item.subtitle, query: marks }) : undefined, leading: item.icon, meta: item.meta, onTap: () => choose(item), onHold: hold(key, item), held: heldKey === key }, item.id));
+                const scored = byScore.has(item);
+                return (_jsx(PhoneRow, { title: _jsx(PhoneMarked, { text: item.title, query: marks, byScore: scored }), subtitle: item.subtitle ? _jsx(PhoneMarked, { text: item.subtitle, query: marks }) : undefined, leading: item.icon, meta: item.meta, onTap: () => choose(item), onHold: hold(key, item), held: heldKey === key }, item.id));
             }), group.note ? _jsx("p", { className: "dl-phone-search-note", children: group.note }) : null] }, group.id)));
 }
 /**
@@ -248,7 +249,7 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
     const found = results?.some((section) => section.children || (section.rows && section.rows.length > 0)) ?? false;
     const answered = answers.answered ?? "";
     const settled = !answers.stale && answers.busy === 0;
-    const groupList = (groups) => (_jsx("div", { className: "dl-phone-search-results", "data-stale": answers.stale ? "" : undefined, "aria-busy": answers.stale || answers.busy > 0 || undefined, children: _jsx(GroupSections, { groups: groups, marks: answered, choose: chooseFromList, hold: hold, heldKey: menu?.key ?? null }) }));
+    const groupList = (groups) => (_jsx("div", { className: "dl-phone-search-results", "data-stale": answers.stale ? "" : undefined, "aria-busy": answers.stale || answers.busy > 0 || undefined, children: _jsx(GroupSections, { groups: groups, marks: answered, byScore: answers.byScore, choose: chooseFromList, hold: hold, heldKey: menu?.key ?? null }) }));
     const emptyNote = (_jsx("p", { className: "dl-phone-search-note", children: emptyText ? emptyText(query.trim()) : query.trim() ? `No results for “${query.trim()}”.` : "No results." }));
     return (_jsx(Dialog.Root, { open: open, 
         // Covered, the sheet is no longer the screen: the page goes back to

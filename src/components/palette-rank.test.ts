@@ -109,4 +109,30 @@ describe("scoreParts", () => {
   it("marks an accented letter as the one it folds to", () => {
     expect(marked("Élan vital", "ev")).toEqual(["É", "v"]);
   });
+
+  it("marks every row the score finds, from the alignment it chose", () => {
+    const shown = (text: string, query: string) =>
+      scoreParts(text, query)
+        .map((part) => (part.match ? `[${part.text}]` : part.text))
+        .join("");
+    for (const [text, query] of [
+      ["Copy link - open", "ol"],
+      ["Page", "pgae"],
+    ] as const) {
+      expect(scoreQuery(text, query)).toBeGreaterThan(0);
+      expect(scoreParts(text, query).some((part) => part.match)).toBe(true);
+    }
+    expect(shown("Copy link - open", "ol")).toBe("C[o]py [l]ink - open");
+    expect(shown("Page", "pgae")).toBe("[Page]");
+  });
+
+  it("counts a letter outside the basic plane as one letter", () => {
+    expect(marked("😀 file", "😀f")).toEqual(["😀", "f"]);
+    // The letter after it is taken where it follows, not at the next word.
+    expect(scoreParts("😀a ab", "😀a")).toEqual([
+      { text: "😀a", match: true },
+      { text: " ab", match: false },
+    ]);
+    expect(marked("𝒜bc page", "𝒜p")).toEqual(["𝒜", "p"]);
+  });
 });

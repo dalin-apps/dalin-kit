@@ -147,35 +147,85 @@ export function rankActions<T extends { title: string; keywords?: string }>(item
   ];
 }
 
-/** What ends a word in a row's text, as command-score reads it: a space, a hyphen, or one of its gap marks. */
-const WORD_EDGE = /[\s\-\\/_+.#"@[({&]/;
+/**
+ * The places in `text` where command-score took the letters of `typed`,
+ * for its best score: the same walk as command-score.ts, with the same
+ * weights, keeping the path that won. A transposed pair marks both
+ * letters. Code units throughout, as command-score counts them. Null where
+ * the letters are not all in the text.
+ */
+function scorePath(text: string, typed: string): number[] | null {
+  const lower = text.toLowerCase().replace(/[\s-]/g, " ");
+  const abbr = typed.toLowerCase().replace(/[\s-]/g, " ");
+  const gap = /[\\/_+.#"@[({&]/;
+  const space = /[\s-]/;
+  const memo = new Map<string, { score: number; path: number[] }>();
+  const walk = (at: number, ai: number): { score: number; path: number[] } => {
+    if (ai === abbr.length) return { score: at === text.length ? 1 : 0.99, path: [] };
+    const key = `${at},${ai}`;
+    const known = memo.get(key);
+    if (known) return known;
+    const ch = abbr.charAt(ai);
+    let best = { score: 0, path: [] as number[] };
+    for (let index = lower.indexOf(ch, at); index >= 0; index = lower.indexOf(ch, index + 1)) {
+      const next = walk(index + 1, ai + 1);
+      let score = next.score;
+      if (score > best.score) {
+        if (index === at) score *= 1;
+        else if (gap.test(text.charAt(index - 1))) {
+          score *= 0.8;
+          const breaks = text.slice(at, index - 1).match(new RegExp(gap.source, "g"));
+          if (breaks && at > 0) score *= 0.999 ** breaks.length;
+        } else if (space.test(text.charAt(index - 1))) {
+          score *= 0.9;
+          const breaks = text.slice(at, index - 1).match(/[\s-]/g);
+          if (breaks && at > 0) score *= 0.999 ** breaks.length;
+        } else {
+          score *= 0.17;
+          if (at > 0) score *= 0.999 ** (index - at);
+        }
+        if (text.charAt(index) !== typed.charAt(ai)) score *= 0.9999;
+      }
+      let path = [index, ...next.path];
+      if (
+        (score < 0.1 && lower.charAt(index - 1) === abbr.charAt(ai + 1)) ||
+        (abbr.charAt(ai + 1) === ch && lower.charAt(index - 1) !== ch)
+      ) {
+        const swapped = walk(index + 1, ai + 2);
+        if (swapped.score * 0.1 > score) {
+          score = swapped.score * 0.1;
+          path = [index - 1, index, ...swapped.path];
+        }
+      }
+      if (score > best.score) best = { score, path };
+    }
+    memo.set(key, best);
+    return best;
+  };
+  const found = walk(0, 0);
+  return found.score > 0 ? found.path : null;
+}
 
 /**
  * The text cut into runs, with the letters of the query marked where a row
- * found by its score alone took them. The query's letters are walked along
- * the text in order: a letter that follows the last one marked is taken
- * there, otherwise at the next word that starts with it, otherwise at its
- * next place anywhere. So "todo" marks "to" and "do" in "New to-do list",
- * and "np" marks the N and the P of "New page". Where the letters do not
- * all fall in the text (they matched the keywords) nothing is marked.
+ * found by its score alone took them: the alignment command-score itself
+ * chose (`scorePath`), so "todo" marks "to" and "do" in "New to-do list",
+ * "np" the N and the P of "New page", "ol" the O of "Copy" and the L of
+ * "link", and the transposed "pgae" the whole of "Page". Where the letters
+ * do not all fall in the text (they matched the keywords) nothing is marked.
  */
 export function scoreParts(text: string, query: string): MatchPart[] {
   if (!text) return [];
-  const letters = [...fold(query).replace(/\s+/g, "")];
-  if (letters.length === 0) return [{ text, match: false }];
+  const typed = fold(query).trim().replace(/\s+/g, " ");
+  if (!typed) return [{ text, match: false }];
   const { chars, folded, from } = foldMap(text);
+  const path = scorePath(folded, typed);
+  if (!path) return [{ text, match: false }];
   const marked: boolean[] = new Array<boolean>(chars.length).fill(false);
-  let at = 0;
-  for (const letter of letters) {
-    let found = -1;
-    if (at > 0 && folded[at] === letter) found = at;
-    for (let i = at; found === -1 && i < folded.length; i++) {
-      if (folded[i] === letter && (i === 0 || WORD_EDGE.test(folded[i - 1]!))) found = i;
-    }
-    if (found === -1) found = folded.indexOf(letter, at);
-    if (found === -1) return [{ text, match: false }];
-    marked[from[found]!] = true;
-    at = found + 1;
+  for (const index of path) {
+    // A space in the query meets a space in the text, which draws no mark.
+    if (index < 0 || /\s/.test(folded.charAt(index))) continue;
+    marked[from[index]!] = true;
   }
   return partsOf(chars, marked);
 }

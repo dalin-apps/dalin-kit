@@ -79,6 +79,8 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
     // An Enter pressed while the list was stale, waiting for the answer.
     const heldEnter = useRef(false);
     // An Enter pressed on a row that waits for the next answer (`dim: "waiting"`).
+    // It belongs to that place in the list: a key or a pointer that moves the
+    // highlight, new words, a page and a close each drop it.
     const heldRow = useRef(false);
     const inputRef = useRef(null);
     // The panel's element as state: a toast over the dim keeps its action in
@@ -150,7 +152,8 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
     // The page on top decides what is searched.
     const top = pages[pages.length - 1]?.page;
     const asked = usePaletteResults({
-        active: open && !ownResults,
+        // A page's own sources answer on it, whatever list the first page uses.
+        active: open && (!ownResults || top !== undefined),
         query,
         scope: pages.map((p) => p.page.id).join("/"),
         sources: top ? (top.sources ?? NO_SOURCES) : sources,
@@ -159,7 +162,7 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
         tail: top ? undefined : tail,
     });
     const results = useMemo(() => {
-        if (!ownResults)
+        if (!ownResults || top)
             return asked;
         return {
             groups: ownResults.groups.filter((group) => group.items.length > 0),
@@ -170,7 +173,7 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
             retry: asked.retry,
             byScore: NO_SCORED,
         };
-    }, [ownResults, asked, query]);
+    }, [ownResults, top, asked, query]);
     const { stale } = results;
     const staleRef = useRef(stale);
     staleRef.current = stale;
@@ -178,6 +181,7 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
         setPages((prev) => [...prev, { page, parentQuery: query }]);
         setMenu(null);
         heldEnter.current = false;
+        heldRow.current = false;
         setQuery("");
         inputRef.current?.focus({ preventScroll: true });
     }, [query, setQuery]);
@@ -188,6 +192,7 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
         setPages(pages.slice(0, depth));
         setMenu(null);
         heldEnter.current = false;
+        heldRow.current = false;
         setQuery(restored);
         inputRef.current?.focus({ preventScroll: true });
     }, [pages, setQuery]);
@@ -215,9 +220,18 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
         // `select` and `first` are read as they stand when the list changes.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [results.groups, stale]);
-    // An Enter held on a waiting row runs the highlighted row once it stops waiting.
+    // An Enter held on a waiting row runs the highlighted row once it stops
+    // waiting. An answer with nothing to highlight drops it, so no later
+    // update runs a row nobody chose.
     useEffect(() => {
-        if (!heldRow.current || stale || !active || active.dim === "waiting")
+        if (!heldRow.current || stale)
+            return;
+        if (!active) {
+            if (results.busy === 0)
+                heldRow.current = false;
+            return;
+        }
+        if (active.dim === "waiting")
             return;
         heldRow.current = false;
         select(active);
@@ -318,7 +332,12 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
                                 setQuery(next);
                             }, 
                             // The sources and the action ranking have matched already.
-                            filter: null, itemToStringValue: (item) => item.title, autoHighlight: "always", keepHighlight: true, onItemHighlighted: (item) => setActive(item), children: [children, _jsx(RowMenu, { state: menu, onClose: () => setMenu(null), onRun: runEntry, returnTo: inputRef })] }) }) })] }) }));
+                            filter: null, itemToStringValue: (item) => item.title, autoHighlight: "always", keepHighlight: true, onItemHighlighted: (item, details) => {
+                                setActive(item);
+                                // The highlight moved by a key or the pointer: a held Enter was for the row it left.
+                                if (details.reason === "keyboard" || details.reason === "pointer")
+                                    heldRow.current = false;
+                            }, children: [children, _jsx(RowMenu, { state: menu, onClose: () => setMenu(null), onRun: runEntry, returnTo: inputRef })] }) }) })] }) }));
 }
 /**
  * The field row: the glyph, the open pages' crumbs, the app's pieces
@@ -348,9 +367,9 @@ export function PaletteField({ glyph, start, end, filter, completion, onKeyDown,
             event.preventBaseUIHandler?.();
         };
         // Ctrl N and Ctrl P move the highlight, as in cmdk and in Emacs.
-        if (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && (event.key === "n" || event.key === "p")) {
+        if (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && (event.key.toLowerCase() === "n" || event.key.toLowerCase() === "p")) {
             stop();
-            input.dispatchEvent(new KeyboardEvent("keydown", { key: event.key === "n" ? "ArrowDown" : "ArrowUp", bubbles: true, cancelable: true }));
+            input.dispatchEvent(new KeyboardEvent("keydown", { key: event.key.toLowerCase() === "n" ? "ArrowDown" : "ArrowUp", bubbles: true, cancelable: true }));
             return;
         }
         if (completion && !readOnly && ((event.key === "Tab" && !event.shiftKey) || (event.key === "ArrowRight" && caretAtEnd(input)))) {
@@ -374,7 +393,7 @@ export function PaletteField({ glyph, start, end, filter, completion, onKeyDown,
             ctx.backTo(pages.length - 1);
         }
     };
-    const input = (_jsx(Autocomplete.Input, { ref: ctx.inputRef, className: "dl-palette-input", placeholder: ctx.placeholder, "aria-label": ctx.placeholder, "aria-describedby": ctx.hintId, "aria-busy": results.stale || results.busy > 0 || busy || undefined, autoComplete: "off", autoCorrect: "off", spellCheck: false, readOnly: readOnly, onKeyDown: keyDown, "data-dl-owns-tab": completion ? "" : undefined }));
+    const input = (_jsx(Autocomplete.Input, { ref: ctx.inputRef, className: "dl-palette-input", placeholder: ctx.placeholder, "aria-label": ctx.placeholder, "aria-describedby": ctx.hintId, "aria-busy": results.stale || results.busy > 0 || busy || undefined, autoComplete: "off", autoCorrect: "off", spellCheck: false, readOnly: readOnly, onKeyDown: keyDown, "data-dl-owns-tab": completion && !readOnly ? "" : undefined }));
     return (_jsxs(_Fragment, { children: [_jsxs("div", { className: "dl-palette-query", children: [glyph ?? _jsx(SearchGlyph, {}), pages.map((open, depth) => (_jsx("button", { type: "button", className: "dl-palette-crumb", tabIndex: -1, "aria-label": `Back from ${open.page.crumb}`, onMouseDown: (event) => event.preventDefault(), onClick: () => ctx.backTo(depth), children: open.page.crumb }, `${open.page.id}:${depth}`))), start, completion === undefined ? (input) : (_jsxs("span", { className: "dl-palette-field", children: [completion ? (_jsxs("span", { className: "dl-palette-ghost", "aria-hidden": "true", children: [_jsx("span", { className: "dl-palette-ghost-typed", children: query }), completion.suffix] })) : null, input] })), end, filter, _jsx(Dialog.Close, { className: "dl-palette-close", "aria-label": "Close", tabIndex: -1, children: _jsx(Kbd, { children: "Esc" }) })] }), _jsx("span", { id: ctx.hintId, className: "dl-palette-status", children: `Press Enter to ${(active?.verb ?? "open").toLocaleLowerCase()} the highlighted result.` }), _jsx("div", { role: "status", "aria-live": "polite", className: "dl-palette-status", children: body
                     ? (body.status ?? "")
                     : nothing

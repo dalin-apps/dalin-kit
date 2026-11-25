@@ -73,6 +73,14 @@ describe("<PhoneSearch sources actions>", () => {
     expect(rowTitles()).toEqual(["New page"]);
   });
 
+  it("marks the letters the score took on a row only the score found, as the palette does", async () => {
+    await mount(<Sheet />);
+    // "np" holds no word of "New page", and its score finds the row.
+    await type(field(), "np");
+    expect(rowTitles()).toEqual(["New page"]);
+    expect(all(".dl-phone-search-mark").map((m) => m.textContent)).toEqual(["N", "p"]);
+  });
+
   it("runs a row and closes, as a row of the app's own does", async () => {
     ran.mockClear();
     await mount(<Sheet />);

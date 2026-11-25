@@ -241,6 +241,8 @@ export function Palette({
   // An Enter pressed while the list was stale, waiting for the answer.
   const heldEnter = useRef(false);
   // An Enter pressed on a row that waits for the next answer (`dim: "waiting"`).
+  // It belongs to that place in the list: a key or a pointer that moves the
+  // highlight, new words, a page and a close each drop it.
   const heldRow = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   // The panel's element as state: a toast over the dim keeps its action in
@@ -314,7 +316,8 @@ export function Palette({
   // The page on top decides what is searched.
   const top = pages[pages.length - 1]?.page;
   const asked = usePaletteResults({
-    active: open && !ownResults,
+    // A page's own sources answer on it, whatever list the first page uses.
+    active: open && (!ownResults || top !== undefined),
     query,
     scope: pages.map((p) => p.page.id).join("/"),
     sources: top ? (top.sources ?? NO_SOURCES) : sources,
@@ -323,7 +326,7 @@ export function Palette({
     tail: top ? undefined : tail,
   });
   const results: PaletteResults = useMemo(() => {
-    if (!ownResults) return asked;
+    if (!ownResults || top) return asked;
     return {
       groups: ownResults.groups.filter((group) => group.items.length > 0),
       answered: ownResults.query,
@@ -333,7 +336,7 @@ export function Palette({
       retry: asked.retry,
       byScore: NO_SCORED,
     };
-  }, [ownResults, asked, query]);
+  }, [ownResults, top, asked, query]);
   const { stale } = results;
   const staleRef = useRef(stale);
   staleRef.current = stale;
@@ -343,6 +346,7 @@ export function Palette({
       setPages((prev) => [...prev, { page, parentQuery: query }]);
       setMenu(null);
       heldEnter.current = false;
+      heldRow.current = false;
       setQuery("");
       inputRef.current?.focus({ preventScroll: true });
     },
@@ -355,6 +359,7 @@ export function Palette({
       setPages(pages.slice(0, depth));
       setMenu(null);
       heldEnter.current = false;
+      heldRow.current = false;
       setQuery(restored);
       inputRef.current?.focus({ preventScroll: true });
     },
@@ -383,9 +388,16 @@ export function Palette({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results.groups, stale]);
 
-  // An Enter held on a waiting row runs the highlighted row once it stops waiting.
+  // An Enter held on a waiting row runs the highlighted row once it stops
+  // waiting. An answer with nothing to highlight drops it, so no later
+  // update runs a row nobody chose.
   useEffect(() => {
-    if (!heldRow.current || stale || !active || active.dim === "waiting") return;
+    if (!heldRow.current || stale) return;
+    if (!active) {
+      if (results.busy === 0) heldRow.current = false;
+      return;
+    }
+    if (active.dim === "waiting") return;
     heldRow.current = false;
     select(active);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -509,7 +521,11 @@ export function Palette({
               itemToStringValue={(item: PaletteItem) => item.title}
               autoHighlight="always"
               keepHighlight
-              onItemHighlighted={(item: PaletteItem | undefined) => setActive(item)}
+              onItemHighlighted={(item: PaletteItem | undefined, details: { reason: string }) => {
+                setActive(item);
+                // The highlight moved by a key or the pointer: a held Enter was for the row it left.
+                if (details.reason === "keyboard" || details.reason === "pointer") heldRow.current = false;
+              }}
             >
               {children}
               <RowMenu state={menu} onClose={() => setMenu(null)} onRun={runEntry} returnTo={inputRef} />
@@ -585,10 +601,10 @@ export function PaletteField({ glyph, start, end, filter, completion, onKeyDown,
       (event as unknown as { preventBaseUIHandler?: () => void }).preventBaseUIHandler?.();
     };
     // Ctrl N and Ctrl P move the highlight, as in cmdk and in Emacs.
-    if (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && (event.key === "n" || event.key === "p")) {
+    if (event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && (event.key.toLowerCase() === "n" || event.key.toLowerCase() === "p")) {
       stop();
       input.dispatchEvent(
-        new KeyboardEvent("keydown", { key: event.key === "n" ? "ArrowDown" : "ArrowUp", bubbles: true, cancelable: true }),
+        new KeyboardEvent("keydown", { key: event.key.toLowerCase() === "n" ? "ArrowDown" : "ArrowUp", bubbles: true, cancelable: true }),
       );
       return;
     }
@@ -626,8 +642,10 @@ export function PaletteField({ glyph, start, end, filter, completion, onKeyDown,
       spellCheck={false}
       readOnly={readOnly}
       onKeyDown={keyDown}
-      // Tab takes the completion, so the toast's place in the loop waits.
-      data-dl-owns-tab={completion ? "" : undefined}
+      // A forward Tab takes the completion, so the toast's place in the
+      // loop waits for that press. Shift+Tab, and a field that is read
+      // only, leave Tab to the loop.
+      data-dl-owns-tab={completion && !readOnly ? "" : undefined}
     />
   );
 
