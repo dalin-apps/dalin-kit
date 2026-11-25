@@ -31,6 +31,10 @@ import { type SheetDismissDistance } from "./sheet-release.js";
  *   would raise the phone's keyboard over the sheet.
  * - Every close asks `onOpenChange` first, with its reason, and the app
  *   may refuse it with `details.cancel()`. A refused swipe settles back.
+ * - A modal sheet holds Tab itself, on the press, and says it is modal
+ *   (`aria-modal`). Base UI's focus guards turn Tab back a frame late, so
+ *   two quick presses left the sheet. With sheets stacked, the top one
+ *   holds it.
  * - It tells the kit's toaster it covers the bar, and a toast's action
  *   joins its Tab loop, as in the phone's search and the palette.
  *

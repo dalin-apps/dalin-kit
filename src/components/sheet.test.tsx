@@ -74,21 +74,27 @@ type Step = [y: number, ms: number];
  */
 async function drag(el: Element, steps: readonly Step[], start = 300): Promise<void> {
   (document as { elementFromPoint?: unknown }).elementFromPoint = () => el;
+  fingerY = start;
   await act(async () => {
     touch("touchstart", el, start, now);
   });
   await act(async () => {
     for (const [y, ms] of steps) {
       now += ms;
+      fingerY = y;
       touch("touchmove", el, y, now);
     }
   });
 }
 
-async function release(el: Element, after = 2, type = "touchend"): Promise<void> {
+/** Where the finger of `drag()` last was: a lift carries the finger's own place, as a phone's does. */
+let fingerY = 0;
+
+/** The finger lifts `after` ms on, where it last moved to, or at `y`: a loaded frame can hold back the last move. */
+async function release(el: Element, after = 2, type = "touchend", y = fingerY): Promise<void> {
   now += after;
   await act(async () => {
-    touch(type, el, 0, now);
+    touch(type, el, y, now);
   });
   await settle(80);
 }
@@ -1754,4 +1760,227 @@ describe("sheet.css", () => {
   it("keeps the close fade's rule off a closing sheet, which has its own exit", () => {
     expect(ruleFor(css, ":is(.dl-sheet, .dl-sheet-scrim)[data-dl-leaving]")).toBe("animation: none !important;");
   });
+});
+
+/**
+ * A Tab as the browser takes one: the keydown, and where nothing took it,
+ * focus on to the next stop in the page's order, or the one before with
+ * Shift. Base UI's guards are stops too, as they are in a browser.
+ */
+function browserTab(shift = false): void {
+  const from = document.activeElement ?? document.body;
+  const event = new KeyboardEvent("keydown", { key: "Tab", shiftKey: shift, bubbles: true, cancelable: true });
+  from.dispatchEvent(event);
+  if (event.defaultPrevented) return;
+  const stops = all<HTMLElement>("a[href], button, input, select, textarea, [tabindex]").filter(
+    (el) => el.tabIndex >= 0 && !el.hasAttribute("disabled") && !el.closest("[inert]"),
+  );
+  const way = shift ? Node.DOCUMENT_POSITION_PRECEDING : Node.DOCUMENT_POSITION_FOLLOWING;
+  const ahead = stops.filter((el) => from.compareDocumentPosition(el) & way && !(shift && el.contains(from)));
+  const to = (shift ? ahead[ahead.length - 1] : ahead[0]) ?? (shift ? stops[stops.length - 1] : stops[0]);
+  to?.focus();
+}
+
+/** Tab pressed `times` over inside one frame: nothing a frame later runs in between. */
+async function tabs(times: number, shift = false): Promise<void> {
+  await act(async () => {
+    for (let i = 0; i < times; i++) browserTab(shift);
+  });
+}
+
+describe("<Sheet>, Tab inside a modal sheet", () => {
+  /** A page with stops before and after the sheet, which Tab must not reach while it is open. */
+  function Page({ modal, stops = true }: { modal?: SheetProps["modal"]; stops?: boolean }): ReactNode {
+    return (
+      <>
+        <button type="button" id="before">
+          Before
+        </button>
+        <Sheet defaultOpen modal={modal}>
+          <SheetContent label="Move to">
+            <SheetBody>
+              {stops ? (
+                <>
+                  <button type="button" id="first">
+                    First
+                  </button>
+                  <button type="button" id="last">
+                    Last
+                  </button>
+                </>
+              ) : (
+                <p>Nothing to press</p>
+              )}
+            </SheetBody>
+          </SheetContent>
+        </Sheet>
+        <button type="button" id="after">
+          After
+        </button>
+      </>
+    );
+  }
+  const focused = () => (document.activeElement === panel() ? "panel" : document.activeElement?.id || "elsewhere");
+
+  it("holds two quick Tabs off the last stop, inside one frame", async () => {
+    await mount(<Page />);
+    await settle(60);
+    one<HTMLElement>("#last")!.focus();
+    await tabs(2);
+    expect(focused()).toBe("last");
+    await settle(60);
+    expect(focused()).toBe("last");
+    await tabs(1);
+    expect(focused()).toBe("first");
+  });
+
+  it("holds two quick Shift+Tabs off the first stop, and off the panel itself", async () => {
+    await mount(<Page />);
+    await settle(60);
+    one<HTMLElement>("#first")!.focus();
+    await tabs(2, true);
+    expect(focused()).toBe("first");
+    panel()!.focus();
+    await tabs(1, true);
+    expect(focused()).toBe("last");
+    await settle(60);
+    expect(focused()).toBe("last");
+  });
+
+  it("keeps Tab on the panel when there is nothing in it to press", async () => {
+    await mount(<Page stops={false} />);
+    await settle(60);
+    panel()!.focus();
+    await tabs(2);
+    expect(focused()).toBe("panel");
+    await tabs(2, true);
+    expect(focused()).toBe("panel");
+  });
+
+  it("holds Tab under `\"trap-focus\"` as well", async () => {
+    await mount(<Page modal="trap-focus" />);
+    await settle(60);
+    one<HTMLElement>("#last")!.focus();
+    await tabs(2);
+    expect(focused()).toBe("last");
+  });
+
+  it("leaves Tab to the page when it is not modal", async () => {
+    await mount(<Page modal={false} />);
+    await settle(60);
+    one<HTMLElement>("#last")!.focus();
+    await tabs(1);
+    expect(focused()).toBe("after");
+  });
+
+  it("still runs the loop through a toast: off the last stop to the toast, and back to the first", async () => {
+    await mount(<Page />);
+    await settle(60);
+    const { toast, action } = withToast();
+    one<HTMLElement>("#last")!.focus();
+    await tabs(1);
+    expect(document.activeElement).toBe(toast);
+    await tabs(1);
+    expect(document.activeElement).toBe(action);
+    await tabs(1);
+    expect(focused()).toBe("first");
+    await tabs(1, true);
+    expect(document.activeElement).toBe(action);
+  });
+
+  it("is held by the top sheet of a stack alone", async () => {
+    await mount(<Stack log={[]} />);
+    await settle(60);
+    await tap(one("#open-top"));
+    one<HTMLElement>("#in-top")!.focus();
+    await tabs(2);
+    expect(document.activeElement?.id).toBe("in-top");
+    await tabs(2, true);
+    expect(document.activeElement?.id).toBe("in-top");
+  });
+});
+
+describe("<Sheet>, what a screen reader is told", () => {
+  /** A page beside the sheet, to see what a screen reader is left. */
+  function Beside({ modal }: { modal?: SheetProps["modal"] }): ReactNode {
+    return (
+      <>
+        <button type="button" id="page">
+          On the page
+        </button>
+        <Demo modal={modal} />
+      </>
+    );
+  }
+
+  it("marks a modal sheet's panel modal, as the page behind it is hidden", async () => {
+    await mount(<Beside />);
+    await settle(60);
+    expect(panel()!.getAttribute("aria-modal")).toBe("true");
+    expect(one("#page")!.closest("[aria-hidden='true']")).not.toBeNull();
+  });
+
+  it("marks one that holds only Tab modal too, since Base UI hides the page behind it as well", async () => {
+    await mount(<Beside modal="trap-focus" />);
+    await settle(60);
+    expect(panel()!.getAttribute("aria-modal")).toBe("true");
+    expect(one("#page")!.closest("[aria-hidden='true']")).not.toBeNull();
+  });
+
+  it("does not mark a sheet that is not modal", async () => {
+    await mount(<Beside modal={false} />);
+    await settle(60);
+    expect(panel()!.hasAttribute("aria-modal")).toBe(false);
+    expect(one("#page")!.closest("[aria-hidden='true']")).toBeNull();
+  });
+});
+
+describe("<Sheet>, a flick through a loaded frame", () => {
+  // A flick at some 2.8px/ms over 90px, as a phone under load hands it on:
+  // the last move comes 60ms late, then Android's still move before the lift.
+  const late: readonly Step[] = [
+    [316, 6],
+    [338, 8],
+    [360, 8],
+    [390, 60],
+    [390, 2],
+  ];
+  for (const part of [".dl-sheet-handle", ".dl-sheet-title"]) {
+    const from = part === ".dl-sheet-handle" ? "the handle" : "the body";
+
+    it(`closes on a flick whose last move a loaded frame held back, from ${from}`, async () => {
+      const log = await open();
+      const el = one(part)!;
+      await drag(el, late);
+      await release(el, 2);
+      expect(log).toEqual(["close:swipe"]);
+    });
+
+    it(`counts the travel a lift carries past the last move, from ${from}`, async () => {
+      // The frame held the last move back until the lift: Base UI's panel
+      // stands at 45px of the finger's 90px, and the lift comes 90ms on.
+      const log = await open();
+      const el = one(part)!;
+      await drag(el, [
+        [316, 6],
+        [345, 10],
+      ]);
+      await release(el, 90, "touchend", 390);
+      expect(log).toEqual(["close:swipe"]);
+    });
+
+    it(`keeps a slow drag slow through a loaded frame, from ${from}`, async () => {
+      const log = await open();
+      const el = one(part)!;
+      await drag(el, [
+        [316, 50],
+        [340, 300],
+        [360, 300],
+        [380, 60],
+      ]);
+      await release(el, 2);
+      expect(log).toEqual([]);
+      expect(dragged()).toBe(false);
+    });
+  }
 });

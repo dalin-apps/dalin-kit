@@ -6,10 +6,10 @@ import {
   SHEET_DISMISS_PX,
   SHEET_OPEN_GUARD_MS,
   SHEET_SCROLL_GUARD_MS,
-  nextSheetVelocity,
   resolveSheetDismissDistance,
   sheetDismissDistance,
   sheetDragBlock,
+  sheetReleaseVelocity,
   sheetShouldDismiss,
 } from "./sheet-release.js";
 
@@ -102,13 +102,57 @@ describe("the two distance rules the apps have", () => {
 });
 
 describe("the drag's speed", () => {
-  it("takes the first sample whole, then leans on the newest", () => {
-    expect(nextSheetVelocity(0, 20, 20)).toBe(1);
-    expect(nextSheetVelocity(1, 1, 30)).toBeCloseTo(0.3 + (1 / 30) * 0.7, 6);
+  /** A flick at 2.8px/ms from 300, a move every 8ms. */
+  const flick = [
+    { y: 300, t: 0 },
+    { y: 322, t: 8 },
+    { y: 344, t: 16 },
+    { y: 367, t: 24 },
+    { y: 390, t: 32 },
+  ];
+
+  it("reads distance over time across the last three moves", () => {
+    expect(sheetReleaseVelocity(flick, 34)).toBeCloseTo(68 / 24, 6);
   });
 
-  it("keeps the last speed for a move that took no time", () => {
-    expect(nextSheetVelocity(0.8, 5, 0)).toBe(0.8);
+  it("keeps a flick a flick through a loaded frame: one move 60ms late", () => {
+    // The last move arrives after a long frame. Mail's smoothing read
+    // this one at 0.35px/ms once Android's still move came before the lift.
+    const loaded = [
+      { y: 300, t: 0 },
+      { y: 316, t: 6 },
+      { y: 338, t: 14 },
+      { y: 360, t: 22 },
+      { y: 390, t: 82 },
+    ];
+    expect(sheetReleaseVelocity(loaded, 86)).toBeCloseTo(74 / 76, 6);
+  });
+
+  it("reads only the last 100ms, or the last move alone where it took longer", () => {
+    const slowThenFast = [
+      { y: 300, t: 0 },
+      { y: 310, t: 300 },
+      { y: 320, t: 600 },
+      { y: 370, t: 620 },
+    ];
+    expect(sheetReleaseVelocity(slowThenFast, 622)).toBeCloseTo(50 / 20, 6);
+    const stalled = [
+      { y: 300, t: 0 },
+      { y: 316, t: 6 },
+      { y: 390, t: 156 },
+    ];
+    expect(sheetReleaseVelocity(stalled, 158)).toBeCloseTo(74 / 150, 6);
+  });
+
+  it("has no speed once the pointer has been still for 80ms before the lift, or with one sample", () => {
+    expect(sheetReleaseVelocity(flick, 32 + 81)).toBe(0);
+    expect(sheetReleaseVelocity(flick, 32 + 80)).toBeGreaterThan(0.5);
+    expect(sheetReleaseVelocity([{ y: 300, t: 0 }], 4)).toBe(0);
+    expect(sheetReleaseVelocity([], 4)).toBe(0);
+  });
+
+  it("counts no stretch as shorter than 8ms, so two events a millisecond apart are no flick", () => {
+    expect(sheetReleaseVelocity([{ y: 300, t: 0 }, { y: 302, t: 1 }], 1)).toBe(2 / 8);
   });
 });
 

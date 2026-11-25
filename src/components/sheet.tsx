@@ -24,11 +24,11 @@ import { pushBackEntry, type BackEntry } from "./back-entry.js";
 import { cx, withClass } from "./cx.js";
 import { CloseGlyph } from "./icons.js";
 import {
-  SHEET_FLING_STALE_MS,
-  nextSheetVelocity,
   sheetDragBlock,
+  sheetReleaseVelocity,
   sheetShouldDismiss,
   type SheetDismissDistance,
+  type SheetSample,
 } from "./sheet-release.js";
 import { useToasterTab } from "./toaster-tab.js";
 
@@ -62,6 +62,10 @@ import { useToasterTab } from "./toaster-tab.js";
  *   would raise the phone's keyboard over the sheet.
  * - Every close asks `onOpenChange` first, with its reason, and the app
  *   may refuse it with `details.cancel()`. A refused swipe settles back.
+ * - A modal sheet holds Tab itself, on the press, and says it is modal
+ *   (`aria-modal`). Base UI's focus guards turn Tab back a frame late, so
+ *   two quick presses left the sheet. With sheets stacked, the top one
+ *   holds it.
  * - It tells the kit's toaster it covers the bar, and a toast's action
  *   joins its Tab loop, as in the phone's search and the palette.
  *
@@ -549,8 +553,10 @@ function mouseY(event: Event): number | null {
  *   and Base UI then starts nothing for that gesture. A drag follows one
  *   touch: a second finger neither starts a gesture nor ends this one.
  * - As the finger lifts (capture, at the window, so before Base UI), the
- *   release is judged from where Base UI has the panel and from the kit's
- *   own reading of the speed. A close Base UI then asks for is refused if
+ *   release is judged from the finger's own travel and from the kit's own
+ *   samples of it, the lift's place among them: a loaded frame can hold
+ *   the last move back until the lift, and Base UI's panel then stands a
+ *   move behind the finger. A close Base UI then asks for is refused if
  *   the answer was no (`<Sheet>`'s `onOpenChange`).
  * - After Base UI has had the release (bubble, at the window), a yes that
  *   Base UI did not act on closes the sheet, from where the finger let go.
@@ -573,7 +579,14 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
     /** What the gesture in hand follows: a mouse, one touch by its identifier, or nothing. */
     let tracking: { kind: "mouse" } | { kind: "touch"; id: number } | null = null;
     let last = { y: 0, t: 0 };
-    let velocity = 0;
+    /** Where the followed pointer has been, oldest first: the press, then each move that moved it. */
+    let samples: SheetSample[] = [];
+    const sample = (y: number, t: number) => {
+      const prev = samples[samples.length - 1];
+      if (prev && Math.abs(y - prev.y) < 1) return;
+      samples.push({ y, t });
+      if (samples.length > 8) samples.shift();
+    };
     let scrolledAt = Number.NEGATIVE_INFINITY;
     /** The release the verdict was given for, and the frame that finishes it if nothing else does. */
     let judged: Event | null = null;
@@ -663,7 +676,7 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
       last = { y: y ?? 0, t: now };
       startY = last.y;
       clearGap();
-      velocity = 0;
+      samples = [{ ...last }];
       judged = null;
       clearFrame();
       gesture.current.verdict = null;
@@ -672,24 +685,22 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
 
     /**
      * Gives the release its verdict, from the finger's travel since the
-     * press: Base UI's offset and the travel it dropped. `moveDy` is for a
-     * release that moved the panel itself (a mouse's last move), which Base
-     * UI counts before it decides.
+     * press: Base UI's offset, the travel it dropped, and `releaseDy`, the
+     * travel the release carries past the last move Base UI took (a
+     * mouse's last move, or a lift a loaded frame held the move back for).
+     * The speed is the kit's own reading of its samples.
      */
-    const judge = (event: Event, cancelled: boolean, moveDy?: number) => {
+    const judge = (event: Event, cancelled: boolean, releaseDy = 0) => {
       judged = event;
       learnGap();
-      const panelOffset = moveDy === undefined ? offsetNow() : afterMove(offsetNow(), moveDy);
-      const offset = panelOffset + (gap ?? 0);
-      const fresh = moveDy !== undefined && moveDy !== 0;
-      const held = !fresh && event.timeStamp - last.t > SHEET_FLING_STALE_MS;
+      const offset = afterMove(offsetNow(), releaseDy) + (gap ?? 0);
       gesture.current.verdict = !dragging()
         ? null
         : !cancelled &&
           sheetShouldDismiss({
             offset,
             height: panel.offsetHeight,
-            velocity: held ? 0 : velocity,
+            velocity: sheetReleaseVelocity(samples, event.timeStamp),
             distance: distance.current,
           });
       gesture.current.baseTried = false;
@@ -735,7 +746,7 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
       if (moved) learnGap();
       moved = true;
       const dy = y - last.y;
-      velocity = nextSheetVelocity(velocity, dy, event.timeStamp - last.t);
+      sample(y, event.timeStamp);
       // A mouse's release can arrive as a move with no button down, and
       // Base UI moves the panel by it before it ends the drag. The kit
       // counts that move too, then judges.
@@ -761,7 +772,17 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
       return !isTouch(event);
     };
     const onEnd = (event: Event) => {
-      if (ownEnd(event)) judge(event, event.type.endsWith("cancel"));
+      if (!ownEnd(event)) return;
+      const cancelled = event.type.endsWith("cancel");
+      // The lift's own place: under a loaded frame it can be past the last
+      // move anyone heard. A cancel's place means nothing.
+      const y = cancelled ? null : yOf(event);
+      if (y === null) {
+        judge(event, cancelled);
+        return;
+      }
+      sample(y, event.timeStamp);
+      judge(event, false, y - last.y);
     };
     const onEndAfter = (event: Event) => {
       finish(event);
@@ -901,8 +922,10 @@ export function SheetContent({
     if (!panel || !open || !toastCover) return;
     return registerToastDock(panel, { kind: "cover", rank: COVER_RANK + depth });
   }, [panel, open, toastCover, depth]);
-  // A toast raised over the sheet keeps its Undo in reach of Tab.
-  useToasterTab(open && modal !== false ? panel : null);
+  // A modal sheet holds Tab itself, on the press, and a toast raised over
+  // it keeps its Undo in reach. Base UI's focus guards would turn Tab back
+  // a frame late, and a second press inside that frame left the sheet.
+  useToasterTab(open && modal !== false ? panel : null, { hold: true });
 
   const marks = {
     "data-layout": layout,
@@ -938,6 +961,9 @@ export function SheetContent({
           ref={panelRef}
           data-slot="sheet"
           aria-label={label}
+          // Base UI hides the page from a screen reader behind a modal
+          // sheet, `"trap-focus"` too, and does not say so on the panel.
+          aria-modal={modal !== false ? true : undefined}
           {...marks}
           {...props}
           className={withClass("dl-sheet", className)}

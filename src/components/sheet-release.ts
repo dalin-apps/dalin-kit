@@ -76,15 +76,40 @@ export function sheetShouldDismiss(args: {
   return offset > resolveSheetDismissDistance(distance, height) || flung;
 }
 
+/** A flick's speed is read over this much of the end of the drag, at most. */
+export const SHEET_FLING_WINDOW_MS = 100;
+/** And over no more than this many of its last moves. */
+const FLING_MOVES = 3;
+/** No stretch of a drag counts as shorter than this, so two events a millisecond apart are no flick. */
+const FLING_MIN_MS = 8;
+
+/** Where the pointer was on a drag, top to bottom in px, and when, in ms. */
+export type SheetSample = { y: number; t: number };
+
 /**
- * The speed of a drag, in px per ms, after one more move. Weighted toward
- * the newest sample, so one event landing a millisecond after the last
- * can't read as a flick: mail's smoothing.
+ * The speed of a release, in px per ms, positive downward, from the drag's
+ * own samples: where the pointer was and when, oldest first, the release
+ * last where it moved. Samples that did not move are left out, as Base
+ * UI leaves them, since some Android phones send one just before the lift.
+ *
+ * It is distance over time across the last few moves: up to three, within
+ * the last 100ms, or the last move alone where that one took longer. A
+ * loaded frame holds a move back and then hands it over late, and one slow
+ * sample does not then outweigh the flick it ends. A pointer that has not
+ * moved for 80ms before it lifts has no speed left.
  */
-export function nextSheetVelocity(previous: number, delta: number, dt: number): number {
-  if (!(dt > 0)) return previous;
-  const sample = delta / dt;
-  return previous === 0 ? sample : previous * 0.3 + sample * 0.7;
+export function sheetReleaseVelocity(samples: readonly SheetSample[], releasedAt: number): number {
+  const n = samples.length;
+  const end = samples[n - 1];
+  let from = samples[n - 2];
+  if (!end || !from) return 0;
+  if (releasedAt - end.t > SHEET_FLING_STALE_MS) return 0;
+  for (let i = n - 3; i >= Math.max(0, n - 1 - FLING_MOVES); i--) {
+    const sample = samples[i];
+    if (!sample || end.t - sample.t > SHEET_FLING_WINDOW_MS) break;
+    from = sample;
+  }
+  return (end.y - from.y) / Math.max(end.t - from.t, FLING_MIN_MS);
 }
 
 /** Why a press may not start a drag, or null when it may. */

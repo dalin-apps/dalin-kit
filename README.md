@@ -90,6 +90,8 @@ No app has to move a sheet to take 0.11. To move one, import `@dalin/kit/sheet.c
 | Counts as an open overlay (notes' `useRegisterOverlay`) | Call it with the same `open` the sheet is given |
 | Ticks as it opens or is dismissed (haptics) | `onOpenChange`, which names the reason |
 | Registers as a toast dock, or is named in `<Toaster cover>` | Nothing: the sheet registers itself. Take its class out of the selector |
+| Holds Tab on the press (calendar's `useTabCycle`, mail's and notes' traps) | Nothing: a modal sheet holds Tab itself and keeps the toast in its loop. Delete the app's trap for it |
+| Sets `aria-modal` on its panel (calendar, mail) | Nothing: a modal sheet's panel carries `aria-modal="true"`. Take the app's own off |
 | Becomes a small dialog on a computer (every Settings sheet) | `layout="dialog"`, from the app's own width check |
 | Closes past a flat 96px, whatever its height (every Settings sheet) | `dismissDistance={SHEET_DISMISS_PX}` |
 | Stands at a z-index of the app's own | `--dl-sheet-z`, on `:root` or for one sheet in `vars` on `<SheetContent>` |
@@ -1177,9 +1179,9 @@ import { SHEET_DISMISS_PX, Sheet } from "@dalin/kit/components";
 
 A function of the height works too: `dismissDistance={(height) => height / 3}`.
 
-The flick is one rule for every sheet: faster than 0.5px a millisecond, once the sheet has travelled 16px. Anything less settles it back. The speed is read at the release, so a finger that stopped before it lifted is no flick. `sheetShouldDismiss` is the whole rule as a function. The apps' copies disagree on the edge itself: calendar closes at exactly the distance and mail and the Settings sheets only past it. The kit closes past the distance, and counts a flick from 16px on.
+The flick is one rule for every sheet: faster than 0.5px a millisecond, once the sheet has travelled 16px. Anything less settles it back. The kit reads the speed from its own samples of the finger, as distance over time across the last three moves inside 100ms (`sheetReleaseVelocity`). A phone under load can hand a move over 60ms late, or only with the lift, and one slow sample no longer turns a real flick into a settle. A finger still for 80ms before it lifts is no flick. `sheetShouldDismiss` is the whole rule as a function. The apps' copies disagree on the edge itself: calendar closes at exactly the distance and mail and the Settings sheets only past it. The kit closes past the distance, and counts a flick from 16px on.
 
-Base UI's Drawer has a rule of its own: past half the height, or the same flick with no least travel, averaged over the whole drag. Whichever distance the sheet has, the kit's rule wins, and this is how. The kit listens on both sides of Base UI's own handlers. Before Base UI hears a release, the kit reads how far down Base UI has the panel and how fast the finger was moving, and decides.
+Base UI's Drawer has a rule of its own: past half the height, or the same flick with no least travel, averaged over the whole drag. Whichever distance the sheet has, the kit's rule wins, and this is how. The kit listens on both sides of Base UI's own handlers. Before Base UI hears a release, the kit reads how far the finger has travelled, with the lift's own place counted, and how fast it was moving. Then it decides.
 
 If Base UI then asks to close and the kit's answer was no, the kit refuses that close with Base UI's `eventDetails.cancel()` and the sheet settles. If the kit's answer was yes and Base UI asked for nothing, the kit closes the sheet itself, in the same task as the release. The panel slides out from where the finger let go: traced frame by frame in headless Chromium, it holds there and then goes straight down over 260ms, never back up. Where both say yes, Base UI runs the close, in less than the sheet time after a fast flick. `onOpenChange` hears `"swipe"` in every case.
 
@@ -1219,7 +1221,9 @@ Keep the `<Sheet>` mounted and change `open`. A sheet the app unmounts to close 
 
 Escape closes the sheet. `ownsEscape` lets something inside it take the key first: while it answers true the sheet stays open and the key travels on to the field, which drops its text. Calendar passes its `fieldOwnsEscape`.
 
-Focus lands on the panel as the sheet opens, and not on its first control, since a focused field would raise the phone's keyboard over the sheet. `initialFocus` names another target. Tab stays inside a modal sheet, and focus goes back to what opened it. `modal={false}` gives the page back, as mail's compose does while it peeks.
+Focus lands on the panel as the sheet opens, and not on its first control, since a focused field would raise the phone's keyboard over the sheet. `initialFocus` names another target. Focus goes back to what opened it. `modal={false}` gives the page back, as mail's compose does while it peeks.
+
+A modal sheet holds Tab itself, on the press: Tab off the last stop comes round to the first, and Shift+Tab off the first (or off the panel) goes to the last. Base UI's own guards turn Tab back a frame late, so two quick presses used to leave the sheet. With sheets stacked, only the top one holds Tab. Its panel carries `aria-modal="true"`, which is true of `"trap-focus"` as well: Base UI hides the page from a screen reader behind both. A sheet with `modal={false}` carries none.
 
 A sheet over a sheet is a `<Sheet>` drawn inside the first one's content: drive's place peek over the file sheet, calendar's picks over the event sheet. Escape, a press outside and a swipe then close the top one alone. It dims the one behind with a scrim of its own and stands one step higher on the z ladder, so five sheets deep still stand under the toaster. The one behind stays where it is, and carries `data-nested-drawer-open` for an app that wants to style it.
 

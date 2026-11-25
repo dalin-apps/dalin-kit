@@ -25,6 +25,14 @@ function tabStops(roots) {
  * back to the one on top, and not to one it covers.
  */
 const surfaces = [];
+/** Whether `el` comes after `from` in the page's order: a stop inside `from` does. */
+function follows(el, from) {
+    return (from.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+}
+/** Whether `el` comes before `from` in the page's order. `from`'s own box, which holds it, does not. */
+function precedes(el, from) {
+    return (from.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING) !== 0 && !el.contains(from);
+}
 /**
  * Lets Tab leave a modal surface for the toaster, and come back.
  *
@@ -36,11 +44,15 @@ const surfaces = [];
  * back to the surface's first stop, and Shift+Tab runs the same loop the
  * other way. Between a toast's own stops the browser moves as usual.
  *
- * With no toast that can take Tab, nothing changes. A screen reader needs
- * none of this: Base UI leaves a live region out of what it hides. With
- * several surfaces up, the one registered last answers.
+ * With no toast that can take Tab, nothing changes, unless the surface
+ * asked to be held (`hold`): then Tab off its last stop comes round to its
+ * first, Shift+Tab the other way, and with no stop at all the key stays
+ * where it is. Focus on the surface itself counts as before its first stop.
+ * A screen reader needs none of this: Base UI leaves a live region out of
+ * what it hides. With several surfaces up, the one registered last answers.
  */
-export function useToasterTab(surface) {
+export function useToasterTab(surface, options = {}) {
+    const hold = options.hold ?? false;
     useEffect(() => {
         if (!surface)
             return;
@@ -55,18 +67,31 @@ export function useToasterTab(surface) {
             if (!(active instanceof HTMLElement))
                 return;
             const toasts = tabStops([...doc.querySelectorAll(TOASTER)]);
-            if (toasts.length === 0)
+            if (toasts.length === 0 && !hold)
                 return;
             const own = tabStops([surface]);
             const back = event.shiftKey;
             let next;
             if (surface.contains(active)) {
                 // Off the surface's last stop going forward, or its first going back.
-                if (own.length > 0 && active !== (back ? own[0] : own[own.length - 1]))
+                // Held, the edge is read from the page's order, so focus on the
+                // surface itself or on something Tab skips counts by where it sits.
+                const edge = hold
+                    ? !own.some((el) => el !== active && (back ? precedes(el, active) : follows(el, active)))
+                    : own.length === 0 || active === (back ? own[0] : own[own.length - 1]);
+                if (!edge)
                     return;
-                next = back ? toasts[toasts.length - 1] : toasts[0];
+                if (toasts.length > 0)
+                    next = back ? toasts[toasts.length - 1] : toasts[0];
+                else
+                    next = back ? own[own.length - 1] : own[0];
+                if (!next) {
+                    // Held, with nothing to go to: the key stays on the surface.
+                    event.preventDefault();
+                    return;
+                }
             }
-            else if (active.closest(TOASTER)) {
+            else if (toasts.length > 0 && active.closest(TOASTER)) {
                 if (active !== (back ? toasts[0] : toasts[toasts.length - 1]))
                     return;
                 next = (back ? own[own.length - 1] : own[0]) ?? surface;
@@ -85,6 +110,6 @@ export function useToasterTab(surface) {
             if (at !== -1)
                 surfaces.splice(at, 1);
         };
-    }, [surface]);
+    }, [surface, hold]);
 }
 //# sourceMappingURL=toaster-tab.js.map

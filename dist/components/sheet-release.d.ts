@@ -60,12 +60,26 @@ export declare function sheetShouldDismiss(args: {
     velocity: number;
     distance?: SheetDismissDistance;
 }): boolean;
+/** A flick's speed is read over this much of the end of the drag, at most. */
+export declare const SHEET_FLING_WINDOW_MS = 100;
+/** Where the pointer was on a drag, top to bottom in px, and when, in ms. */
+export type SheetSample = {
+    y: number;
+    t: number;
+};
 /**
- * The speed of a drag, in px per ms, after one more move. Weighted toward
- * the newest sample, so one event landing a millisecond after the last
- * can't read as a flick: mail's smoothing.
+ * The speed of a release, in px per ms, positive downward, from the drag's
+ * own samples: where the pointer was and when, oldest first, the release
+ * last where it moved. Samples that did not move are left out, as Base
+ * UI leaves them, since some Android phones send one just before the lift.
+ *
+ * It is distance over time across the last few moves: up to three, within
+ * the last 100ms, or the last move alone where that one took longer. A
+ * loaded frame holds a move back and then hands it over late, and one slow
+ * sample does not then outweigh the flick it ends. A pointer that has not
+ * moved for 80ms before it lifts has no speed left.
  */
-export declare function nextSheetVelocity(previous: number, delta: number, dt: number): number;
+export declare function sheetReleaseVelocity(samples: readonly SheetSample[], releasedAt: number): number;
 /** Why a press may not start a drag, or null when it may. */
 export type SheetDragBlock = "opening" | "scrolled" | "select" | "selection" | null;
 /**
