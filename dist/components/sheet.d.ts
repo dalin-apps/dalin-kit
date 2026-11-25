@@ -1,5 +1,6 @@
 import { type ComponentProps, type ReactNode, type Ref } from "react";
 import { Drawer } from "@base-ui/react/drawer";
+import { type SheetDismissDistance } from "./sheet-release.js";
 /**
  * The family's sheet: one bottom sheet for the four apps, on Base UI's
  * Drawer. Each app had hand-built its own (three in calendar alone), and
@@ -109,6 +110,14 @@ export type SheetProps = {
     modal?: boolean | "trap-focus";
     /** Whether a drag closes the sheet. Off for a sheet whose drag is the app's own. */
     swipe?: boolean;
+    /**
+     * How far down a release closes the sheet, in px, or as a function of
+     * the sheet's height. Left out, it is mail's and calendar's rule: 96px
+     * or 40% of the height, whichever is less. The Settings sheets pass
+     * `SHEET_DISMISS_PX`, their flat 96px, which a short sheet needs said:
+     * under 240px tall the two differ. The flick is the same either way.
+     */
+    dismissDistance?: SheetDismissDistance;
     /** Whether a press outside the sheet closes it. On by default. */
     dismissOnOutsidePress?: boolean;
     /**
@@ -147,7 +156,7 @@ export declare const SHEET_NO_DRAG_ATTR = "data-dl-no-drag";
 export declare function noSheetDrag(axis?: "x" | "y"): {
     [SHEET_NO_DRAG_ATTR]: string;
 };
-export declare function Sheet({ open: openProp, defaultOpen, onOpenChange, onOpenChangeComplete, layout, modal, swipe, dismissOnOutsidePress, systemBack, ownsEscape, virtualKeyboard, actionsRef, children, }: SheetProps): ReactNode;
+export declare function Sheet({ open: openProp, defaultOpen, onOpenChange, onOpenChangeComplete, layout, modal, swipe, dismissDistance, dismissOnOutsidePress, systemBack, ownsEscape, virtualKeyboard, actionsRef, children, }: SheetProps): ReactNode;
 /** A button that opens the sheet, for a sheet that owns its own state. */
 export declare function SheetTrigger(props: Drawer.Trigger.Props): ReactNode;
 export type SheetContentProps = Omit<Drawer.Popup.Props, "children"> & {

@@ -91,6 +91,7 @@ No app has to move a sheet to take 0.11. To move one, import `@dalin/kit/sheet.c
 | Ticks as it opens or is dismissed (haptics) | `onOpenChange`, which names the reason |
 | Registers as a toast dock, or is named in `<Toaster cover>` | Nothing: the sheet registers itself. Take its class out of the selector |
 | Becomes a small dialog on a computer (every Settings sheet) | `layout="dialog"`, from the app's own width check |
+| Closes past a flat 96px, whatever its height (every Settings sheet) | `dismissDistance={SHEET_DISMISS_PX}` |
 | Stands at a z-index of the app's own | `--dl-sheet-z` |
 | Is a solid panel (mail's Settings sheet) | `--dl-sheet-fill` and `--dl-sheet-blur: none` |
 | Holds a swipe between files, or a PDF that pans (mail's attachment viewer) | `noSheetDrag("x")` on the swipe, `noSheetDrag()` on the PDF |
@@ -103,7 +104,7 @@ Four things change for a sheet as it moves, and the owner approved the first on 
 - Every sheet opens and closes over `--dl-t-sheet`, 260ms. Mail's compose sheet takes 300ms today, and would take 260ms if it moves.
 - On Android, Base UI takes Chrome's back gesture for an open sheet through the browser's CloseWatcher, with no history entry (`"close-watcher"`). Calendar's and notes' sheets have no entry of their own, and now close on it. Drive's and mail's hear that reason too, and their own guard takes its entry off as it does for any close from the screen.
 
-The distance that closes a sheet and the flick that closes it are the ones the apps had (see "The drag").
+The distance that closes a sheet and the flick that closes it are the ones the apps had. There are two distances today, and a Settings sheet has to name its own (see "The drag").
 
 ## Moving an app from 0.10.5 to 0.10.6
 
@@ -1105,6 +1106,7 @@ The panel is the overlay glass with 14px top corners and the 40 by 4 handle at i
 | `layout` | `"sheet"` | `"dialog"` draws the same parts as a small centred dialog. |
 | `modal` | `true` | `false` leaves the page in use. `"trap-focus"` holds Tab and nothing else. |
 | `swipe` | `true` | Whether a drag closes it. |
+| `dismissDistance` | 96px or 40% of the height | How far down a release closes it: a number of px, or a function of the sheet's height. The Settings sheets pass `SHEET_DISMISS_PX`. |
 | `dismissOnOutsidePress` | `true` | Whether a press on the scrim closes it. |
 | `systemBack` | `false` | Whether the sheet holds a history entry while it is open. |
 | `ownsEscape` | none | `(target, event) => boolean`. True leaves this Escape to something inside the sheet. |
@@ -1147,9 +1149,26 @@ import { noSheetDrag } from "@dalin/kit/components";
 
 With no argument, no drag that starts in the region moves the sheet: a media scrubber, a PDF being panned. With `"x"` a sideways drag belongs to the region and a downward one still moves the sheet, which is what mail's swipe between attachments needs. `"y"` is the other axis.
 
-A release closes the sheet past 96px or 40% of its height, whichever is less. A flick faster than 0.5px a millisecond closes it too, once the sheet has travelled 16px. Anything less settles it back. That is the rule mail, calendar and every Settings sheet each carried a copy of, and `sheetShouldDismiss` is its one home now. The speed is read at the release, so a finger that stopped before it lifted is no flick.
+A release closes the sheet once it has travelled far enough, or on a flick. The apps have two rules for how far, and the kit keeps both.
 
-Base UI's Drawer has a rule of its own: past half the height, or the same flick with no least travel, averaged over the whole drag. The kit's rule wins, and this is how. The kit listens on both sides of Base UI's own handlers. Before Base UI hears a release, the kit reads how far down Base UI has the panel and how fast the finger was moving, and decides. If Base UI then asks to close and the kit's answer was no, the kit refuses that close with Base UI's `eventDetails.cancel()` and the sheet settles. If the kit's answer was yes and Base UI asked for nothing, the kit closes the sheet itself. Where both say yes, Base UI runs the close, in less than the sheet time after a fast flick. `onOpenChange` hears `"swipe"` in every case.
+| Rule | Where it is today | Closes past |
+| --- | --- | --- |
+| The app sheets', the default | Calendar's `sheetRelease`, mail's `sheetShouldDismiss` | 96px or 40% of the sheet's height, whichever is less |
+| The Settings sheets' | `SettingsSheet` in all four apps | A flat 96px |
+
+The two agree on a sheet 240px tall or more, where 40% of the height is 96px or past it. Under 240px they differ: a 200px sheet closes past 80px by the first rule and past 96px by the second. So the distance is the sheet's own, in `dismissDistance`, and a Settings sheet that moves onto the kit passes the flat one:
+
+```tsx
+import { SHEET_DISMISS_PX, Sheet } from "@dalin/kit/components";
+
+<Sheet dismissDistance={SHEET_DISMISS_PX} layout={phone ? "sheet" : "dialog"} open={open} onOpenChange={change}>
+```
+
+A function of the height works too: `dismissDistance={(height) => height / 3}`.
+
+The flick is one rule for every sheet: faster than 0.5px a millisecond, once the sheet has travelled 16px. Anything less settles it back. The speed is read at the release, so a finger that stopped before it lifted is no flick. `sheetShouldDismiss` is the whole rule as a function. The apps' copies disagree on the edge itself: calendar closes at exactly the distance and mail and the Settings sheets only past it. The kit closes past the distance, and counts a flick from 16px on.
+
+Base UI's Drawer has a rule of its own: past half the height, or the same flick with no least travel, averaged over the whole drag. Whichever distance the sheet has, the kit's rule wins, and this is how. The kit listens on both sides of Base UI's own handlers. Before Base UI hears a release, the kit reads how far down Base UI has the panel and how fast the finger was moving, and decides. If Base UI then asks to close and the kit's answer was no, the kit refuses that close with Base UI's `eventDetails.cancel()` and the sheet settles. If the kit's answer was yes and Base UI asked for nothing, the kit closes the sheet itself. Where both say yes, Base UI runs the close, in less than the sheet time after a fast flick. `onOpenChange` hears `"swipe"` in every case.
 
 A pull upward meets one resistance in every app, Base UI's own curve: the panel rises by the square root of the pull, so 100px of finger lifts it 10px. Calendar's sheets rose 35px for that pull, mail's 25px, and the Settings sheets not at all. The curve sits between them. It is also what the Drawer draws by itself, and a factor of the kit's own would have to overwrite the Drawer's transform on every frame of a drag.
 

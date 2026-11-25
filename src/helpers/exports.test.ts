@@ -140,6 +140,8 @@ describe("@dalin/kit/components", () => {
     "noSheetDrag",
     "sheetShouldDismiss",
     "sheetDragBlock",
+    "SHEET_DISMISS_PX",
+    "resolveSheetDismissDistance",
   ])("exports %s", (name) => {
     expect((components as Record<string, unknown>)[name]).toBeDefined();
   });

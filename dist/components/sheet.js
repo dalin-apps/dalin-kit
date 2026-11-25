@@ -43,7 +43,7 @@ function fromKey(event) {
         return true;
     return event.type === "click" && event.detail === 0;
 }
-export function Sheet({ open: openProp, defaultOpen = false, onOpenChange, onOpenChangeComplete, layout = "sheet", modal = true, swipe = true, dismissOnOutsidePress = true, systemBack = false, ownsEscape, virtualKeyboard = false, actionsRef, children, }) {
+export function Sheet({ open: openProp, defaultOpen = false, onOpenChange, onOpenChangeComplete, layout = "sheet", modal = true, swipe = true, dismissDistance, dismissOnOutsidePress = true, systemBack = false, ownsEscape, virtualKeyboard = false, actionsRef, children, }) {
     const parent = useContext(SheetContext);
     const [ownOpen, setOwnOpen] = useState(defaultOpen);
     const open = openProp ?? ownOpen;
@@ -64,6 +64,8 @@ export function Sheet({ open: openProp, defaultOpen = false, onOpenChange, onOpe
     }, [open]);
     const base = useRef(null);
     const gesture = useRef({ verdict: null, baseTried: false });
+    const distance = useRef(dismissDistance);
+    distance.current = dismissDistance;
     /** The reason the kit gives a close it asked Base UI for, and the event behind it. */
     const forced = useRef(null);
     /** Whether the last close asked for was refused. */
@@ -223,7 +225,7 @@ export function Sheet({ open: openProp, defaultOpen = false, onOpenChange, onOpe
         };
     }, []);
     const depth = parent ? parent.depth + 1 : 0;
-    const value = useMemo(() => ({ open, layout, instant, modal, swipe, virtualKeyboard, depth, gesture, swipeClose }), [open, layout, instant, modal, swipe, virtualKeyboard, depth, swipeClose]);
+    const value = useMemo(() => ({ open, layout, instant, modal, swipe, virtualKeyboard, depth, gesture, distance, swipeClose }), [open, layout, instant, modal, swipe, virtualKeyboard, depth, swipeClose]);
     return (_jsx(SheetContext.Provider, { value: value, children: _jsx(Drawer.Root, { open: open, onOpenChange: handleChange, onOpenChangeComplete: handleComplete, modal: modal, disablePointerDismissal: !dismissOnOutsidePress, actionsRef: base, children: virtualKeyboard ? _jsx(Drawer.VirtualKeyboardProvider, { children: children }) : children }) }));
 }
 /** A button that opens the sheet, for a sheet that owns its own state. */
@@ -276,7 +278,7 @@ const isTouchPointer = (event) => !("touches" in event) && event.pointerType ===
  *   Base UI did not act on closes the sheet.
  */
 function useSheetGesture(viewport, panel, sheet) {
-    const { open, layout, swipe, gesture, swipeClose } = sheet;
+    const { open, layout, swipe, gesture, distance, swipeClose } = sheet;
     const openedAt = useRef(0);
     useEffect(() => {
         if (open)
@@ -331,7 +333,13 @@ function useSheetGesture(viewport, panel, sheet) {
             const offset = Number.parseFloat(panel.style.getPropertyValue("--drawer-swipe-movement-y")) || 0;
             const held = event.timeStamp - last.t > SHEET_FLING_STALE_MS;
             gesture.current.verdict =
-                !cancelled && sheetShouldDismiss({ offset, height: panel.offsetHeight, velocity: held ? 0 : velocity });
+                !cancelled &&
+                    sheetShouldDismiss({
+                        offset,
+                        height: panel.offsetHeight,
+                        velocity: held ? 0 : velocity,
+                        distance: distance.current,
+                    });
             gesture.current.baseTried = false;
         };
         const finish = (event) => {
@@ -396,7 +404,7 @@ function useSheetGesture(viewport, panel, sheet) {
                 win.removeEventListener(name, onEndAfter);
             }
         };
-    }, [viewport, panel, draggable, gesture, swipeClose]);
+    }, [viewport, panel, draggable, gesture, distance, swipeClose]);
 }
 /**
  * The sheet itself: the scrim, the box that places the panel, and the

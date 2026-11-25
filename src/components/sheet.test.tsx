@@ -16,6 +16,7 @@ import { all, click, key, mount, one, press, settle, withDom, withToast } from "
 import { INPUT_ATTR } from "../helpers/input-modality.js";
 import { setMotionReader } from "../helpers/motion.js";
 import { readToastCovered } from "../toast/toast-dock.js";
+import { SHEET_DISMISS_PX } from "./sheet-release.js";
 import {
   SHEET_NO_DRAG_ATTR,
   Sheet,
@@ -316,6 +317,78 @@ describe("<Sheet>, the drag", () => {
     ]);
     await release(title, 200);
     expect(log).toEqual(["close:swipe"]);
+  });
+
+  it("keeps a short Settings sheet open short of its flat 96px, where the default rule closes it", async () => {
+    // 200px tall: the default closes past 80px, the Settings sheets past 96px.
+    const log = await open({ height: 200, dismissDistance: SHEET_DISMISS_PX });
+    const title = one(".dl-sheet-title")!;
+    await drag(title, [
+      [300, 50],
+      [385, 600],
+    ]);
+    await release(title, 200);
+    expect(log).toEqual([]);
+    expect(panel()).not.toBeNull();
+    expect(dragged()).toBe(false);
+
+    now += 500;
+    await drag(title, [
+      [300, 50],
+      [400, 600],
+    ]);
+    await release(title, 200);
+    expect(log).toEqual(["close:swipe"]);
+  });
+
+  it("holds the flat 96px against Base UI as well, which would close a 150px sheet at half its height", async () => {
+    const log = await open({ height: 150, dismissDistance: SHEET_DISMISS_PX });
+    const title = one(".dl-sheet-title")!;
+    // 85px is past Base UI's 75px and short of 96px.
+    await drag(title, [
+      [300, 50],
+      [385, 600],
+    ]);
+    await release(title, 200);
+    expect(log).toEqual([]);
+    expect(panel()).not.toBeNull();
+    expect(panel()!.hasAttribute("data-ending-style")).toBe(false);
+    expect(dragged()).toBe(false);
+  });
+
+  it("closes that same 150px sheet at 85px under the default rule", async () => {
+    const log = await open({ height: 150 });
+    const title = one(".dl-sheet-title")!;
+    await drag(title, [
+      [300, 50],
+      [385, 600],
+    ]);
+    await release(title, 200);
+    expect(log).toEqual(["close:swipe"]);
+  });
+
+  it("closes a Settings sheet on the same flick as any other", async () => {
+    const log = await open({ height: 200, dismissDistance: SHEET_DISMISS_PX });
+    const title = one(".dl-sheet-title")!;
+    await drag(title, [
+      [300, 16],
+      [320, 20],
+    ]);
+    await release(title, 2);
+    expect(log).toEqual(["close:swipe"]);
+  });
+
+  it("takes its closing distance as a function of its height", async () => {
+    const log = await open({ dismissDistance: (height) => height / 2 });
+    const title = one(".dl-sheet-title")!;
+    // 110px closes a 600px sheet by default, and not at half its height.
+    await drag(title, [
+      [300, 50],
+      [410, 700],
+    ]);
+    await release(title, 200);
+    expect(log).toEqual([]);
+    expect(panel()).not.toBeNull();
   });
 
   it("closes on a flick after 16px, which Base UI alone would not count", async () => {

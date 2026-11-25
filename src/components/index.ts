@@ -106,8 +106,10 @@ export {
   SHEET_FLING_VELOCITY,
   SHEET_OPEN_GUARD_MS,
   SHEET_SCROLL_GUARD_MS,
+  resolveSheetDismissDistance,
   sheetDismissDistance,
   sheetDragBlock,
   sheetShouldDismiss,
+  type SheetDismissDistance,
   type SheetDragBlock,
 } from "./sheet-release.js";

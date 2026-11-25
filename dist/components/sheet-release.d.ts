@@ -1,13 +1,20 @@
 /**
  * What a released drag does to a sheet, and when a drag may start.
  *
- * The numbers are the family's own, the practice room's drawer rule that
- * mail, calendar and every Settings sheet each carried a copy of: a sheet
- * closes past 96px or 40% of its height, whichever is less, or on a flick
- * faster than half a pixel a millisecond once it has travelled 16px. Base
- * UI's Drawer has another rule (half the height, or the same flick with no
- * least travel), so the kit judges every release itself and its answer wins
- * (sheet.tsx). Pure, so the rule is tested without a pointer.
+ * The numbers are the family's own, the practice room's drawer rule, which
+ * the apps carry in two forms. Mail's and calendar's sheets close past 96px
+ * or 40% of the sheet's height, whichever is less. The Settings sheet in
+ * all four apps closes past a flat 96px, with no share of the height. Both
+ * close on a flick faster than half a pixel a millisecond once the sheet
+ * has travelled 16px. The two differ on a sheet shorter than 240px, where
+ * 40% of the height comes before 96px.
+ *
+ * So the distance is the sheet's to choose (`dismissDistance` on
+ * `<Sheet>`): the first form by default, and `SHEET_DISMISS_PX` for the
+ * flat one. Base UI's Drawer has another rule again (half the height, or
+ * the same flick with no least travel), so the kit judges every release
+ * itself and its answer wins (sheet.tsx). Pure, so the rule is tested
+ * without a pointer.
  */
 /** Travel that closes a sheet outright. */
 export declare const SHEET_DISMISS_PX = 96;
@@ -23,17 +30,35 @@ export declare const SHEET_FLING_STALE_MS = 80;
 export declare const SHEET_OPEN_GUARD_MS = 500;
 /** No drag starts this soon after the sheet's body scrolled: a scroll that just reached the top is still a scroll. */
 export declare const SHEET_SCROLL_GUARD_MS = 100;
-/** How far down a sheet of this height must travel to close. */
+/**
+ * How far down a sheet must travel to close: a number of px, or a function
+ * of the sheet's own height. `<Sheet dismissDistance>` takes one.
+ */
+export type SheetDismissDistance = number | ((height: number) => number);
+/**
+ * The default distance, mail's and calendar's: 96px or 40% of the sheet's
+ * height, whichever is less. A sheet with no measured height gets 96px.
+ */
 export declare function sheetDismissDistance(height: number): number;
+/** The distance in force for a sheet of this height. A value that is no positive number falls back to the default. */
+export declare function resolveSheetDismissDistance(distance: SheetDismissDistance | undefined, height: number): number;
 /**
  * Whether a release closes the sheet. `offset` is how far down it sits, in
  * px, `height` is its own height, and `velocity` is px per ms at the
- * release, positive downward.
+ * release, positive downward. `distance` is the sheet's own closing
+ * distance, where it has one: `SHEET_DISMISS_PX` is the Settings sheets'
+ * flat 96px.
+ *
+ * The apps' copies disagree on the edge itself: calendar closes at the
+ * distance and at 16px of a flick, mail and the Settings sheets only past
+ * them. Here a release closes past the distance, and a flick counts from
+ * 16px on.
  */
 export declare function sheetShouldDismiss(args: {
     offset: number;
     height: number;
     velocity: number;
+    distance?: SheetDismissDistance;
 }): boolean;
 /**
  * The speed of a drag, in px per ms, after one more move. Weighted toward

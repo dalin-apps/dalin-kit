@@ -27,6 +27,7 @@ import {
   nextSheetVelocity,
   sheetDragBlock,
   sheetShouldDismiss,
+  type SheetDismissDistance,
 } from "./sheet-release.js";
 import { useToasterTab } from "./toaster-tab.js";
 
@@ -145,6 +146,14 @@ export type SheetProps = {
   modal?: boolean | "trap-focus";
   /** Whether a drag closes the sheet. Off for a sheet whose drag is the app's own. */
   swipe?: boolean;
+  /**
+   * How far down a release closes the sheet, in px, or as a function of
+   * the sheet's height. Left out, it is mail's and calendar's rule: 96px
+   * or 40% of the height, whichever is less. The Settings sheets pass
+   * `SHEET_DISMISS_PX`, their flat 96px, which a short sheet needs said:
+   * under 240px tall the two differ. The flick is the same either way.
+   */
+  dismissDistance?: SheetDismissDistance;
   /** Whether a press outside the sheet closes it. On by default. */
   dismissOnOutsidePress?: boolean;
   /**
@@ -207,6 +216,8 @@ type SheetContextValue = {
   /** How many sheets this one stands over. */
   depth: number;
   gesture: RefObject<Gesture>;
+  /** The sheet's own closing distance, read at each release. */
+  distance: RefObject<SheetDismissDistance | undefined>;
   /** Closes the sheet for a drag the kit's rule accepts and Base UI's did not. */
   swipeClose: (event: Event) => void;
 };
@@ -234,6 +245,7 @@ export function Sheet({
   layout = "sheet",
   modal = true,
   swipe = true,
+  dismissDistance,
   dismissOnOutsidePress = true,
   systemBack = false,
   ownsEscape,
@@ -263,6 +275,8 @@ export function Sheet({
 
   const base = useRef<Drawer.Root.Actions | null>(null);
   const gesture = useRef<Gesture>({ verdict: null, baseTried: false });
+  const distance = useRef(dismissDistance);
+  distance.current = dismissDistance;
   /** The reason the kit gives a close it asked Base UI for, and the event behind it. */
   const forced = useRef<{ reason: SheetChangeReason; event: Event | undefined } | null>(null);
   /** Whether the last close asked for was refused. */
@@ -432,7 +446,7 @@ export function Sheet({
 
   const depth = parent ? parent.depth + 1 : 0;
   const value = useMemo<SheetContextValue>(
-    () => ({ open, layout, instant, modal, swipe, virtualKeyboard, depth, gesture, swipeClose }),
+    () => ({ open, layout, instant, modal, swipe, virtualKeyboard, depth, gesture, distance, swipeClose }),
     [open, layout, instant, modal, swipe, virtualKeyboard, depth, swipeClose],
   );
 
@@ -503,7 +517,7 @@ const isTouchPointer = (event: Event) => !("touches" in event) && (event as Poin
  *   Base UI did not act on closes the sheet.
  */
 function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null, sheet: SheetContextValue): void {
-  const { open, layout, swipe, gesture, swipeClose } = sheet;
+  const { open, layout, swipe, gesture, distance, swipeClose } = sheet;
   const openedAt = useRef(0);
   useEffect(() => {
     if (open) openedAt.current = performance.now();
@@ -558,7 +572,13 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
       const offset = Number.parseFloat(panel.style.getPropertyValue("--drawer-swipe-movement-y")) || 0;
       const held = event.timeStamp - last.t > SHEET_FLING_STALE_MS;
       gesture.current.verdict =
-        !cancelled && sheetShouldDismiss({ offset, height: panel.offsetHeight, velocity: held ? 0 : velocity });
+        !cancelled &&
+        sheetShouldDismiss({
+          offset,
+          height: panel.offsetHeight,
+          velocity: held ? 0 : velocity,
+          distance: distance.current,
+        });
       gesture.current.baseTried = false;
     };
 
@@ -620,7 +640,7 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
         win.removeEventListener(name, onEndAfter);
       }
     };
-  }, [viewport, panel, draggable, gesture, swipeClose]);
+  }, [viewport, panel, draggable, gesture, distance, swipeClose]);
 }
 
 export type SheetContentProps = Omit<Drawer.Popup.Props, "children"> & {
