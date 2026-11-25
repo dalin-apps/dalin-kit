@@ -613,13 +613,15 @@ describe("rows the app steps back", () => {
 });
 
 describe("a held Enter belongs to its row", () => {
-  type State = "waiting" | "empty" | "live" | "later";
+  type State = "waiting" | "empty" | "live" | "later" | "failed";
   function Held({ state, words = "lunch" }: { state: State; words?: string }) {
     const people = [row("dana", "Dana Ito")];
     const messages =
       state === "waiting"
         ? [row("old", "Lunch last week", { dim: "waiting" })]
-        : state === "live"
+        : state === "failed"
+          ? [row("old", "Lunch last week", { dim: true })]
+          : state === "live"
           ? [row("new", "Lunch on Friday")]
           : state === "later"
             ? [row("later", "Lunch in May")]
@@ -669,6 +671,20 @@ describe("a held Enter belongs to its row", () => {
     expect(ran).not.toHaveBeenCalled();
   });
 
+  it("drops it when the row steps back instead of coming current, as a failed answer leaves it", async () => {
+    ran.mockClear();
+    await mount(<Held state="waiting" />);
+    await key("Enter", field());
+    await mount(<Held state="failed" />);
+    expect(ran).not.toHaveBeenCalled();
+    await mount(<Held state="live" />);
+    expect(ran).not.toHaveBeenCalled();
+    // A fresh Enter on the stepped-back row still runs it.
+    await mount(<Held state="failed" />);
+    await key("Enter", field());
+    expect(ran).toHaveBeenCalledWith("old");
+  });
+
   it("drops it on going back a page", async () => {
     ran.mockClear();
     const slow: PalettePage = {
@@ -684,6 +700,29 @@ describe("a held Enter belongs to its row", () => {
     await press({ key: "Backspace" });
     expect(one(".dl-palette-crumb")).toBeNull();
     expect(ran).not.toHaveBeenCalled();
+  });
+});
+
+describe("the line for an empty list", () => {
+  function Empty({ emptyText }: { emptyText?: (query: string) => ReactNode }) {
+    return (
+      <Palette open query="zzz" results={{ query: "zzz", groups: [] }}>
+        <PaletteField />
+        <PaletteList emptyText={emptyText} />
+      </Palette>
+    );
+  }
+
+  it("says the kit's words, or the app's", async () => {
+    await mount(<Empty />);
+    expect(one(".dl-palette-note")!.textContent).toBe("No results for “zzz”.");
+    await mount(<Empty emptyText={(query) => `Nothing called ${query}.`} />);
+    expect(one(".dl-palette-note")!.textContent).toBe("Nothing called zzz.");
+  });
+
+  it("draws none when the app's emptyText answers null", async () => {
+    await mount(<Empty emptyText={() => null} />);
+    expect(one(".dl-palette-note")).toBeNull();
   });
 });
 

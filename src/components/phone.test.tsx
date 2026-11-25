@@ -789,6 +789,12 @@ describe("<PhoneSearch covered>, under the app's reader", () => {
 });
 
 describe("<PhoneSearch>, a row's end and the app's own line", () => {
+  it("keeps iOS's callout and selection out of a row's long press", () => {
+    const rowRule = ruleFor(css, ".dl-phone-search-row");
+    expect(rowRule).toContain("-webkit-touch-callout: none");
+    expect(rowRule).toContain("user-select: none");
+  });
+
   it("ends a row with its meta: a size, a count", async () => {
     await mount(
       <Search

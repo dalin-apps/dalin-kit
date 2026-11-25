@@ -332,6 +332,10 @@ html[data-dl-motion="reduce"] :is(.dl-phone-icon, .dl-phone-search-cancel, .dl-p
   letter-spacing: 0;
   text-align: left;
   -webkit-tap-highlight-color: transparent;
+  /* A row takes a long press: iOS's callout and selection loupe stay out of it. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 /* A row's leading glyph: 20px, muted. */
 .dl-phone-search-row > svg {

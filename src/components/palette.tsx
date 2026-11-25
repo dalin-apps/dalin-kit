@@ -452,9 +452,11 @@ export function Palette({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results.groups, stale]);
 
-  // An Enter held on a waiting row runs the highlighted row once it stops
-  // waiting. An answer with nothing to highlight drops it, so no later
-  // update runs a row nobody chose.
+  // An Enter held on a waiting row runs the highlighted row once it is
+  // current. An answer with nothing to highlight drops it, so no later
+  // update runs a row nobody chose, and so does a row that steps back
+  // instead (a failed answer leaves it at 85%): it was never the answer the
+  // Enter waited for.
   useEffect(() => {
     if (!heldRow.current || stale) return;
     if (!active) {
@@ -463,6 +465,7 @@ export function Palette({
     }
     if (active.dim === "waiting") return;
     heldRow.current = false;
+    if (active.dim) return;
     select(active);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results.groups, active, stale]);
@@ -896,9 +899,11 @@ export function PaletteList({ emptyText, rowContent, children }: PaletteListProp
   const settled = !results.stale && results.busy === 0;
   const nothing = results.groups.length === 0 && asked && settled;
   const empty = emptyText ?? ctx.emptyText;
+  // An app's `emptyText` may answer null for a list it explains itself.
+  const nothingNote = nothing ? (empty ? empty(query.trim()) : `No results for “${query.trim()}”.`) : null;
   return (
     <div className="dl-palette-scroll" data-empty={results.groups.length === 0 ? "" : undefined}>
-      {nothing ? <p className="dl-palette-note">{empty ? empty(query.trim()) : `No results for “${query.trim()}”.`}</p> : null}
+      {nothingNote != null ? <p className="dl-palette-note">{nothingNote}</p> : null}
       <Autocomplete.List className="dl-palette-list" data-stale={results.stale ? "" : undefined}>
         {(group: PaletteGroup) => (
           <Autocomplete.Group key={group.id} items={group.items} className="dl-palette-group">

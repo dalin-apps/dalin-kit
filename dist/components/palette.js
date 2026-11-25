@@ -256,9 +256,11 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
         // `select` and `first` are read as they stand when the list changes.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [results.groups, stale]);
-    // An Enter held on a waiting row runs the highlighted row once it stops
-    // waiting. An answer with nothing to highlight drops it, so no later
-    // update runs a row nobody chose.
+    // An Enter held on a waiting row runs the highlighted row once it is
+    // current. An answer with nothing to highlight drops it, so no later
+    // update runs a row nobody chose, and so does a row that steps back
+    // instead (a failed answer leaves it at 85%): it was never the answer the
+    // Enter waited for.
     useEffect(() => {
         if (!heldRow.current || stale)
             return;
@@ -270,6 +272,8 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
         if (active.dim === "waiting")
             return;
         heldRow.current = false;
+        if (active.dim)
+            return;
         select(active);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [results.groups, active, stale]);
@@ -504,7 +508,9 @@ export function PaletteList({ emptyText, rowContent, children }) {
     const settled = !results.stale && results.busy === 0;
     const nothing = results.groups.length === 0 && asked && settled;
     const empty = emptyText ?? ctx.emptyText;
-    return (_jsxs("div", { className: "dl-palette-scroll", "data-empty": results.groups.length === 0 ? "" : undefined, children: [nothing ? _jsx("p", { className: "dl-palette-note", children: empty ? empty(query.trim()) : `No results for “${query.trim()}”.` }) : null, _jsx(Autocomplete.List, { className: "dl-palette-list", "data-stale": results.stale ? "" : undefined, children: (group) => (_jsxs(Autocomplete.Group, { items: group.items, className: "dl-palette-group", children: [group.heading ? _jsx(Autocomplete.GroupLabel, { className: "dl-palette-head", children: group.heading }) : null, _jsx(Autocomplete.Collection, { children: (item) => {
+    // An app's `emptyText` may answer null for a list it explains itself.
+    const nothingNote = nothing ? (empty ? empty(query.trim()) : `No results for “${query.trim()}”.`) : null;
+    return (_jsxs("div", { className: "dl-palette-scroll", "data-empty": results.groups.length === 0 ? "" : undefined, children: [nothingNote != null ? _jsx("p", { className: "dl-palette-note", children: nothingNote }) : null, _jsx(Autocomplete.List, { className: "dl-palette-list", "data-stale": results.stale ? "" : undefined, children: (group) => (_jsxs(Autocomplete.Group, { items: group.items, className: "dl-palette-group", children: [group.heading ? _jsx(Autocomplete.GroupLabel, { className: "dl-palette-head", children: group.heading }) : null, _jsx(Autocomplete.Collection, { children: (item) => {
                                 const key = `${group.id}:${item.id}`;
                                 const byScore = results.byScore.has(item);
                                 const own = rowContent?.(item, { highlighted: item === active, marks, byScore });
