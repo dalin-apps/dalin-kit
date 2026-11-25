@@ -27,13 +27,18 @@
    A release after a drag runs for Base UI's share of the sheet time, less
    for a faster flick (--drawer-swipe-strength).
 
-   Variables an app may set, on :root or on the sheet through `className`.
-     --dl-sheet-z        The scrim's z-index; the panel is one over it. 55
-                         (--dl-z-sheet): over the phone's search, under the
-                         toaster while it stands over a sheet. The dialog
-                         layout stands two over --dl-z-dialog, so it opens
-                         over the Settings dialog. A sheet over a sheet is
-                         two higher again.
+   Variables an app may set, on :root, or for one sheet through `vars` on
+   <SheetContent>, which writes them on the scrim and on the box that
+   places the panel. A variable in the panel's `className` reaches the
+   panel alone: the ones the scrim and the box read never see it.
+     --dl-sheet-z        The z-index of the scrim and of the box that places
+                         the panel, which is drawn after the scrim and so
+                         stands over it. 55 (--dl-z-sheet): over the
+                         phone's search, under the toaster while it stands
+                         over a sheet. The dialog layout stands two over
+                         --dl-z-dialog, so it opens over the Settings
+                         dialog. A sheet over a sheet is one higher, so
+                         five deep still stand under the toaster.
      --dl-sheet-scrim    The fill over the page. --dl-scrim unless set.
      --dl-sheet-lift     How much of the dim a full drag takes away. 0.55.
      --dl-sheet-fill     The panel's fill. The overlay glass, --dl-overlay.
@@ -58,7 +63,7 @@
 .dl-sheet-scrim {
   position: fixed;
   inset: 0;
-  z-index: calc(var(--dl-sheet-z, var(--dl-z-sheet, 55)) + var(--dl-sheet-depth, 0) * 2);
+  z-index: calc(var(--dl-sheet-z, var(--dl-z-sheet, 55)) + var(--dl-sheet-depth, 0));
   background: var(--dl-sheet-scrim, var(--dl-scrim, rgb(0 0 0 / 0.62)));
   /* Lifts as the panel is dragged away, at the rate the finger asks for. */
   opacity: calc(1 - var(--drawer-swipe-progress, 0) * var(--dl-sheet-lift, 0.55));
@@ -77,7 +82,8 @@
   --dl-sheet-kb-now: var(--dl-sheet-kb, var(--kb-inset, 0px));
   position: fixed;
   inset: 0;
-  z-index: calc(var(--dl-sheet-z, var(--dl-z-sheet, 55)) + var(--dl-sheet-depth, 0) * 2 + 1);
+  /* The scrim's number: drawn after the scrim, the box stands over it. */
+  z-index: calc(var(--dl-sheet-z, var(--dl-z-sheet, 55)) + var(--dl-sheet-depth, 0));
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -111,7 +117,12 @@
   color: var(--dl-fg, #fff);
   box-shadow: var(--dl-overlay-shadow, 0 12px 32px -8px rgb(0 0 0 / 0.55));
   outline: none;
-  transition: transform var(--dl-t-sheet, 260ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+  /* `translate` is the kit's share of a drag: the travel a phone keeps
+     back before its first touchmove (sheet.tsx). It leaves with Base UI's
+     transform, on the same curve. */
+  transition:
+    transform var(--dl-t-sheet, 260ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    translate var(--dl-t-sheet, 260ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 /* The frost, as a layer behind the content. Blurred, then levelled, as the
    menus are, so the words hold over a white page. */
@@ -195,11 +206,11 @@
 
 /* The dialog layout: the Settings sheets on a computer. */
 .dl-sheet-scrim[data-layout="dialog"] {
-  z-index: calc(var(--dl-sheet-z, calc(var(--dl-z-dialog, 80) + 2)) + var(--dl-sheet-depth, 0) * 2);
+  z-index: calc(var(--dl-sheet-z, calc(var(--dl-z-dialog, 80) + 2)) + var(--dl-sheet-depth, 0));
   transition-duration: var(--dl-sheet-dialog-t, var(--dl-t-open, 150ms));
 }
 .dl-sheet-viewport[data-layout="dialog"] {
-  z-index: calc(var(--dl-sheet-z, calc(var(--dl-z-dialog, 80) + 2)) + var(--dl-sheet-depth, 0) * 2 + 1);
+  z-index: calc(var(--dl-sheet-z, calc(var(--dl-z-dialog, 80) + 2)) + var(--dl-sheet-depth, 0));
   justify-content: center;
   padding: 24px;
 }

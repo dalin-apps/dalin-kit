@@ -14,6 +14,7 @@ import {
   type Ref,
   type RefObject,
 } from "react";
+import { flushSync } from "react-dom";
 import { Drawer } from "@base-ui/react/drawer";
 import { startedFromKeyboard } from "../helpers/input-modality.js";
 import { LEAVING_ATTR } from "../helpers/leaving.js";
@@ -77,14 +78,15 @@ export type SheetNativeDetails = Parameters<NonNullable<Drawer.Root.Props["onOpe
 /**
  * Why the sheet is opening or closing. Base UI's reasons, and one of the
  * kit's: `"system-back"` is Android's back button or the iOS back swipe,
- * with `systemBack` on.
+ * with `systemBack` on, whether the history entry or the browser's
+ * CloseWatcher took it.
  *
  * `"outside-press"` is a press on the scrim, `"escape-key"` the key,
  * `"swipe"` a drag released past the family's rule, `"close-press"` a
  * `<SheetClose>` or the dialog's X, `"trigger-press"` a `<SheetTrigger>`,
  * `"imperative-action"` the `close()` of `actionsRef`, `"focus-out"` focus
  * leaving a sheet that is not modal, and `"close-watcher"` Android's back
- * gesture where the browser gives it to the sheet with no history entry.
+ * gesture where the browser gives it to a sheet with `systemBack` off.
  */
 export type SheetChangeReason = SheetNativeDetails["reason"] | "system-back";
 
@@ -109,7 +111,8 @@ export type SheetActions = {
    * Closes the sheet as its own Close does. `onOpenChange` hears
    * `"imperative-action"` and may refuse. `then` runs once the exit has
    * finished and the sheet's history entry, if it has one, has gone: the
-   * moment a row may navigate. It does not run for a refused close.
+   * moment a row may navigate. It does not run for a refused close, nor
+   * for one an app that owns `open` let pass and then kept the sheet open.
    */
   close: (then?: () => void) => void;
 };
@@ -184,6 +187,8 @@ export type SheetProps = {
 export const SHEET_NO_DRAG_ATTR = "data-dl-no-drag";
 /** Base UI's own name for the same mark, which is what its Drawer reads. */
 const BASE_IGNORE_ATTR = "data-base-ui-swipe-ignore";
+/** What `noSheetDrag()` returns: the kit's mark and Base UI's, with the same value. */
+export type SheetNoDragProps = { [SHEET_NO_DRAG_ATTR]: string; [BASE_IGNORE_ATTR]: string };
 /** How far a sheet ranks as a toast dock: with the phone's search, over the bar and a parked chip. */
 const COVER_RANK = 50;
 
@@ -194,9 +199,13 @@ const COVER_RANK = 50;
  * attachments.
  *
  *   <div {...noSheetDrag("x")}>...</div>
+ *
+ * It writes the kit's mark and Base UI's own, so React owns both: a region
+ * that stops spreading it (mail's PDF once zoomed back out) drags again.
  */
-export function noSheetDrag(axis?: "x" | "y"): { [SHEET_NO_DRAG_ATTR]: string } {
-  return { [SHEET_NO_DRAG_ATTR]: axis ?? "" };
+export function noSheetDrag(axis?: "x" | "y"): SheetNoDragProps {
+  const value = axis ?? "";
+  return { [SHEET_NO_DRAG_ATTR]: value, [BASE_IGNORE_ATTR]: value };
 }
 
 type Gesture = {
@@ -277,19 +286,26 @@ export function Sheet({
   const gesture = useRef<Gesture>({ verdict: null, baseTried: false });
   const distance = useRef(dismissDistance);
   distance.current = dismissDistance;
+  const backRef = useRef(systemBack);
+  backRef.current = systemBack;
   /** The reason the kit gives a close it asked Base UI for, and the event behind it. */
   const forced = useRef<{ reason: SheetChangeReason; event: Event | undefined } | null>(null);
-  /** Whether the last close asked for was refused. */
-  const refused = useRef(false);
+  /** Whether the sheet is in the tree: a sheet the app unmounts to close leaves no closed render. */
+  const mounted = useRef(false);
 
   // What waits for the exit: `close(then)`. It runs once the slide has
-  // ended and the history entry has gone, whichever is later.
+  // ended and every history entry the sheet pushed has gone.
   const pendingThen = useRef<(() => void) | null>(null);
   const afterExit = useRef<Array<() => void>>([]);
   const exitDone = useRef(!open);
-  const backGone = useRef(true);
+  // The sheet's history entry, as the phone's search keeps one: in a ref
+  // and not tied to one effect's cleanup, since strict mode runs every
+  // effect twice as a tree mounts.
+  const backEntry = useRef<BackEntry | null>(null);
+  /** Entries taken off from the screen whose traversal has not landed. */
+  const popping = useRef(0);
   const flush = useCallback(() => {
-    if (!exitDone.current || !backGone.current) return;
+    if (!exitDone.current || backEntry.current || popping.current > 0) return;
     const runs = afterExit.current;
     afterExit.current = [];
     for (const run of runs) run();
@@ -305,26 +321,26 @@ export function Sheet({
     (next: boolean, native: SheetNativeDetails) => {
       const asked = forced.current;
       forced.current = null;
-      refused.current = false;
       if (!next && !asked && native.reason === "swipe") {
         // Base UI would close on this release. The kit's rule has already
         // judged it (the gesture's own listeners), and a no settles it back.
         gesture.current.baseTried = true;
         if (gesture.current.verdict === false) {
           native.cancel();
-          refused.current = true;
           return;
         }
       }
       const event = asked ? asked.event : (native.event as Event | undefined);
-      const reason = asked ? asked.reason : native.reason;
+      let reason = asked ? asked.reason : native.reason;
+      // Android's back reaches a sheet through the browser's CloseWatcher
+      // before history sees it. With `systemBack` on, that is the same back.
+      if (reason === "close-watcher" && backRef.current) reason = "system-back";
       if (!next && reason === "escape-key" && escapeRef.current && event) {
         const target = event.target instanceof Element ? event.target : null;
         if (escapeRef.current(target, event as KeyboardEvent)) {
           native.cancel();
           // The key is the field's: let it travel on to whoever listens.
           native.allowPropagation();
-          refused.current = true;
           return;
         }
       }
@@ -339,7 +355,6 @@ export function Sheet({
       };
       changeRef.current?.(next, details);
       if (native.isCanceled) {
-        refused.current = true;
         pendingThen.current = null;
         return;
       }
@@ -378,6 +393,18 @@ export function Sheet({
     forced.current = null;
   }, []);
 
+  // Whether a close was let through and the sheet is still up a task
+  // later, asked once the app that owns `open` has had its say. Timers in
+  // a ref, so an unmount clears them.
+  const timers = useRef(new Set<number>());
+  const afterClose = useCallback((run: () => void) => {
+    const id = window.setTimeout(() => {
+      timers.current.delete(id);
+      if (mounted.current) run();
+    }, 0);
+    timers.current.add(id);
+  }, []);
+
   useImperativeHandle(
     actionsRef,
     () => ({
@@ -388,53 +415,57 @@ export function Sheet({
         }
         pendingThen.current = then ?? null;
         base.current?.close();
+        // Base UI answers inside close(). A `then` it never took is dropped,
+        // or a later close would run it.
+        pendingThen.current = null;
+        if (!then) return;
+        // An app that owns `open` may let the close pass and keep the sheet
+        // up. That close did not happen, so its `then` is dropped too.
+        afterClose(() => {
+          if (!openRef.current) return;
+          afterExit.current = afterExit.current.filter((run) => run !== then);
+        });
       },
     }),
-    [],
+    [afterClose],
   );
 
-  // The sheet's history entry, as the phone's search keeps one: in a ref
-  // and not tied to one effect's cleanup, since strict mode runs every
-  // effect twice as a tree mounts.
-  const backEntry = useRef<BackEntry | null>(null);
-  const backRef = useRef(systemBack);
-  backRef.current = systemBack;
   const onBack = useCallback(() => {
     backEntry.current = null;
-    backGone.current = true;
     forced.current = { reason: "system-back", event: undefined };
     base.current?.close();
     forced.current = null;
     // A refused back keeps the sheet up, so it needs its entry again, or
-    // the next back would leave the app. Asked a task later, once an app
-    // that owns `open` has had its say.
-    window.setTimeout(() => {
+    // the next back would leave the app. Refused means the sheet is still
+    // in the tree and still open: `cancel()`, or an app that owns `open`
+    // and kept it. A sheet the app unmounted gets no entry.
+    afterClose(() => {
       if (!openRef.current || !backRef.current || backEntry.current) return;
-      backGone.current = false;
       backEntry.current = pushBackEntry(onBack);
-    }, 0);
-  }, []);
+    });
+  }, [afterClose]);
   useEffect(() => {
     if (open && systemBack) {
-      if (!backEntry.current) {
-        backGone.current = false;
-        backEntry.current = pushBackEntry(onBack);
-      }
+      if (!backEntry.current) backEntry.current = pushBackEntry(onBack);
     } else if (backEntry.current) {
       const entry = backEntry.current;
       backEntry.current = null;
+      // Counted until its own traversal lands, so a sheet opened again in
+      // the meantime is not taken for one whose entry has gone.
+      popping.current += 1;
       entry.pop(() => {
-        backGone.current = true;
+        popping.current -= 1;
         flush();
       });
     }
   }, [open, systemBack, onBack, flush]);
-  // A sheet the app unmounts to close leaves no closed render to pop from.
-  const mounted = useRef(false);
   useEffect(() => {
     mounted.current = true;
+    const pending = timers.current;
     return () => {
       mounted.current = false;
+      for (const id of pending) window.clearTimeout(id);
+      pending.clear();
       queueMicrotask(() => {
         if (mounted.current) return;
         const entry = backEntry.current;
@@ -488,17 +519,24 @@ function selectingIn(panel: HTMLElement): boolean {
   return panel.contains(selection.anchorNode) || panel.contains(selection.focusNode);
 }
 
-/** Where on the screen an event's pointer is, top to bottom. */
-function pointY(event: Event): number | null {
-  if ("touches" in event) {
-    const touch = (event as TouchEvent).touches[0] ?? (event as TouchEvent).changedTouches?.[0];
-    return touch ? touch.clientY : null;
+/** The touch a gesture follows, by its identifier, among an event's touches. */
+function touchOf(list: TouchList | undefined, id: number): Touch | null {
+  if (!list) return null;
+  for (let i = 0; i < list.length; i++) {
+    const touch = list[i];
+    if (touch && touch.identifier === id) return touch;
   }
+  return null;
+}
+
+const isTouch = (event: Event): event is TouchEvent => "touches" in event;
+const isTouchPointer = (event: Event) => !isTouch(event) && (event as PointerEvent).pointerType === "touch";
+
+/** Where the mouse is, top to bottom. */
+function mouseY(event: Event): number | null {
   const y = (event as PointerEvent).clientY;
   return typeof y === "number" ? y : null;
 }
-
-const isTouchPointer = (event: Event) => !("touches" in event) && (event as PointerEvent).pointerType === "touch";
 
 /**
  * The kit's half of the drag. Base UI moves the panel and decides by its
@@ -508,13 +546,17 @@ const isTouchPointer = (event: Event) => !("touches" in event) && (event as Poin
  * - As a press lands (capture, on the sheet's own viewport, which runs
  *   before React hands the event to Base UI), the start rules are asked. A
  *   press that may not drag writes Base UI's ignore mark on the viewport,
- *   and Base UI then starts nothing for that gesture.
+ *   and Base UI then starts nothing for that gesture. A drag follows one
+ *   touch: a second finger neither starts a gesture nor ends this one.
  * - As the finger lifts (capture, at the window, so before Base UI), the
  *   release is judged from where Base UI has the panel and from the kit's
  *   own reading of the speed. A close Base UI then asks for is refused if
  *   the answer was no (`<Sheet>`'s `onOpenChange`).
  * - After Base UI has had the release (bubble, at the window), a yes that
- *   Base UI did not act on closes the sheet.
+ *   Base UI did not act on closes the sheet, from where the finger let go.
+ *   Something inside the sheet may stop the release on its way up, so the
+ *   next frame finishes it too, and a verdict belongs to its own release
+ *   alone: no later move acts on it.
  */
 function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null, sheet: SheetContextValue): void {
   const { open, layout, swipe, gesture, distance, swipeClose } = sheet;
@@ -528,24 +570,85 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
     if (!viewport || !panel) return;
     const win = viewport.ownerDocument.defaultView;
     if (!win) return;
-    let tracking = false;
+    /** What the gesture in hand follows: a mouse, one touch by its identifier, or nothing. */
+    let tracking: { kind: "mouse" } | { kind: "touch"; id: number } | null = null;
     let last = { y: 0, t: 0 };
     let velocity = 0;
     let scrolledAt = Number.NEGATIVE_INFINITY;
+    /** The release the verdict was given for, and the frame that finishes it if nothing else does. */
+    let judged: Event | null = null;
+    let frame = 0;
+    /** Where the press landed, top to bottom. */
+    let startY = 0;
+    /**
+     * The travel Base UI drops as it takes its origin from the first move:
+     * a phone sends no touchmove until the finger has gone some 15px. The
+     * kit draws it back with `translate` beside Base UI's `transform`, and
+     * counts it in the release. Null until known.
+     */
+    let gap: number | null = null;
+    let moved = false;
+    let gapFrame = 0;
 
     /** Whether Base UI has the panel under a finger: it writes both while it drags. */
     const dragging = () => panel.style.transform !== "" || panel.style.transition === "none";
+    /** How far down Base UI has the panel, in px. */
+    const offsetNow = () => Number.parseFloat(panel.style.getPropertyValue("--drawer-swipe-movement-y")) || 0;
+
+    /** Where the followed pointer is on this event, top to bottom, or null when the event is not its own. */
+    const yOf = (event: Event): number | null => {
+      if (!tracking) return null;
+      if (tracking.kind === "touch") {
+        if (!isTouch(event)) return null;
+        const touch = touchOf(event.touches, tracking.id) ?? touchOf(event.changedTouches, tracking.id);
+        return touch ? touch.clientY : null;
+      }
+      return isTouch(event) || isTouchPointer(event) ? null : mouseY(event);
+    };
+
+    const clearFrame = () => {
+      if (frame) win.cancelAnimationFrame(frame);
+      frame = 0;
+    };
+    const showGap = (px: number) => {
+      if (px > 0) panel.style.setProperty("translate", `0 ${px}px`);
+      else panel.style.removeProperty("translate");
+    };
+    /** Reads the dropped travel once Base UI has the panel: the finger's travel less Base UI's. */
+    const learnGap = () => {
+      if (gap !== null || !moved || !dragging()) return;
+      const offset = offsetNow();
+      if (offset < 0) return;
+      gap = Math.max(0, last.y - startY - offset);
+      showGap(gap);
+    };
+    const clearGap = () => {
+      if (gapFrame) win.cancelAnimationFrame(gapFrame);
+      gapFrame = 0;
+      gap = null;
+      moved = false;
+      showGap(0);
+    };
 
     const onStart = (event: Event) => {
       if (isTouchPointer(event)) return;
-      if (!("touches" in event) && (event as PointerEvent).button !== 0) return;
-      const target = event.target instanceof Element ? event.target : null;
-      // A region of the app's own gestures is named in the kit's attribute,
-      // and Base UI reads its own: the mark is copied across once.
-      const own = target?.closest(`[${SHEET_NO_DRAG_ATTR}]`);
-      if (own && !own.hasAttribute(BASE_IGNORE_ATTR)) {
-        own.setAttribute(BASE_IGNORE_ATTR, own.getAttribute(SHEET_NO_DRAG_ATTR) ?? "");
+      let start: typeof tracking;
+      let y: number | null;
+      if (isTouch(event)) {
+        // A second finger while one is down is no new gesture. A followed
+        // touch missing from the screen's list has ended unseen (its target
+        // left the page), and this press starts afresh.
+        if (tracking?.kind === "touch" && touchOf(event.touches, tracking.id)) return;
+        const touch = event.changedTouches?.[0] ?? event.touches[0];
+        if (!touch) return;
+        start = { kind: "touch", id: touch.identifier };
+        y = touch.clientY;
+      } else {
+        if ((event as PointerEvent).button !== 0) return;
+        start = { kind: "mouse" };
+        y = mouseY(event);
       }
+      const target = event.target instanceof Element ? event.target : null;
       const now = event.timeStamp;
       const blocked =
         !draggable ||
@@ -556,63 +659,112 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
           selecting: selectingIn(panel),
         }) !== null;
       viewport.toggleAttribute(BASE_IGNORE_ATTR, blocked);
-      const y = pointY(event);
-      tracking = y !== null;
+      tracking = y === null ? null : start;
       last = { y: y ?? 0, t: now };
+      startY = last.y;
+      clearGap();
       velocity = 0;
+      judged = null;
+      clearFrame();
       gesture.current.verdict = null;
       gesture.current.baseTried = false;
     };
 
-    const judge = (event: Event, cancelled: boolean) => {
-      if (!dragging()) {
-        gesture.current.verdict = null;
-        return;
-      }
-      const offset = Number.parseFloat(panel.style.getPropertyValue("--drawer-swipe-movement-y")) || 0;
-      const held = event.timeStamp - last.t > SHEET_FLING_STALE_MS;
-      gesture.current.verdict =
-        !cancelled &&
-        sheetShouldDismiss({
-          offset,
-          height: panel.offsetHeight,
-          velocity: held ? 0 : velocity,
-          distance: distance.current,
-        });
+    /**
+     * Gives the release its verdict, from the finger's travel since the
+     * press: Base UI's offset and the travel it dropped. `moveDy` is for a
+     * release that moved the panel itself (a mouse's last move), which Base
+     * UI counts before it decides.
+     */
+    const judge = (event: Event, cancelled: boolean, moveDy?: number) => {
+      judged = event;
+      learnGap();
+      const panelOffset = moveDy === undefined ? offsetNow() : afterMove(offsetNow(), moveDy);
+      const offset = panelOffset + (gap ?? 0);
+      const fresh = moveDy !== undefined && moveDy !== 0;
+      const held = !fresh && event.timeStamp - last.t > SHEET_FLING_STALE_MS;
+      gesture.current.verdict = !dragging()
+        ? null
+        : !cancelled &&
+          sheetShouldDismiss({
+            offset,
+            height: panel.offsetHeight,
+            velocity: held ? 0 : velocity,
+            distance: distance.current,
+          });
       gesture.current.baseTried = false;
+      // The bubble listener may never hear this release: the next frame
+      // finishes it then, still before anything is drawn.
+      clearFrame();
+      frame = win.requestAnimationFrame(() => {
+        frame = 0;
+        if (judged === event) flushSync(() => finish(event));
+      });
     };
 
     const finish = (event: Event) => {
-      tracking = false;
+      if (judged !== event) return;
+      judged = null;
+      tracking = null;
+      clearFrame();
       const { verdict, baseTried } = gesture.current;
       gesture.current.verdict = null;
+      // Base UI lets go of the panel as it takes the release. One still
+      // under its drag never heard the release, and is left to it.
+      if (dragging()) return;
+      // The dropped travel goes with Base UI's offset, on the same curve.
+      clearGap();
       if (verdict === true && !baseTried) swipeClose(event);
     };
 
-    // A mouse's release can arrive as a move with no button down, and Base
-    // UI ends the drag on it.
-    const releasedInMove = (event: Event) =>
-      !("touches" in event) && (event as PointerEvent).buttons === 0 && dragging();
-
     const onMove = (event: Event) => {
-      if (!tracking || isTouchPointer(event)) return;
-      const y = pointY(event);
-      if (y === null) return;
-      if (releasedInMove(event)) {
-        judge(event, false);
+      if (isTouchPointer(event)) {
+        // Before its first touchmove the browser still sends pointer moves,
+        // from the first pixel. Where Base UI holds the panel from the press
+        // (the handle, or a body with nothing to scroll, so no scroll to
+        // tell apart), the panel follows them until Base UI has a move.
+        const pointer = event as PointerEvent;
+        if (tracking?.kind === "touch" && !moved && pointer.isPrimary && dragging()) {
+          showGap(Math.max(0, pointer.clientY - startY));
+        }
         return;
       }
-      velocity = nextSheetVelocity(velocity, y - last.y, event.timeStamp - last.t);
+      const y = yOf(event);
+      if (y === null) return;
+      // Base UI has taken every move before this one.
+      if (moved) learnGap();
+      moved = true;
+      const dy = y - last.y;
+      velocity = nextSheetVelocity(velocity, dy, event.timeStamp - last.t);
+      // A mouse's release can arrive as a move with no button down, and
+      // Base UI moves the panel by it before it ends the drag. The kit
+      // counts that move too, then judges.
+      const releasing = !isTouch(event) && (event as PointerEvent).buttons === 0 && dragging();
+      if (releasing) judge(event, false, dy);
       last = { y, t: event.timeStamp };
+      // Base UI takes this move after the kit: the dropped travel is read
+      // once it has, before the frame is drawn.
+      if (!releasing && gap === null && !gapFrame) {
+        gapFrame = win.requestAnimationFrame(() => {
+          gapFrame = 0;
+          learnGap();
+        });
+      }
     };
     const onMoveAfter = (event: Event) => {
-      if (tracking && !isTouchPointer(event) && gesture.current.verdict !== null) finish(event);
+      finish(event);
+    };
+    /** Whether this end is the followed pointer's own. */
+    const ownEnd = (event: Event): boolean => {
+      if (!tracking || isTouchPointer(event)) return false;
+      if (tracking.kind === "touch") return isTouch(event) && touchOf(event.changedTouches, tracking.id) !== null;
+      return !isTouch(event);
     };
     const onEnd = (event: Event) => {
-      if (tracking && !isTouchPointer(event)) judge(event, event.type.endsWith("cancel"));
+      if (ownEnd(event)) judge(event, event.type.endsWith("cancel"));
     };
     const onEndAfter = (event: Event) => {
-      if (tracking && !isTouchPointer(event)) finish(event);
+      finish(event);
     };
     const onScroll = (event: Event) => {
       scrolledAt = event.timeStamp;
@@ -630,6 +782,8 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
       win.addEventListener(name, onEndAfter, { passive: true });
     }
     return () => {
+      clearFrame();
+      clearGap();
       for (const name of starts) viewport.removeEventListener(name, onStart, true);
       viewport.removeEventListener("scroll", onScroll, true);
       win.removeEventListener("touchmove", onMove, true);
@@ -641,6 +795,16 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
       }
     };
   }, [viewport, panel, draggable, gesture, distance, swipeClose]);
+}
+
+/**
+ * Where Base UI puts the panel after one more move of `dy`: the travel adds
+ * up as it is, except above the resting place, where Base UI draws the
+ * square root of the pull.
+ */
+function afterMove(offset: number, dy: number): number {
+  const raw = (offset >= 0 ? offset : -(offset ** 2)) + dy;
+  return raw >= 0 ? raw : -Math.sqrt(-raw);
 }
 
 export type SheetContentProps = Omit<Drawer.Popup.Props, "children"> & {
@@ -669,14 +833,27 @@ export type SheetContentProps = Omit<Drawer.Popup.Props, "children"> & {
   scrimClassName?: string;
   /** Extra classes for the box that places the panel, beside `dl-sheet-viewport`. */
   viewportClassName?: string;
+  /**
+   * The sheet's own variables (sheet.css), for this sheet alone:
+   * `vars={{ "--dl-sheet-z": 72 }}`. They are written on the scrim and on
+   * the box that places the panel, and the panel inherits them from the
+   * box. A variable in `className` or `style` reaches the panel alone, and
+   * the scrim's and the box's own (`--dl-sheet-z`, `--dl-sheet-scrim`,
+   * `--dl-sheet-lift`, `--dl-sheet-kb`, the dialog's timing) never see it.
+   */
+  vars?: SheetVars;
   children?: ReactNode;
 };
+
+/** Variables for one sheet, by name: `{ "--dl-sheet-z": 72 }`. */
+export type SheetVars = { [name: `--${string}`]: string | number };
 
 /**
  * The sheet itself: the scrim, the box that places the panel, and the
  * panel, with the handle drawn at its top. `className`, `style` and every
- * other prop go to the panel, and `initialFocus` and `finalFocus` are
- * Base UI's own: focus lands on the panel unless `initialFocus` names a
+ * other prop go to the panel. `vars` go to the scrim and to the box, and
+ * the panel inherits them. `initialFocus` and `finalFocus` are Base UI's
+ * own: focus lands on the panel unless `initialFocus` names a
  * target, and goes back to what opened the sheet.
  *
  * Each part carries `data-layout`, and the panel and the scrim Base UI's
@@ -694,6 +871,7 @@ export function SheetContent({
   className,
   scrimClassName,
   viewportClassName,
+  vars,
   children,
   ref,
   ...props
@@ -733,7 +911,9 @@ export function SheetContent({
     // app's focus trap read it as "this is on its way out".
     [LEAVING_ATTR]: open ? undefined : "",
   };
-  const depthStyle = depth > 0 ? ({ "--dl-sheet-depth": depth } as Record<string, number>) : undefined;
+  // The depth and the app's own variables, on the parts that read them.
+  const partStyle =
+    depth > 0 || vars ? ({ ...vars, ...(depth > 0 ? { "--dl-sheet-depth": depth } : null) } as Record<string, string | number>) : undefined;
 
   return (
     <Drawer.Portal container={container} keepMounted={keepMounted}>
@@ -742,7 +922,7 @@ export function SheetContent({
           forceRender
           data-slot="sheet-scrim"
           className={cx("dl-sheet-scrim", scrimClassName)}
-          style={depthStyle}
+          style={partStyle}
           {...marks}
         />
       ) : null}
@@ -750,7 +930,7 @@ export function SheetContent({
         ref={setViewport}
         data-slot="sheet-viewport"
         className={cx("dl-sheet-viewport", viewportClassName)}
-        style={depthStyle}
+        style={partStyle}
         data-layout={layout}
         data-kb={virtualKeyboard ? "base" : undefined}
       >

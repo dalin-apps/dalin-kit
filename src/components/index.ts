@@ -97,7 +97,9 @@ export {
   type SheetContentProps,
   type SheetLayout,
   type SheetNativeDetails,
+  type SheetNoDragProps,
   type SheetProps,
+  type SheetVars,
 } from "./sheet.js";
 export {
   SHEET_DISMISS_FRACTION,

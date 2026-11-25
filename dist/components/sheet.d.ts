@@ -44,14 +44,15 @@ export type SheetNativeDetails = Parameters<NonNullable<Drawer.Root.Props["onOpe
 /**
  * Why the sheet is opening or closing. Base UI's reasons, and one of the
  * kit's: `"system-back"` is Android's back button or the iOS back swipe,
- * with `systemBack` on.
+ * with `systemBack` on, whether the history entry or the browser's
+ * CloseWatcher took it.
  *
  * `"outside-press"` is a press on the scrim, `"escape-key"` the key,
  * `"swipe"` a drag released past the family's rule, `"close-press"` a
  * `<SheetClose>` or the dialog's X, `"trigger-press"` a `<SheetTrigger>`,
  * `"imperative-action"` the `close()` of `actionsRef`, `"focus-out"` focus
  * leaving a sheet that is not modal, and `"close-watcher"` Android's back
- * gesture where the browser gives it to the sheet with no history entry.
+ * gesture where the browser gives it to a sheet with `systemBack` off.
  */
 export type SheetChangeReason = SheetNativeDetails["reason"] | "system-back";
 export type SheetChangeDetails = {
@@ -74,7 +75,8 @@ export type SheetActions = {
      * Closes the sheet as its own Close does. `onOpenChange` hears
      * `"imperative-action"` and may refuse. `then` runs once the exit has
      * finished and the sheet's history entry, if it has one, has gone: the
-     * moment a row may navigate. It does not run for a refused close.
+     * moment a row may navigate. It does not run for a refused close, nor
+     * for one an app that owns `open` let pass and then kept the sheet open.
      */
     close: (then?: () => void) => void;
 };
@@ -145,6 +147,13 @@ export type SheetProps = {
 };
 /** The attribute that marks a region whose gestures are its own. `""` for every drag, `"x"` or `"y"` for one axis. */
 export declare const SHEET_NO_DRAG_ATTR = "data-dl-no-drag";
+/** Base UI's own name for the same mark, which is what its Drawer reads. */
+declare const BASE_IGNORE_ATTR = "data-base-ui-swipe-ignore";
+/** What `noSheetDrag()` returns: the kit's mark and Base UI's, with the same value. */
+export type SheetNoDragProps = {
+    [SHEET_NO_DRAG_ATTR]: string;
+    [BASE_IGNORE_ATTR]: string;
+};
 /**
  * Props for a region inside a sheet that owns its own gestures: a media
  * scrubber, a PDF being panned. With `"x"`, a sideways drag is the
@@ -152,10 +161,11 @@ export declare const SHEET_NO_DRAG_ATTR = "data-dl-no-drag";
  * attachments.
  *
  *   <div {...noSheetDrag("x")}>...</div>
+ *
+ * It writes the kit's mark and Base UI's own, so React owns both: a region
+ * that stops spreading it (mail's PDF once zoomed back out) drags again.
  */
-export declare function noSheetDrag(axis?: "x" | "y"): {
-    [SHEET_NO_DRAG_ATTR]: string;
-};
+export declare function noSheetDrag(axis?: "x" | "y"): SheetNoDragProps;
 export declare function Sheet({ open: openProp, defaultOpen, onOpenChange, onOpenChangeComplete, layout, modal, swipe, dismissDistance, dismissOnOutsidePress, systemBack, ownsEscape, virtualKeyboard, actionsRef, children, }: SheetProps): ReactNode;
 /** A button that opens the sheet, for a sheet that owns its own state. */
 export declare function SheetTrigger(props: Drawer.Trigger.Props): ReactNode;
@@ -185,20 +195,34 @@ export type SheetContentProps = Omit<Drawer.Popup.Props, "children"> & {
     scrimClassName?: string;
     /** Extra classes for the box that places the panel, beside `dl-sheet-viewport`. */
     viewportClassName?: string;
+    /**
+     * The sheet's own variables (sheet.css), for this sheet alone:
+     * `vars={{ "--dl-sheet-z": 72 }}`. They are written on the scrim and on
+     * the box that places the panel, and the panel inherits them from the
+     * box. A variable in `className` or `style` reaches the panel alone, and
+     * the scrim's and the box's own (`--dl-sheet-z`, `--dl-sheet-scrim`,
+     * `--dl-sheet-lift`, `--dl-sheet-kb`, the dialog's timing) never see it.
+     */
+    vars?: SheetVars;
     children?: ReactNode;
+};
+/** Variables for one sheet, by name: `{ "--dl-sheet-z": 72 }`. */
+export type SheetVars = {
+    [name: `--${string}`]: string | number;
 };
 /**
  * The sheet itself: the scrim, the box that places the panel, and the
  * panel, with the handle drawn at its top. `className`, `style` and every
- * other prop go to the panel, and `initialFocus` and `finalFocus` are
- * Base UI's own: focus lands on the panel unless `initialFocus` names a
+ * other prop go to the panel. `vars` go to the scrim and to the box, and
+ * the panel inherits them. `initialFocus` and `finalFocus` are Base UI's
+ * own: focus lands on the panel unless `initialFocus` names a
  * target, and goes back to what opened the sheet.
  *
  * Each part carries `data-layout`, and the panel and the scrim Base UI's
  * state (`data-open`, `data-starting-style`, `data-ending-style`,
  * `data-swiping`, `data-nested-drawer-open`), for the app's own rules.
  */
-export declare function SheetContent({ label, container, keepMounted, scrim, handle, closeLabel, toastCover, className, scrimClassName, viewportClassName, children, ref, ...props }: SheetContentProps): ReactNode;
+export declare function SheetContent({ label, container, keepMounted, scrim, handle, closeLabel, toastCover, className, scrimClassName, viewportClassName, vars, children, ref, ...props }: SheetContentProps): ReactNode;
 /**
  * The grab handle: a strip with the family's pill on it. `<SheetContent>`
  * draws one at its top, so an app draws its own only where the handle
@@ -221,4 +245,5 @@ export declare function SheetBody({ className, ...props }: Drawer.Content.Props)
 export declare function SheetFooter({ className, ...props }: ComponentProps<"div">): ReactNode;
 /** A button that closes the sheet. `onOpenChange` hears `"close-press"`. */
 export declare function SheetClose(props: Drawer.Close.Props): ReactNode;
+export {};
 //# sourceMappingURL=sheet.d.ts.map

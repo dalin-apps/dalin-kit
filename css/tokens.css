@@ -226,7 +226,8 @@
 
   /* The z ladder, low to high, at the numbers the kit and the apps already
      use, so nothing moves. The phone bar; the phone search sheet over it;
-     the family's sheet (its panel one over its scrim), which may open over
+     the family's sheet (its scrim and its panel on one number, the panel
+     drawn after, and one more for each sheet over it), which may open over
      search; the toaster while it stands over a sheet; menus and popovers; a dialog
      and its scrim (the panel one over the scrim); the command palette (its
      panel one over its dim); a tooltip, over everything it can label. The

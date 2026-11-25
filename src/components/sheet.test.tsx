@@ -246,6 +246,7 @@ describe("<Sheet>, what it draws", () => {
   it("carries no transform, and no filter of its own, while it rests", async () => {
     await open();
     expect(panel()!.style.transform).toBe("");
+    expect(panel()!.style.getPropertyValue("translate")).toBe("");
     expect(panel()!.style.filter).toBe("");
     expect(panel()!.style.willChange).toBe("");
   });
@@ -628,7 +629,7 @@ describe("<Sheet>, when a drag may start", () => {
     await drag(thumb, far);
     expect(dragged()).toBe(false);
     await release(thumb);
-    // The kit's mark is handed to Base UI under its own name.
+    // The kit's mark and Base UI's own, both written by React.
     expect(one("#scrubber")!.getAttribute(SHEET_NO_DRAG_ATTR)).toBe("");
     expect(one("#scrubber")!.getAttribute("data-base-ui-swipe-ignore")).toBe("");
 
@@ -647,7 +648,7 @@ describe("<Sheet>, when a drag may start", () => {
         </div>
       ),
     });
-    expect(noSheetDrag("x")).toEqual({ [SHEET_NO_DRAG_ATTR]: "x" });
+    expect(noSheetDrag("x")).toEqual({ [SHEET_NO_DRAG_ATTR]: "x", "data-base-ui-swipe-ignore": "x" });
     const files = one("#files")!;
     await drag(files, far);
     expect(files.getAttribute("data-base-ui-swipe-ignore")).toBe("x");
@@ -857,7 +858,7 @@ describe("<Sheet>, a sheet over a sheet", () => {
     expect(rulesWith(css, "data-nested-drawer-open")).toEqual([]);
   });
 
-  it("dims the one behind with a scrim of its own, two steps up the ladder", async () => {
+  it("dims the one behind with a scrim of its own, one step up the ladder", async () => {
     await mount(<Stack log={[]} />);
     await settle(60);
     await tap(one("#open-top"));
@@ -866,7 +867,7 @@ describe("<Sheet>, a sheet over a sheet", () => {
     expect(scrims[0]!.style.getPropertyValue("--dl-sheet-depth")).toBe("");
     expect(scrims[1]!.style.getPropertyValue("--dl-sheet-depth")).toBe("1");
     expect(one(".dl-sheet.top")!.parentElement!.style.getPropertyValue("--dl-sheet-depth")).toBe("1");
-    expect(ruleFor(css, ".dl-sheet-scrim")).toContain("var(--dl-sheet-depth, 0) * 2");
+    expect(ruleFor(css, ".dl-sheet-scrim")).toContain("+ var(--dl-sheet-depth, 0))");
   });
 
   it("closes the top one alone on a press outside it", async () => {
@@ -1265,11 +1266,351 @@ describe("a part outside its sheet", () => {
   });
 });
 
+/** One touch event for several fingers: `id` is the one that changed, `down` the others still on the glass. */
+function finger(type: string, el: Element, id: number, y: number, at: number, down: readonly [id: number, y: number][] = []): void {
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  const point = (n: number, py: number) => ({ clientX: 100, clientY: py, identifier: n, target: el });
+  const lifted = type === "touchend" || type === "touchcancel";
+  const others = down.map(([n, py]) => point(n, py));
+  Object.defineProperty(event, "touches", { value: lifted ? others : [...others, point(id, y)] });
+  Object.defineProperty(event, "changedTouches", { value: [point(id, y)] });
+  Object.defineProperty(event, "timeStamp", { value: at });
+  el.dispatchEvent(event);
+}
+
+/** 120px down over most of a second: past the kit's 96px, short of Base UI's half, and no flick. */
+const slow: readonly Step[] = [
+  [300, 50],
+  [360, 300],
+  [420, 400],
+];
+
+describe("<Sheet>, a release that is not the drag's own", () => {
+  it("follows one finger: a second one lifting elsewhere does not close the sheet under the first", async () => {
+    const log = await open();
+    const title = one(".dl-sheet-title")!;
+    await drag(title, slow);
+    expect(travel()).toBe(120);
+    // A second finger, down and up on the page outside the sheet.
+    now += 100;
+    await act(async () => {
+      finger("touchend", document.body, 2, 600, now, [[1, 420]]);
+    });
+    await settle(80);
+    expect(log).toEqual([]);
+    expect(dragged()).toBe(true);
+    // The first finger's own lift is the release.
+    await release(title, 2);
+    expect(log).toEqual(["close:swipe"]);
+  });
+
+  it("finishes a release that something in the sheet kept from the window", async () => {
+    const log = await open();
+    const title = one(".dl-sheet-title")!;
+    const stop = (event: Event) => event.stopPropagation();
+    // After Base UI has had it, on its way up to the window.
+    document.addEventListener("touchend", stop);
+    try {
+      await drag(title, slow);
+      await release(title, 200);
+    } finally {
+      document.removeEventListener("touchend", stop);
+    }
+    expect(log).toEqual(["close:swipe"]);
+  });
+
+  it("does not close on a later move after a release Base UI never heard", async () => {
+    const log = await open();
+    const grip = one(".dl-sheet-handle")!;
+    await mouse(grip, "pointerdown", 300, 0, 1);
+    await mouse(grip, "pointermove", 300, 16, 1);
+    await mouse(grip, "pointermove", 420, 600, 1);
+    expect(travel()).toBe(120);
+    // A region that keeps its pointerup to itself: neither Base UI nor the window hears it.
+    const stop = (event: Event) => event.stopPropagation();
+    grip.addEventListener("pointerup", stop);
+    await mouse(grip, "pointerup", 420, 200, 0);
+    grip.removeEventListener("pointerup", stop);
+    await settle(80);
+    await mouse(document.body, "pointermove", 430, 50, 0);
+    await mouse(document.body, "pointermove", 440, 50, 0);
+    await settle(80);
+    expect(log).toEqual([]);
+    expect(panel()).not.toBeNull();
+  });
+
+  it("counts a mouse's last move, the one that carries the release, before it judges", async () => {
+    const log = await open();
+    const grip = one(".dl-sheet-handle")!;
+    await mouse(grip, "pointerdown", 300, 0, 1);
+    await mouse(grip, "pointermove", 300, 16, 1);
+    await mouse(grip, "pointermove", 330, 600, 1);
+    // The button comes up on a move that takes the panel from 30px to 120px.
+    await mouse(grip, "pointermove", 420, 16, 0);
+    await settle(80);
+    expect(log).toEqual(["close:swipe"]);
+  });
+});
+
+describe("<Sheet>, the travel a phone keeps back", () => {
+  // A phone sends its first touchmove some 15px from the press, and Base UI
+  // takes its origin from that move. The family's distance is the finger's.
+  it("closes a slow drag from the handle past 96px of the finger, though Base UI has the panel at 84px", async () => {
+    const log = await open();
+    const grip = one(".dl-sheet-handle")!;
+    await drag(grip, [
+      [316, 50],
+      [356, 300],
+      [400, 400],
+    ]);
+    expect(travel()).toBe(84);
+    await release(grip, 200);
+    expect(log).toEqual(["close:swipe"]);
+  });
+
+  it("closes the same drag from the body", async () => {
+    const log = await open();
+    const title = one(".dl-sheet-title")!;
+    await drag(title, [
+      [316, 50],
+      [356, 300],
+      [400, 400],
+    ]);
+    await release(title, 200);
+    expect(log).toEqual(["close:swipe"]);
+  });
+
+  it("settles a drag of 90px of the finger", async () => {
+    const log = await open();
+    const grip = one(".dl-sheet-handle")!;
+    await drag(grip, [
+      [316, 50],
+      [356, 300],
+      [390, 400],
+    ]);
+    await release(grip, 200);
+    expect(log).toEqual([]);
+    expect(dragged()).toBe(false);
+  });
+
+  it("closes a short sheet past 40% of its height in finger travel", async () => {
+    // A 225px sheet on a short screen closes past 90px of the finger.
+    const log = await open({ height: 225 });
+    const grip = one(".dl-sheet-handle")!;
+    await drag(grip, [
+      [316, 50],
+      [350, 300],
+      [392, 400],
+    ]);
+    await release(grip, 200);
+    expect(log).toEqual(["close:swipe"]);
+  });
+});
+
+describe("<Sheet>, a press in its first half second", () => {
+  it("lets a tap on a button and on an option through, and holds back only a drag", async () => {
+    const pressed = vi.fn();
+    const picked = vi.fn();
+    await open({
+      body: (
+        <>
+          <button type="button" id="early" onClick={pressed}>
+            Archive
+          </button>
+          <div role="option" aria-selected="false" id="option" tabIndex={-1} onClick={picked}>
+            Inbox
+          </div>
+        </>
+      ),
+    });
+    // Just opened.
+    now = performance.now() + 100;
+    for (const target of [one("#early")!, one("#option")!]) {
+      (document as { elementFromPoint?: unknown }).elementFromPoint = () => target;
+      await act(async () => {
+        touch("touchstart", target, 300, now);
+        now += 60;
+        touch("touchend", target, 300, now);
+        for (const name of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) {
+          target.dispatchEvent(new MouseEvent(name, { bubbles: true, cancelable: true, button: 0, detail: 1 }));
+        }
+      });
+      await settle(30);
+    }
+    expect(pressed).toHaveBeenCalledTimes(1);
+    expect(picked).toHaveBeenCalledTimes(1);
+    expect(panel()).not.toBeNull();
+    // The same window holds a drag back.
+    now += 20;
+    const title = one(".dl-sheet-title")!;
+    await drag(title, [
+      [300, 16],
+      [360, 100],
+    ]);
+    expect(dragged()).toBe(false);
+    await release(title);
+  });
+});
+
+describe("<Sheet>, an opt-out that changes", () => {
+  function Pdf({ mark }: { mark: "" | "x" | null }): ReactNode {
+    return (
+      <Demo
+        body={
+          <div id="pdf" {...(mark === null ? {} : noSheetDrag(mark === "" ? undefined : mark))}>
+            page
+          </div>
+        }
+      />
+    );
+  }
+  const far: readonly Step[] = [
+    [300, 16],
+    [360, 100],
+  ];
+
+  it("drags again once the region stops opting out, and follows a change of axis", async () => {
+    await mount(<Pdf mark="" />);
+    await settle(60);
+    const pdf = () => one("#pdf")!;
+    await drag(pdf(), far);
+    expect(dragged()).toBe(false);
+    await release(pdf());
+    // Zoomed back out: the region's gestures are no longer its own.
+    await mount(<Pdf mark={null} />);
+    expect(pdf().hasAttribute("data-base-ui-swipe-ignore")).toBe(false);
+    now += 500;
+    await drag(pdf(), far);
+    expect(dragged()).toBe(true);
+    await release(pdf(), 200);
+    // Sideways alone: a downward drag moves the sheet.
+    await mount(<Pdf mark="x" />);
+    expect(pdf().getAttribute("data-base-ui-swipe-ignore")).toBe("x");
+    now += 500;
+    await drag(pdf(), far);
+    expect(dragged()).toBe(true);
+    await release(pdf(), 200);
+  });
+});
+
+describe("<Sheet>, the system's back and an app that unmounts it", () => {
+  function Gone({ log }: { log: string[] }): ReactNode {
+    const [shown, setShown] = useState(true);
+    return shown ? (
+      <Demo
+        systemBack
+        onOpenChange={(next, details) => {
+          log.push(details.reason);
+          if (!next) setShown(false);
+        }}
+      />
+    ) : (
+      <p>closed</p>
+    );
+  }
+
+  it("leaves no entry behind for a sheet the app unmounted on the back", async () => {
+    const log: string[] = [];
+    await mount(<Gone log={log} />);
+    await settle(60);
+    expect(layers()).toHaveLength(1);
+    await act(async () => window.history.back());
+    await settle(120);
+    expect(log).toEqual(["system-back"]);
+    expect(panel()).toBeNull();
+    expect(layers()).toHaveLength(0);
+  });
+});
+
+describe("<Sheet>, close(then) and a close that did not happen", () => {
+  it("drops `then` for a close an app that owns `open` let pass and kept open", async () => {
+    const actions = { current: null as SheetActions | null };
+    const then = vi.fn();
+    await mount(<Demo open actionsRef={actions} />);
+    await settle(60);
+    await act(async () => actions.current!.close(then));
+    await settle(60);
+    expect(panel()).not.toBeNull();
+    // Later the app closes the sheet for a reason of its own.
+    await mount(<Demo open={false} actionsRef={actions} />);
+    await settle(120);
+    expect(panel()).toBeNull();
+    expect(then).not.toHaveBeenCalled();
+  });
+
+  it("waits for the newest entry, not one taken off before the sheet opened again", async () => {
+    const seen: number[] = [];
+    const actions = { current: null as SheetActions | null };
+    function Again({ shown }: { shown: boolean }): ReactNode {
+      return <Demo open={shown} systemBack actionsRef={actions} />;
+    }
+    await mount(<Again shown />);
+    await settle(60);
+    expect(layers()).toHaveLength(1);
+    // Closed and opened again before the first entry's traversal lands.
+    await mount(<Again shown={false} />);
+    await mount(<Again shown />);
+    await settle(60);
+    expect(layers()).toHaveLength(1);
+    await act(async () => actions.current!.close(() => seen.push(layers().length)));
+    await mount(<Again shown={false} />);
+    // A traversal lands on a later task, which a loaded run can hold back.
+    for (let waited = 0; seen.length === 0 && waited < 2000; waited += 50) await settle(50);
+    expect(seen).toEqual([0]);
+  });
+});
+
+describe("<Sheet>, a toast over a stack", () => {
+  it("brings Tab back from the toast to the top sheet, not the one it covers", async () => {
+    await mount(<Stack log={[]} />);
+    await settle(60);
+    await tap(one("#open-top"));
+    const { action } = withToast();
+    action.focus();
+    await key("Tab", action);
+    expect(document.activeElement?.id).toBe("in-top");
+  });
+});
+
+describe("<Sheet>, a variable for one sheet", () => {
+  it("writes `vars` on the scrim and on the box around the panel", async () => {
+    await open({ content: { vars: { "--dl-sheet-z": 72, "--dl-sheet-kb": "40px", "--dl-sheet-lift": 0 } } });
+    for (const part of [scrim()!, viewport()!]) {
+      expect(part.style.getPropertyValue("--dl-sheet-z")).toBe("72");
+      expect(part.style.getPropertyValue("--dl-sheet-kb")).toBe("40px");
+      expect(part.style.getPropertyValue("--dl-sheet-lift")).toBe("0");
+    }
+    // The panel inherits them from the box it sits in.
+    expect(panel()!.parentElement).toBe(viewport());
+    expect(panel()!.hasAttribute("vars")).toBe(false);
+  });
+
+  it("keeps a stacked sheet's depth beside its variables", async () => {
+    function Over(): ReactNode {
+      return (
+        <Sheet defaultOpen>
+          <SheetContent label="Under">
+            <Sheet defaultOpen>
+              <SheetContent label="Over" vars={{ "--dl-sheet-scrim": "red" }} />
+            </Sheet>
+          </SheetContent>
+        </Sheet>
+      );
+    }
+    await mount(<Over />);
+    await settle(60);
+    const top = all(".dl-sheet-scrim")[1]!;
+    expect(top.style.getPropertyValue("--dl-sheet-scrim")).toBe("red");
+    expect(top.style.getPropertyValue("--dl-sheet-depth")).toBe("1");
+  });
+});
+
 describe("sheet.css", () => {
   const rest = ruleFor(css, ".dl-sheet");
 
   it("gives the resting panel no transform, filter, backdrop filter or will-change", () => {
     expect(rest).not.toMatch(/(^|;)\s*transform\s*:/);
+    expect(css).not.toMatch(/(^|;)\s*translate\s*:/);
     expect(rest).not.toMatch(/(^|;)\s*(-webkit-)?backdrop-filter\s*:/);
     expect(rest).not.toMatch(/(^|;)\s*filter\s*:/);
     expect(rest).not.toContain("will-change");
@@ -1306,7 +1647,7 @@ describe("sheet.css", () => {
   });
 
   it("opens and closes over the sheet time, on the family's curve", () => {
-    expect(rest).toContain("transition: transform var(--dl-t-sheet, 260ms) var(--dl-ease,");
+    expect(rest).toMatch(/transition:\s*transform var\(--dl-t-sheet, 260ms\) var\(--dl-ease,[^;]*,\s*translate var\(--dl-t-sheet, 260ms\) var\(--dl-ease,/);
     expect(ruleFor(css, ".dl-sheet:is([data-starting-style], [data-ending-style])")).toBe("transform: translateY(100%);");
   });
 
@@ -1351,12 +1692,34 @@ describe("sheet.css", () => {
 
   it("stands on the kit's ladder, under an app's own number", () => {
     expect(ruleFor(css, ".dl-sheet-scrim")).toContain("z-index: calc(var(--dl-sheet-z, var(--dl-z-sheet, 55))");
-    expect(ruleFor(css, ".dl-sheet-viewport")).toMatch(/z-index: calc\(var\(--dl-sheet-z, var\(--dl-z-sheet, 55\)\).* \+ 1\)/);
+    expect(ruleFor(css, ".dl-sheet-viewport")).toContain("z-index: calc(var(--dl-sheet-z, var(--dl-z-sheet, 55))");
     expect(readCss("tokens")).toMatch(/--dl-z-search: 50;\s*--dl-z-sheet: 55;\s*--dl-z-toast: 60;/);
     // The dialog layout opens over the Settings dialog.
     expect(ruleFor(css, '.dl-sheet-scrim[data-layout="dialog"]')).toContain(
       "z-index: calc(var(--dl-sheet-z, calc(var(--dl-z-dialog, 80) + 2))",
     );
+  });
+
+  it("keeps five stacked sheets over the phone's search and under the toaster, each over the last", () => {
+    const tokens = readCss("tokens");
+    const step = (name: string) => Number(new RegExp(`--dl-z-${name}: (\\d+);`).exec(tokens)![1]);
+    const z = (selector: string, depth: number) => {
+      const expr = /z-index: (calc\(.*\));/.exec(ruleFor(css, selector))![1]!;
+      const value = expr
+        .replace("var(--dl-sheet-z, var(--dl-z-sheet, 55))", String(step("sheet")))
+        .replace("var(--dl-sheet-depth, 0)", String(depth))
+        .replace(/calc/g, "");
+      return Function(`return ${value}`)() as number;
+    };
+    for (let depth = 0; depth < 5; depth++) {
+      for (const part of [".dl-sheet-scrim", ".dl-sheet-viewport"]) {
+        expect(z(part, depth)).toBeGreaterThan(step("search"));
+        expect(z(part, depth)).toBeLessThan(step("toast"));
+      }
+      // The box is drawn after its scrim, so the same number stands over it.
+      expect(z(".dl-sheet-viewport", depth)).toBeGreaterThanOrEqual(z(".dl-sheet-scrim", depth));
+      expect(z(".dl-sheet-scrim", depth + 1)).toBeGreaterThan(z(".dl-sheet-viewport", depth));
+    }
   });
 
   it("makes the dialog layout a small centred panel with the family's 150ms open and close", () => {

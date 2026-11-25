@@ -92,7 +92,7 @@ No app has to move a sheet to take 0.11. To move one, import `@dalin/kit/sheet.c
 | Registers as a toast dock, or is named in `<Toaster cover>` | Nothing: the sheet registers itself. Take its class out of the selector |
 | Becomes a small dialog on a computer (every Settings sheet) | `layout="dialog"`, from the app's own width check |
 | Closes past a flat 96px, whatever its height (every Settings sheet) | `dismissDistance={SHEET_DISMISS_PX}` |
-| Stands at a z-index of the app's own | `--dl-sheet-z` |
+| Stands at a z-index of the app's own | `--dl-sheet-z`, on `:root` or for one sheet in `vars` on `<SheetContent>` |
 | Is a solid panel (mail's Settings sheet) | `--dl-sheet-fill` and `--dl-sheet-blur: none` |
 | Holds a swipe between files, or a PDF that pans (mail's attachment viewer) | `noSheetDrag("x")` on the swipe, `noSheetDrag()` on the PDF |
 | Stops at a height of its own (mail's 88dvh) | `max-height` in the app's own class on `<SheetContent>` |
@@ -102,7 +102,7 @@ Four things change for a sheet as it moves, and the owner approved the first on 
 - It drags from anywhere on it once its body is scrolled to the top, where only the grab strip dragged. Calendar's pick sheets and every sheet in drive but the Settings ones did not drag at all, and now do.
 - A pull upward gives by one curve in every app (see "The drag"). Calendar's gave 35% of the pull, mail's 25%, and the Settings sheets none.
 - Every sheet opens and closes over `--dl-t-sheet`, 260ms. Mail's compose sheet takes 300ms today, and would take 260ms if it moves.
-- On Android, Base UI takes Chrome's back gesture for an open sheet through the browser's CloseWatcher, with no history entry (`"close-watcher"`). Calendar's and notes' sheets have no entry of their own, and now close on it. Drive's and mail's hear that reason too, and their own guard takes its entry off as it does for any close from the screen.
+- On Android, Base UI takes Chrome's back gesture for an open sheet through the browser's CloseWatcher, with no history entry (`"close-watcher"`, or `"system-back"` on a sheet with `systemBack` on). Calendar's and notes' sheets have no entry of their own, and now close on it. Drive's and mail's hear that reason too, and their own guard takes its entry off as it does for any close from the screen.
 
 The distance that closes a sheet and the flick that closes it are the ones the apps had. There are two distances today, and a Settings sheet has to name its own (see "The drag").
 
@@ -296,7 +296,7 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 | `--dl-meaning-starred` | `oklch(0.75 0.15 80)` | Starred, amber |
 | `--dl-meaning-spam` | `oklch(0.72 0.17 50)` | Spam, orange |
 | `--dl-z-bar`, `--dl-z-search`, `--dl-z-toast` | 30, 50, 60 | The phone bar, the phone search, the toaster over a sheet |
-| `--dl-z-sheet` | 55 | The family's sheet: its scrim, the panel one over. Over the phone search, under the toaster |
+| `--dl-z-sheet` | 55 | The family's sheet: its scrim, and the panel drawn after it at the same number. One more for each sheet over it. Over the phone search, under the toaster |
 | `--dl-z-overlay`, `--dl-z-dialog` | 70, 80 | Menus and popovers; a dialog's scrim, its panel one over |
 | `--dl-z-palette`, `--dl-z-tooltip` | 90, 95 | The command palette's dim, its panel one over; a tooltip |
 
@@ -1126,6 +1126,7 @@ The panel is the overlay glass with 14px top corners and the 40 by 4 handle at i
 | `toastCover` | `true` | Whether the sheet tells the toaster it covers the bottom bar. |
 | `keepMounted` | `false` | Keeps the sheet in the document while it is closed. |
 | `scrimClassName`, `viewportClassName` | none | The app's own classes on the scrim and on the box around the panel. |
+| `vars` | none | The sheet's own variables for this sheet alone, such as `{ "--dl-sheet-z": 72 }`. See "Variables an app may set". |
 
 ### The drag
 
@@ -1138,7 +1139,17 @@ A press starts no drag in four cases, which are vaul's rules and which Base UI l
 - on a `<select>`;
 - while text inside it is selected.
 
-A region with gestures of its own opts out with `data-dl-no-drag`, which `noSheetDrag()` writes:
+These hold back a drag and nothing else. A tap on a button or an option in the first 500ms still lands.
+
+Chromium on a phone sends no touchmove until the finger has gone some 15px from the press, and Base UI's Drawer takes the origin of a drag from the first touchmove. The browser does send pointer moves inside that distance.
+
+So where Base UI holds the panel from the press (the handle, or a body with nothing to scroll), the kit moves the panel by them, and it follows the finger from the first pixel. A body that scrolls can't tell a drag from a scroll before that first touchmove, so its panel waits for it and then meets the finger. Either way the kit draws back whatever travel Base UI dropped, with `translate` beside Base UI's transform, and judges a release by how far the finger has gone since the press.
+
+Measured in headless Chromium at 390 by 844 before the fix, a drag from the handle stayed put for 16px and then trailed the finger by 16px, so a slow close needed 112px of finger. It now follows from 2px and closes past 96px.
+
+A sheet follows one finger. A second finger on the glass neither starts a drag of its own nor ends this one.
+
+A region with gestures of its own opts out with `noSheetDrag()`, which writes the kit's `data-dl-no-drag` and Base UI's `data-base-ui-swipe-ignore`:
 
 ```tsx
 import { noSheetDrag } from "@dalin/kit/components";
@@ -1147,7 +1158,7 @@ import { noSheetDrag } from "@dalin/kit/components";
 <div {...noSheetDrag("x")}>{files}</div>
 ```
 
-With no argument, no drag that starts in the region moves the sheet: a media scrubber, a PDF being panned. With `"x"` a sideways drag belongs to the region and a downward one still moves the sheet, which is what mail's swipe between attachments needs. `"y"` is the other axis.
+With no argument, no drag that starts in the region moves the sheet: a media scrubber, a PDF being panned. With `"x"` a sideways drag belongs to the region and a downward one still moves the sheet, which is what mail's swipe between attachments needs. `"y"` is the other axis. Spread it, so React owns both marks: a region that stops spreading it (mail's PDF once zoomed back out) drags the sheet again, and a change of axis counts from the next press. Writing `data-dl-no-drag` by hand no longer opts out.
 
 A release closes the sheet once it has travelled far enough, or on a flick. The apps have two rules for how far, and the kit keeps both.
 
@@ -1168,7 +1179,11 @@ A function of the height works too: `dismissDistance={(height) => height / 3}`.
 
 The flick is one rule for every sheet: faster than 0.5px a millisecond, once the sheet has travelled 16px. Anything less settles it back. The speed is read at the release, so a finger that stopped before it lifted is no flick. `sheetShouldDismiss` is the whole rule as a function. The apps' copies disagree on the edge itself: calendar closes at exactly the distance and mail and the Settings sheets only past it. The kit closes past the distance, and counts a flick from 16px on.
 
-Base UI's Drawer has a rule of its own: past half the height, or the same flick with no least travel, averaged over the whole drag. Whichever distance the sheet has, the kit's rule wins, and this is how. The kit listens on both sides of Base UI's own handlers. Before Base UI hears a release, the kit reads how far down Base UI has the panel and how fast the finger was moving, and decides. If Base UI then asks to close and the kit's answer was no, the kit refuses that close with Base UI's `eventDetails.cancel()` and the sheet settles. If the kit's answer was yes and Base UI asked for nothing, the kit closes the sheet itself. Where both say yes, Base UI runs the close, in less than the sheet time after a fast flick. `onOpenChange` hears `"swipe"` in every case.
+Base UI's Drawer has a rule of its own: past half the height, or the same flick with no least travel, averaged over the whole drag. Whichever distance the sheet has, the kit's rule wins, and this is how. The kit listens on both sides of Base UI's own handlers. Before Base UI hears a release, the kit reads how far down Base UI has the panel and how fast the finger was moving, and decides.
+
+If Base UI then asks to close and the kit's answer was no, the kit refuses that close with Base UI's `eventDetails.cancel()` and the sheet settles. If the kit's answer was yes and Base UI asked for nothing, the kit closes the sheet itself, in the same task as the release. The panel slides out from where the finger let go: traced frame by frame in headless Chromium, it holds there and then goes straight down over 260ms, never back up. Where both say yes, Base UI runs the close, in less than the sheet time after a fast flick. `onOpenChange` hears `"swipe"` in every case.
+
+A release that something inside the sheet stops on its way up to the window is still finished, in the next frame. One that Base UI never heard, stopped before Base UI's own handler, is left to Base UI, and no later move closes the sheet on it.
 
 A pull upward meets one resistance in every app, Base UI's own curve: the panel rises by the square root of the pull, so 100px of finger lifts it 10px. Calendar's sheets rose 35px for that pull, mail's 25px, and the Settings sheets not at all. The curve sits between them. It is also what the Drawer draws by itself, and a factor of the kit's own would have to overwrite the Drawer's transform on every frame of a drag.
 
@@ -1176,7 +1191,7 @@ The scrim lifts as the panel goes down, by 55% of the dim over a full drag (`--d
 
 ### Nothing fixed is trapped in it
 
-The panel has no transform at rest, no filter, no backdrop filter and no `will-change`. Any of those would make it the containing block for a `position: fixed` child, and drive's and notes' sheets hold such children. So the frost is a layer behind the panel's content, and a transform is on the panel only while it opens, closes or is under a finger. A fixed child does move with the panel during those moments.
+The panel has no transform at rest, no filter, no backdrop filter and no `will-change`. Any of those would make it the containing block for a `position: fixed` child, and drive's and notes' sheets hold such children. So the frost is a layer behind the panel's content, and a transform (with the kit's `translate`, under a finger) is on the panel only while it opens, closes or is under a finger. A fixed child does move with the panel during those moments.
 
 ### Refusing a close
 
@@ -1196,7 +1211,7 @@ Every way out asks `onOpenChange` first: the scrim, Escape, a swipe, a `<SheetCl
 >
 ```
 
-A close the app makes by setting `open` to `false` asks nobody. `details.reason` is Base UI's word for the cause (`"outside-press"`, `"escape-key"`, `"swipe"`, `"close-press"`, `"trigger-press"`, `"imperative-action"`, `"focus-out"`, `"close-watcher"`) or the kit's `"system-back"`.
+A close the app makes by setting `open` to `false` asks nobody. `details.reason` is Base UI's word for the cause (`"outside-press"`, `"escape-key"`, `"swipe"`, `"close-press"`, `"trigger-press"`, `"imperative-action"`, `"focus-out"`, `"close-watcher"`) or the kit's `"system-back"`. With `systemBack` on, Android's back is `"system-back"` whether the history entry or the browser's CloseWatcher took it.
 
 Keep the `<Sheet>` mounted and change `open`. A sheet the app unmounts to close it is gone in one frame, with no slide.
 
@@ -1206,13 +1221,13 @@ Escape closes the sheet. `ownsEscape` lets something inside it take the key firs
 
 Focus lands on the panel as the sheet opens, and not on its first control, since a focused field would raise the phone's keyboard over the sheet. `initialFocus` names another target. Tab stays inside a modal sheet, and focus goes back to what opened it. `modal={false}` gives the page back, as mail's compose does while it peeks.
 
-A sheet over a sheet is a `<Sheet>` drawn inside the first one's content: drive's place peek over the file sheet, calendar's picks over the event sheet. Escape, a press outside and a swipe then close the top one alone. It dims the one behind with a scrim of its own and stands two steps higher on the z ladder. The one behind stays where it is, and carries `data-nested-drawer-open` for an app that wants to style it.
+A sheet over a sheet is a `<Sheet>` drawn inside the first one's content: drive's place peek over the file sheet, calendar's picks over the event sheet. Escape, a press outside and a swipe then close the top one alone. It dims the one behind with a scrim of its own and stands one step higher on the z ladder, so five sheets deep still stand under the toaster. The one behind stays where it is, and carries `data-nested-drawer-open` for an app that wants to style it.
 
 ### The toaster
 
 An open sheet registers itself as a toast cover, so a toast raised over it announces above its top edge. An app's `<Toaster cover>` selector need not name it. A closing sheet covers nothing: it leaves the dock as its close begins, and its panel and scrim carry `data-dl-leaving` until they are gone.
 
-A toast over a modal sheet keeps its action in reach of Tab, as over the phone's search and the palette: Tab on the sheet's last stop goes to the toast, and Tab on the toast's last stop comes back.
+A toast over a modal sheet keeps its action in reach of Tab, as over the phone's search and the palette: Tab on the sheet's last stop goes to the toast, and Tab on the toast's last stop comes back. With sheets stacked, or the palette over a sheet, it comes back to the one on top.
 
 ### The dialog layout
 
@@ -1226,9 +1241,11 @@ It stands two over `--dl-z-dialog`, so it opens over the Settings dialog.
 
 ### The system's back
 
-`systemBack` gives the sheet one history entry while it is open, the way the phone's search has one: the back button or the back swipe closes the sheet, and a close from the screen takes the entry off. A refused back keeps an entry under the sheet, so the next back asks again. It is off by default. Drive and mail already give their layers entries of their own, and a second one would stack. Calendar's and notes' sheets have none today, so turning it on there is a change to decide.
+`systemBack` gives the sheet one history entry while it is open, the way the phone's search has one: the back button or the back swipe closes the sheet, and a close from the screen takes the entry off. A refused back keeps an entry under the sheet, so the next back asks again. A sheet the app unmounts on the back gets no new entry. It is off by default. Drive and mail already give their layers entries of their own, and a second one would stack. Calendar's and notes' sheets have none today, so turning it on there is a change to decide.
 
-A row that closes the sheet and then navigates calls `close(then)`. `then` runs once the slide has ended and the entry has gone, which is the first moment a navigation is safe:
+On Android, Chrome hands the back gesture to an open sheet through its CloseWatcher before history sees it, and `onOpenChange` hears `"system-back"` for that too. Chrome lets a page refuse one back without a fresh tap, and closes the sheet on the next one whatever the app says.
+
+A row that closes the sheet and then navigates calls `close(then)`. `then` runs once the slide has ended and the entry has gone, which is the first moment a navigation is safe. It never runs for a close that was refused, or for one an app that owns `open` let pass and then kept the sheet open:
 
 ```tsx
 const actions = useRef<SheetActions>(null);
@@ -1249,7 +1266,7 @@ Base UI's own keyboard handling is off. Notes and mail set `navigator.virtualKey
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `--dl-sheet-z` | 55, or 82 in the dialog layout | The scrim's z-index. The panel is one over it. |
+| `--dl-sheet-z` | 55, or 82 in the dialog layout | The z-index of the scrim and of the box around the panel. The box is drawn after the scrim, so it stands over it at the same number. A sheet over a sheet is one higher. |
 | `--dl-sheet-scrim` | `--dl-scrim` | The fill over the page. |
 | `--dl-sheet-lift` | 0.55 | How much of the dim a full drag takes away. |
 | `--dl-sheet-fill`, `--dl-sheet-blur` | the overlay glass | The panel's fill and what it does to the page behind. `none` for the blur makes it solid. |
@@ -1258,6 +1275,14 @@ Base UI's own keyboard handling is off. Notes and mail set `navigator.virtualKey
 | `--dl-sheet-kb` | `--kb-inset` | What the on-screen keyboard covers. |
 | `--dl-sheet-inset` | 16px | The body's side padding. |
 | `--dl-sheet-dialog-w`, `--dl-sheet-dialog-t` | 28rem, `--dl-t-open` | The dialog layout's width, and its open and close. |
+
+Set one on `:root` for every sheet. For one sheet, pass it in `vars` on `<SheetContent>`. It is written on the scrim and on the box around the panel, and the panel inherits it from the box:
+
+```tsx
+<SheetContent vars={{ "--dl-sheet-z": 72, "--dl-sheet-scrim": "rgb(0 0 0 / 0.4)" }}>
+```
+
+A variable in the panel's `className` or `style` reaches the panel alone. That's enough for the panel's own (`--dl-sheet-fill`, `--dl-sheet-blur`, `--dl-sheet-w`, `--dl-sheet-top`, `--dl-sheet-inset`, `--dl-sheet-dialog-w`). The scrim and the box never see it, so `--dl-sheet-z`, `--dl-sheet-scrim`, `--dl-sheet-lift`, `--dl-sheet-kb` and the dialog's `--dl-sheet-dialog-t` go in `vars`.
 
 Every part carries a class (`dl-sheet`, `dl-sheet-scrim`, `dl-sheet-viewport`, `dl-sheet-handle`, `dl-sheet-body` and so on), a `data-slot`, and on the panel, the scrim and the viewport `data-layout`. The panel and the scrim also carry Base UI's state: `data-open`, `data-starting-style`, `data-ending-style` and `data-swiping`. The rules sit in the `dalin` layer, so the app's own class wins.
 

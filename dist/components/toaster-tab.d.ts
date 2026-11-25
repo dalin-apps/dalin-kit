@@ -12,7 +12,8 @@ export declare const TOASTER = "[data-sonner-toaster]";
  * other way. Between a toast's own stops the browser moves as usual.
  *
  * With no toast that can take Tab, nothing changes. A screen reader needs
- * none of this: Base UI leaves a live region out of what it hides.
+ * none of this: Base UI leaves a live region out of what it hides. With
+ * several surfaces up, the one registered last answers.
  */
 export declare function useToasterTab(surface: HTMLElement | null): void;
 //# sourceMappingURL=toaster-tab.d.ts.map

@@ -20,6 +20,12 @@ function tabStops(roots) {
     return stops;
 }
 /**
+ * The surfaces holding Tab, oldest first. Only the newest answers: with a
+ * sheet over a sheet, or the palette over a sheet, Tab off the toast goes
+ * back to the one on top, and not to one it covers.
+ */
+const surfaces = [];
+/**
  * Lets Tab leave a modal surface for the toaster, and come back.
  *
  * A modal dialog keeps Tab inside itself, which is right for the app behind
@@ -31,14 +37,18 @@ function tabStops(roots) {
  * other way. Between a toast's own stops the browser moves as usual.
  *
  * With no toast that can take Tab, nothing changes. A screen reader needs
- * none of this: Base UI leaves a live region out of what it hides.
+ * none of this: Base UI leaves a live region out of what it hides. With
+ * several surfaces up, the one registered last answers.
  */
 export function useToasterTab(surface) {
     useEffect(() => {
         if (!surface)
             return;
         const doc = surface.ownerDocument;
+        surfaces.push(surface);
         const onKey = (event) => {
+            if (surfaces[surfaces.length - 1] !== surface)
+                return;
             if (event.key !== "Tab" || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey)
                 return;
             const active = doc.activeElement;
@@ -69,7 +79,12 @@ export function useToasterTab(surface) {
             next.focus();
         };
         doc.addEventListener("keydown", onKey, true);
-        return () => doc.removeEventListener("keydown", onKey, true);
+        return () => {
+            doc.removeEventListener("keydown", onKey, true);
+            const at = surfaces.lastIndexOf(surface);
+            if (at !== -1)
+                surfaces.splice(at, 1);
+        };
     }, [surface]);
 }
 //# sourceMappingURL=toaster-tab.js.map
