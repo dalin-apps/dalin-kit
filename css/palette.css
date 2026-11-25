@@ -341,4 +341,108 @@ html[data-dl-motion="reduce"] :is(.dl-palette, .dl-palette-dim) {
   padding: 10px 8px;
   color: var(--dl-fg-muted, #b8b8b8);
 }
+
+/* The parts an app builds a palette of its own from (<Palette>). None of
+   them draws unless the app puts it in. */
+
+/* An open page's name before the words: "Move to". A press goes back to it. */
+.dl-palette-crumb {
+  flex: none;
+  margin: 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: oklch(1 0 0 / 0.08);
+  color: var(--dl-fg-muted, #b8b8b8);
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: default;
+}
+@media (hover: hover) {
+  .dl-palette-crumb:hover {
+    color: var(--dl-fg, #fff);
+  }
+}
+
+/* The field with a ghost completion over it: the typed words drawn unseen,
+   so the rest of the name starts where they end. */
+.dl-palette-field {
+  position: relative;
+  flex: 1;
+  min-width: 4rem;
+  display: flex;
+}
+.dl-palette-ghost {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: pre;
+  pointer-events: none;
+  color: var(--dl-fg-faint, #8f97a0);
+}
+.dl-palette-ghost-typed {
+  visibility: hidden;
+}
+
+/* A line of words under the field row. */
+.dl-palette-line {
+  flex: none;
+  margin: 0;
+  padding: 8px 16px 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+
+/* A status line that went wrong, and its button. */
+.dl-palette-note[data-tone="error"] {
+  color: var(--dl-danger-text, oklch(0.74 0.19 25));
+}
+.dl-palette-note-action {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--dl-fg, #fff);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: default;
+}
+/* A line under a group's rows: "Showing 30 of 112". */
+.dl-palette-group-note {
+  padding-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+/* A row the app no longer vouches for: 85%, where its second line still
+   holds 4.5:1 on the panel. */
+.dl-palette-row[data-dim] {
+  opacity: 0.85;
+}
+/* A row left from the last answer while this one is on its way: 60%, and
+   only after 120ms, as the stale list dims. */
+.dl-palette-row[data-dim="waiting"] {
+  opacity: 0.6;
+  transition: opacity 0s linear 120ms;
+}
+/* The row whose menu is open keeps the highlight. */
+.dl-palette-row[data-menu-open] {
+  background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
+}
+/* A row's menu stands over the palette, as the filter's does. */
+.dl-menu-positioner:has(> .dl-palette-menu) {
+  z-index: max(
+    var(--dl-overlay-z, var(--dl-z-overlay, 70)),
+    calc(var(--dl-palette-z, var(--dl-z-palette, 90)) + 2)
+  );
+}
+.dl-palette-menu {
+  min-width: 176px;
+}
 }

@@ -1,7 +1,7 @@
 {
   "name": "@dalin/kit",
-  "version": "0.11.0",
-  "description": "The shared design base of the dalin apps: tokens, the toast, the create button, the wordmark and family switcher, frosted menus, the command palette, the phone header and search, the segmented control, the filter, the sheet, and the helpers each app had copied.",
+  "version": "0.12.0",
+  "description": "The shared design base of the dalin apps: tokens, the toast, the create button, the wordmark and family switcher, frosted menus, the command palette and its parts, the phone header and search, the segmented control, the filter, the sheet, and the helpers each app had copied.",
   "type": "module",
   "license": "MIT",
   "author": "Samuel Gomez",

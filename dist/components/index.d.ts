@@ -9,8 +9,11 @@ export { ContextMenu, ContextMenuContent, ContextMenuTrigger, type ContextMenuCo
 export { ariaKeyShortcuts } from "./key-names.js";
 export { Popover, PopoverClose, PopoverContent, PopoverDescription, PopoverTitle, PopoverTrigger, type PopoverContentProps, } from "./popover.js";
 export { EmptyState, type EmptyStateProps } from "./empty-state.js";
-export { CommandPalette, SOURCE_WAIT_MS, type CommandPaletteProps, type PaletteItem, type PaletteSource, } from "./command-palette.js";
-export { fold, matchParts, matchesQuery, queryTerms, type MatchPart } from "./palette-match.js";
+export { CommandPalette, SOURCE_WAIT_MS, type CommandPaletteProps, type PaletteAnswer, type PaletteGroup, type PaletteItem, type PaletteMenuEntry, type PalettePage, type PaletteSource, } from "./command-palette.js";
+export { Palette, PaletteBody, PaletteField, PaletteLine, PaletteList, PaletteMarked, PaletteNote, usePalette, type PaletteBodyProps, type PaletteCompletion, type PaletteControls, type PaletteFieldProps, type PaletteListProps, type PaletteNoteProps, type PaletteOwnResults, type PaletteProps, type PaletteRowState, } from "./palette.js";
+export { ACTIONS_GROUP, usePaletteResults, type PaletteResults, type PaletteResultsOptions } from "./palette-results.js";
+export { commandScore } from "./command-score.js";
+export { SCORE_FLOOR, fold, matchParts, matchesQuery, queryTerms, rankActions, scoreParts, scoreQuery, type MatchPart, type RankedItem, } from "./palette-match.js";
 export { PHONE_MARK_PX, PhoneHeader, PhoneHeaderIcon, type PhoneHeaderIconProps, type PhoneHeaderProps, } from "./phone-header.js";
 export { PhoneSearch, PhoneSearchAvatar, type PhoneSearchAction, type PhoneSearchAvatarProps, type PhoneSearchChangeDetails, type PhoneSearchProps, type PhoneSearchRow, type PhoneSearchSection, } from "./phone-search.js";
 export { SHEET_NO_DRAG_ATTR, Sheet, SheetBody, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHandle, SheetHeader, SheetTitle, SheetTrigger, noSheetDrag, type SheetActions, type SheetChangeDetails, type SheetChangeReason, type SheetContentProps, type SheetLayout, type SheetNativeDetails, type SheetNoDragProps, type SheetProps, type SheetVars, } from "./sheet.js";

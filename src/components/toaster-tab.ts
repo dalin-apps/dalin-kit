@@ -78,6 +78,9 @@ export function useToasterTab(surface: HTMLElement | null, options: ToasterTabOp
       if (event.key !== "Tab" || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
       const active = doc.activeElement;
       if (!(active instanceof HTMLElement)) return;
+      // A field whose Tab means something of its own (the palette's ghost
+      // completion) keeps it.
+      if (active.closest("[data-dl-owns-tab]")) return;
       const toasts = tabStops([...doc.querySelectorAll(TOASTER)]);
       if (toasts.length === 0 && !hold) return;
       const own = tabStops([surface]);

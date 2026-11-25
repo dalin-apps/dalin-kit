@@ -6,6 +6,11 @@ import { registerToastDock } from "../toast/toast-dock.js";
 import { pushBackEntry, type BackEntry } from "./back-entry.js";
 import { cx } from "./cx.js";
 import { SearchGlyph } from "./icons.js";
+import { useLongPress } from "./long-press.js";
+import { RowMenu, pointAnchor, type RowMenuState } from "./palette-menu.js";
+import { matchParts } from "./palette-match.js";
+import { usePaletteResults } from "./palette-results.js";
+import type { PaletteGroup, PaletteItem, PaletteMenuEntry, PaletteSource } from "./palette-types.js";
 import { useToasterTab } from "./toaster-tab.js";
 
 /** One row of the phone's search: a suggestion before a query, or a result after one. */
@@ -22,6 +27,14 @@ export type PhoneSearchRow = {
   meta?: ReactNode;
   /** Leaves search open after the row is tapped. It closes by default. */
   keepOpen?: boolean;
+  /**
+   * What else the row can do, as the family's menu at the finger: opened by
+   * a long press (450ms of a still finger), or a right click. The same
+   * entries a palette row's `menu` takes.
+   */
+  menu?: () => readonly PaletteMenuEntry[];
+  /** A long press of the app's own, for a row whose hold does something other than a menu. `menu` wins. */
+  onLongPress?: (point: { x: number; y: number }) => void;
   /** What tapping the row does. Search has closed by the time it runs, unless `keepOpen`. */
   onSelect: () => void;
 };
@@ -80,6 +93,24 @@ export type PhoneSearchProps = {
   sections?: readonly PhoneSearchSection[];
   /** For a query: the results, in sections. */
   results?: readonly PhoneSearchSection[];
+  /**
+   * What search asks, the same sources the desktop palette is given. Before
+   * a word is typed each source's answer to `""` is a section, under the
+   * action row and before `sections`. With a query, the sources' groups
+   * come back as sections, and the list changes only once every source has
+   * answered, as the palette's does; a source slower than `SOURCE_WAIT_MS`
+   * joins at the end. `results` and `children` win over them, so an app
+   * moves over one surface at a time.
+   */
+  sources?: readonly PaletteSource[];
+  /**
+   * The app's actions, the palette's own. Ranked against a query as the
+   * palette ranks them, and listed after the sources' groups. Before a word
+   * is typed they are not listed: the action row is the one that leads.
+   */
+  actions?: readonly PaletteItem[];
+  /** The heading over the actions. "Actions". */
+  actionsHeading?: string;
   /**
    * Whether a filter in `fieldEnd` is on. The sheet then shows `results`
    * before a word is typed, as it does for a query, so a pick with no words
@@ -159,39 +190,135 @@ function onFieldControl(event: ReactMouseEvent<HTMLElement>): boolean {
 /** How far a search sheet ranks as a toast dock: over the bar and a parked chip, with the other sheets. */
 const COVER_RANK = 50;
 
+/** What a row hands `choose`: whether search stays open, and what to run. */
+type Chosen = { keepOpen?: boolean; onSelect?: () => void };
+
+/** A row's words with the query's words marked. */
+function PhoneMarked({ text, query }: { text: string; query: string }): ReactNode {
+  return matchParts(text, query).map((part, index) =>
+    part.match ? (
+      <mark key={index} className="dl-phone-search-mark">
+        {part.text}
+      </mark>
+    ) : (
+      part.text
+    ),
+  );
+}
+
+/** One of the kit's rows: a tap runs it, a long press opens its menu or the app's own hold. */
+function PhoneRow({
+  title,
+  subtitle,
+  leading,
+  meta,
+  onTap,
+  onHold,
+  held,
+}: {
+  title: ReactNode;
+  subtitle?: ReactNode;
+  leading?: ReactNode;
+  meta?: ReactNode;
+  onTap: () => void;
+  onHold?: (point: { x: number; y: number }) => void;
+  held?: boolean;
+}): ReactNode {
+  const hold = useLongPress(onHold);
+  return (
+    <button type="button" className="dl-phone-search-row" data-held={held ? "" : undefined} onClick={onTap} {...hold}>
+      {leading}
+      {subtitle ? (
+        <span className="dl-phone-search-two">
+          <b>{title}</b>
+          <small>{subtitle}</small>
+        </span>
+      ) : (
+        <span className="dl-phone-search-one">{title}</span>
+      )}
+      {meta !== undefined && meta !== null && meta !== false ? <span className="dl-phone-search-meta">{meta}</span> : null}
+    </button>
+  );
+}
+
+type Hold = (key: string, row: { menu?: () => readonly PaletteMenuEntry[]; onLongPress?: (point: { x: number; y: number }) => void }) =>
+  | ((point: { x: number; y: number }) => void)
+  | undefined;
+
 function Sections({
   sections,
   choose,
+  hold,
+  heldKey,
 }: {
   sections: readonly PhoneSearchSection[];
-  choose: (row: { keepOpen?: boolean; onSelect: () => void }) => void;
+  choose: (row: Chosen) => void;
+  hold: Hold;
+  heldKey: string | null;
 }): ReactNode {
   return sections.map((section) => {
     const empty = !section.children && (!section.rows || section.rows.length === 0);
     if (empty) return null;
+    const sectionKey = section.id ?? section.heading;
     return (
-      <section key={section.id ?? section.heading} className="dl-phone-search-section">
+      <section key={sectionKey} className="dl-phone-search-section">
         <h2 className="dl-phone-search-heading">{section.heading}</h2>
         {section.children ??
-          section.rows!.map((row) => (
-            <button key={row.id} type="button" className="dl-phone-search-row" onClick={() => choose(row)}>
-              {row.leading}
-              {row.subtitle ? (
-                <span className="dl-phone-search-two">
-                  <b>{row.title}</b>
-                  <small>{row.subtitle}</small>
-                </span>
-              ) : (
-                <span className="dl-phone-search-one">{row.title}</span>
-              )}
-              {row.meta !== undefined && row.meta !== null && row.meta !== false ? (
-                <span className="dl-phone-search-meta">{row.meta}</span>
-              ) : null}
-            </button>
-          ))}
+          section.rows!.map((row) => {
+            const key = `${sectionKey}:${row.id}`;
+            return (
+              <PhoneRow
+                key={row.id}
+                title={row.title}
+                subtitle={row.subtitle}
+                leading={row.leading}
+                meta={row.meta}
+                onTap={() => choose(row)}
+                onHold={hold(key, row)}
+                held={heldKey === key}
+              />
+            );
+          })}
       </section>
     );
   });
+}
+
+/** The groups the sources and actions answered, as sections of the kit's rows with the query marked. */
+function GroupSections({
+  groups,
+  marks,
+  choose,
+  hold,
+  heldKey,
+}: {
+  groups: readonly PaletteGroup[];
+  marks: string;
+  choose: (row: Chosen) => void;
+  hold: Hold;
+  heldKey: string | null;
+}): ReactNode {
+  return groups.map((group) => (
+    <section key={group.id} className="dl-phone-search-section">
+      {group.heading ? <h2 className="dl-phone-search-heading">{group.heading}</h2> : null}
+      {group.items.map((item) => {
+        const key = `${group.id}:${item.id}`;
+        return (
+          <PhoneRow
+            key={item.id}
+            title={<PhoneMarked text={item.title} query={marks} />}
+            subtitle={item.subtitle ? <PhoneMarked text={item.subtitle} query={marks} /> : undefined}
+            leading={item.icon}
+            meta={item.meta}
+            onTap={() => choose(item)}
+            onHold={hold(key, item)}
+            held={heldKey === key}
+          />
+        );
+      })}
+      {group.note ? <p className="dl-phone-search-note">{group.note}</p> : null}
+    </section>
+  ));
 }
 
 /**
@@ -247,6 +374,9 @@ export function PhoneSearch({
   action,
   sections = NO_SECTIONS,
   results,
+  sources,
+  actions,
+  actionsHeading = "Actions",
   narrowed = false,
   children,
   beforeQuery,
@@ -357,21 +487,62 @@ export function PhoneSearch({
     };
   }, []);
 
-  const choose = (row: { keepOpen?: boolean; onSelect: () => void }) => {
+  // The sources and actions, asked as the palette asks them.
+  const searching = sources !== undefined || actions !== undefined;
+  const answers = usePaletteResults({
+    active: open && searching,
+    query,
+    sources: sources ?? NO_SOURCES,
+    actions: actions ?? NO_ACTIONS,
+    actionsHeading,
+    actionsNeedWords: true,
+  });
+  const staleRef = useRef(answers.stale);
+  staleRef.current = answers.stale;
+
+  const choose = (row: Chosen, fromList = false) => {
+    // A row from an earlier query runs nothing.
+    if (fromList && staleRef.current) return;
+    const run = () => row.onSelect?.();
     if (row.keepOpen) {
-      row.onSelect();
+      run();
       return;
     }
     const entry = backEntry.current;
     backEntry.current = null;
     onOpenChange(false);
     // With an entry of its own, the row runs once that entry has gone.
-    if (entry) entry.pop(row.onSelect);
-    else row.onSelect();
+    if (entry) entry.pop(run);
+    else run();
   };
+  const chooseFromList = (row: Chosen) => choose(row, true);
+
+  // A row's menu, opened by a long press.
+  const [menu, setMenu] = useState<RowMenuState | null>(null);
+  const hold: Hold = (key, row) => {
+    if (row.menu) {
+      const entriesOf = row.menu;
+      return (point) => {
+        const entries = entriesOf();
+        if (entries.length > 0) setMenu({ key, entries, anchor: pointAnchor(point.x, point.y), at: Date.now() });
+      };
+    }
+    return row.onLongPress;
+  };
+  if (!open && menu) setMenu(null);
 
   const asked = query.trim() !== "" || narrowed;
   const found = results?.some((section) => section.children || (section.rows && section.rows.length > 0)) ?? false;
+  const answered = answers.answered ?? "";
+  const settled = !answers.stale && answers.busy === 0;
+  const groupList = (groups: readonly PaletteGroup[]) => (
+    <div className="dl-phone-search-results" data-stale={answers.stale ? "" : undefined} aria-busy={answers.stale || answers.busy > 0 || undefined}>
+      <GroupSections groups={groups} marks={answered} choose={chooseFromList} hold={hold} heldKey={menu?.key ?? null} />
+    </div>
+  );
+  const emptyNote = (
+    <p className="dl-phone-search-note">{emptyText ? emptyText(query.trim()) : query.trim() ? `No results for “${query.trim()}”.` : "No results."}</p>
+  );
 
   return (
     <Dialog.Root
@@ -445,9 +616,15 @@ export function PhoneSearch({
             {asked ? (
               children ??
               (found ? (
-                <Sections sections={results!} choose={choose} />
+                <Sections sections={results!} choose={choose} hold={hold} heldKey={menu?.key ?? null} />
               ) : results ? (
-                <p className="dl-phone-search-note">{emptyText ? emptyText(query.trim()) : query.trim() ? `No results for “${query.trim()}”.` : "No results."}</p>
+                emptyNote
+              ) : searching ? (
+                answers.groups.length > 0 ? (
+                  groupList(answers.groups)
+                ) : settled && answers.answered !== null ? (
+                  emptyNote
+                ) : null
               ) : null)
             ) : (
               <>
@@ -457,11 +634,18 @@ export function PhoneSearch({
                     <span className="dl-phone-search-one">{action.label}</span>
                   </button>
                 ) : null}
-                <Sections sections={sections} choose={choose} />
+                {searching && answers.groups.length > 0 ? groupList(answers.groups) : null}
+                <Sections sections={sections} choose={choose} hold={hold} heldKey={menu?.key ?? null} />
                 {beforeQuery}
               </>
             )}
           </div>
+          <RowMenu
+            state={menu}
+            onClose={() => setMenu(null)}
+            onRun={(entry) => choose(entry)}
+            className="dl-phone-search-menu"
+          />
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
@@ -469,3 +653,5 @@ export function PhoneSearch({
 }
 
 const NO_SECTIONS: readonly PhoneSearchSection[] = [];
+const NO_SOURCES: readonly PaletteSource[] = [];
+const NO_ACTIONS: readonly PaletteItem[] = [];

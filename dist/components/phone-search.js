@@ -6,6 +6,10 @@ import { registerToastDock } from "../toast/toast-dock.js";
 import { pushBackEntry } from "./back-entry.js";
 import { cx } from "./cx.js";
 import { SearchGlyph } from "./icons.js";
+import { useLongPress } from "./long-press.js";
+import { RowMenu, pointAnchor } from "./palette-menu.js";
+import { matchParts } from "./palette-match.js";
+import { usePaletteResults } from "./palette-results.js";
 import { useToasterTab } from "./toaster-tab.js";
 /** A person's circle as a row's lead: 28px, white initials. */
 export function PhoneSearchAvatar({ initials, color, className }) {
@@ -25,14 +29,34 @@ function onFieldControl(event) {
 }
 /** How far a search sheet ranks as a toast dock: over the bar and a parked chip, with the other sheets. */
 const COVER_RANK = 50;
-function Sections({ sections, choose, }) {
+/** A row's words with the query's words marked. */
+function PhoneMarked({ text, query }) {
+    return matchParts(text, query).map((part, index) => part.match ? (_jsx("mark", { className: "dl-phone-search-mark", children: part.text }, index)) : (part.text));
+}
+/** One of the kit's rows: a tap runs it, a long press opens its menu or the app's own hold. */
+function PhoneRow({ title, subtitle, leading, meta, onTap, onHold, held, }) {
+    const hold = useLongPress(onHold);
+    return (_jsxs("button", { type: "button", className: "dl-phone-search-row", "data-held": held ? "" : undefined, onClick: onTap, ...hold, children: [leading, subtitle ? (_jsxs("span", { className: "dl-phone-search-two", children: [_jsx("b", { children: title }), _jsx("small", { children: subtitle })] })) : (_jsx("span", { className: "dl-phone-search-one", children: title })), meta !== undefined && meta !== null && meta !== false ? _jsx("span", { className: "dl-phone-search-meta", children: meta }) : null] }));
+}
+function Sections({ sections, choose, hold, heldKey, }) {
     return sections.map((section) => {
         const empty = !section.children && (!section.rows || section.rows.length === 0);
         if (empty)
             return null;
+        const sectionKey = section.id ?? section.heading;
         return (_jsxs("section", { className: "dl-phone-search-section", children: [_jsx("h2", { className: "dl-phone-search-heading", children: section.heading }), section.children ??
-                    section.rows.map((row) => (_jsxs("button", { type: "button", className: "dl-phone-search-row", onClick: () => choose(row), children: [row.leading, row.subtitle ? (_jsxs("span", { className: "dl-phone-search-two", children: [_jsx("b", { children: row.title }), _jsx("small", { children: row.subtitle })] })) : (_jsx("span", { className: "dl-phone-search-one", children: row.title })), row.meta !== undefined && row.meta !== null && row.meta !== false ? (_jsx("span", { className: "dl-phone-search-meta", children: row.meta })) : null] }, row.id)))] }, section.id ?? section.heading));
+                    section.rows.map((row) => {
+                        const key = `${sectionKey}:${row.id}`;
+                        return (_jsx(PhoneRow, { title: row.title, subtitle: row.subtitle, leading: row.leading, meta: row.meta, onTap: () => choose(row), onHold: hold(key, row), held: heldKey === key }, row.id));
+                    })] }, sectionKey));
     });
+}
+/** The groups the sources and actions answered, as sections of the kit's rows with the query marked. */
+function GroupSections({ groups, marks, choose, hold, heldKey, }) {
+    return groups.map((group) => (_jsxs("section", { className: "dl-phone-search-section", children: [group.heading ? _jsx("h2", { className: "dl-phone-search-heading", children: group.heading }) : null, group.items.map((item) => {
+                const key = `${group.id}:${item.id}`;
+                return (_jsx(PhoneRow, { title: _jsx(PhoneMarked, { text: item.title, query: marks }), subtitle: item.subtitle ? _jsx(PhoneMarked, { text: item.subtitle, query: marks }) : undefined, leading: item.icon, meta: item.meta, onTap: () => choose(item), onHold: hold(key, item), held: heldKey === key }, item.id));
+            }), group.note ? _jsx("p", { className: "dl-phone-search-note", children: group.note }) : null] }, group.id)));
 }
 /**
  * The phone's search, the same in all four apps: a full-screen sheet that
@@ -75,7 +99,7 @@ function Sections({ sections, choose, }) {
  *     onQueryChange={search}
  *   />
  */
-export function PhoneSearch({ open, onOpenChange, systemBack = true, query: queryProp, onQueryChange, onSubmit, placeholder = "Search", cancelLabel = "Cancel", action, sections = NO_SECTIONS, results, narrowed = false, children, beforeQuery, covered = false, emptyText, fieldStart, fieldEnd, className, }) {
+export function PhoneSearch({ open, onOpenChange, systemBack = true, query: queryProp, onQueryChange, onSubmit, placeholder = "Search", cancelLabel = "Cancel", action, sections = NO_SECTIONS, results, sources, actions, actionsHeading = "Actions", narrowed = false, children, beforeQuery, covered = false, emptyText, fieldStart, fieldEnd, className, }) {
     const [ownQuery, setOwnQuery] = useState("");
     const query = queryProp ?? ownQuery;
     // The sheet's element as state: Base UI mounts it a commit after `open`
@@ -174,9 +198,25 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
             });
         };
     }, []);
-    const choose = (row) => {
+    // The sources and actions, asked as the palette asks them.
+    const searching = sources !== undefined || actions !== undefined;
+    const answers = usePaletteResults({
+        active: open && searching,
+        query,
+        sources: sources ?? NO_SOURCES,
+        actions: actions ?? NO_ACTIONS,
+        actionsHeading,
+        actionsNeedWords: true,
+    });
+    const staleRef = useRef(answers.stale);
+    staleRef.current = answers.stale;
+    const choose = (row, fromList = false) => {
+        // A row from an earlier query runs nothing.
+        if (fromList && staleRef.current)
+            return;
+        const run = () => row.onSelect?.();
         if (row.keepOpen) {
-            row.onSelect();
+            run();
             return;
         }
         const entry = backEntry.current;
@@ -184,12 +224,32 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
         onOpenChange(false);
         // With an entry of its own, the row runs once that entry has gone.
         if (entry)
-            entry.pop(row.onSelect);
+            entry.pop(run);
         else
-            row.onSelect();
+            run();
     };
+    const chooseFromList = (row) => choose(row, true);
+    // A row's menu, opened by a long press.
+    const [menu, setMenu] = useState(null);
+    const hold = (key, row) => {
+        if (row.menu) {
+            const entriesOf = row.menu;
+            return (point) => {
+                const entries = entriesOf();
+                if (entries.length > 0)
+                    setMenu({ key, entries, anchor: pointAnchor(point.x, point.y), at: Date.now() });
+            };
+        }
+        return row.onLongPress;
+    };
+    if (!open && menu)
+        setMenu(null);
     const asked = query.trim() !== "" || narrowed;
     const found = results?.some((section) => section.children || (section.rows && section.rows.length > 0)) ?? false;
+    const answered = answers.answered ?? "";
+    const settled = !answers.stale && answers.busy === 0;
+    const groupList = (groups) => (_jsx("div", { className: "dl-phone-search-results", "data-stale": answers.stale ? "" : undefined, "aria-busy": answers.stale || answers.busy > 0 || undefined, children: _jsx(GroupSections, { groups: groups, marks: answered, choose: chooseFromList, hold: hold, heldKey: menu?.key ?? null }) }));
+    const emptyNote = (_jsx("p", { className: "dl-phone-search-note", children: emptyText ? emptyText(query.trim()) : query.trim() ? `No results for “${query.trim()}”.` : "No results." }));
     return (_jsx(Dialog.Root, { open: open, 
         // Covered, the sheet is no longer the screen: the page goes back to
         // what covers it, and nothing done there closes search.
@@ -213,7 +273,9 @@ export function PhoneSearch({ open, onOpenChange, systemBack = true, query: quer
                                     if (!onFieldControl(event))
                                         input.current?.focus({ preventScroll: true });
                                 }, children: [_jsx(SearchGlyph, {}), fieldStart, _jsx("input", { ref: focusField, type: "search", className: "dl-phone-search-input", value: query, onChange: (event) => setQuery(event.target.value), placeholder: placeholder, "aria-label": placeholder, enterKeyHint: "search", autoComplete: "off", autoCorrect: "off", autoCapitalize: "none", spellCheck: false }), fieldEnd] }), _jsx(Dialog.Close, { className: "dl-phone-search-cancel", children: cancelLabel })] }), _jsx("div", { className: "dl-phone-search-body", children: asked ? (children ??
-                            (found ? (_jsx(Sections, { sections: results, choose: choose })) : results ? (_jsx("p", { className: "dl-phone-search-note", children: emptyText ? emptyText(query.trim()) : query.trim() ? `No results for “${query.trim()}”.` : "No results." })) : null)) : (_jsxs(_Fragment, { children: [action ? (_jsxs("button", { type: "button", className: "dl-phone-search-row dl-phone-search-action", onClick: () => choose(action), children: [action.icon, _jsx("span", { className: "dl-phone-search-one", children: action.label })] })) : null, _jsx(Sections, { sections: sections, choose: choose }), beforeQuery] })) })] }) }) }));
+                            (found ? (_jsx(Sections, { sections: results, choose: choose, hold: hold, heldKey: menu?.key ?? null })) : results ? (emptyNote) : searching ? (answers.groups.length > 0 ? (groupList(answers.groups)) : settled && answers.answered !== null ? (emptyNote) : null) : null)) : (_jsxs(_Fragment, { children: [action ? (_jsxs("button", { type: "button", className: "dl-phone-search-row dl-phone-search-action", onClick: () => choose(action), children: [action.icon, _jsx("span", { className: "dl-phone-search-one", children: action.label })] })) : null, searching && answers.groups.length > 0 ? groupList(answers.groups) : null, _jsx(Sections, { sections: sections, choose: choose, hold: hold, heldKey: menu?.key ?? null }), beforeQuery] })) }), _jsx(RowMenu, { state: menu, onClose: () => setMenu(null), onRun: (entry) => choose(entry), className: "dl-phone-search-menu" })] }) }) }));
 }
 const NO_SECTIONS = [];
+const NO_SOURCES = [];
+const NO_ACTIONS = [];
 //# sourceMappingURL=phone-search.js.map

@@ -396,4 +396,25 @@ html[data-dl-motion="reduce"] :is(.dl-phone-icon, .dl-phone-search-cancel, .dl-p
   margin: 14px 0 0;
   color: var(--dl-fg-muted, #b8b8b8);
 }
+
+/* The words of the query, in a row drawn from the palette's sources: the
+   palette's mark, on the phone's rows. */
+.dl-phone-search-mark {
+  margin: 0 -2px;
+  padding: 1px 2px;
+  border-radius: 4px;
+  background: oklch(1 0 0 / 0.12);
+  color: inherit;
+  font-weight: 500;
+}
+/* The row whose menu a long press opened stays lit while the menu is up. */
+.dl-phone-search-row[data-held] {
+  background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
+}
+/* A list that answers an earlier query takes no tap. It does not dim:
+   nothing on the sheet moves or fades, and the answer usually lands within
+   a frame or two. */
+.dl-phone-search-results[data-stale] {
+  pointer-events: none;
+}
 }

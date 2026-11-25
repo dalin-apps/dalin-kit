@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
+import type { PaletteItem, PaletteMenuEntry, PaletteSource } from "./palette-types.js";
 /** One row of the phone's search: a suggestion before a query, or a result after one. */
 export type PhoneSearchRow = {
     /** Unique within its section. */
@@ -14,6 +15,17 @@ export type PhoneSearchRow = {
     meta?: ReactNode;
     /** Leaves search open after the row is tapped. It closes by default. */
     keepOpen?: boolean;
+    /**
+     * What else the row can do, as the family's menu at the finger: opened by
+     * a long press (450ms of a still finger), or a right click. The same
+     * entries a palette row's `menu` takes.
+     */
+    menu?: () => readonly PaletteMenuEntry[];
+    /** A long press of the app's own, for a row whose hold does something other than a menu. `menu` wins. */
+    onLongPress?: (point: {
+        x: number;
+        y: number;
+    }) => void;
     /** What tapping the row does. Search has closed by the time it runs, unless `keepOpen`. */
     onSelect: () => void;
 };
@@ -69,6 +81,24 @@ export type PhoneSearchProps = {
     sections?: readonly PhoneSearchSection[];
     /** For a query: the results, in sections. */
     results?: readonly PhoneSearchSection[];
+    /**
+     * What search asks, the same sources the desktop palette is given. Before
+     * a word is typed each source's answer to `""` is a section, under the
+     * action row and before `sections`. With a query, the sources' groups
+     * come back as sections, and the list changes only once every source has
+     * answered, as the palette's does; a source slower than `SOURCE_WAIT_MS`
+     * joins at the end. `results` and `children` win over them, so an app
+     * moves over one surface at a time.
+     */
+    sources?: readonly PaletteSource[];
+    /**
+     * The app's actions, the palette's own. Ranked against a query as the
+     * palette ranks them, and listed after the sources' groups. Before a word
+     * is typed they are not listed: the action row is the one that leads.
+     */
+    actions?: readonly PaletteItem[];
+    /** The heading over the actions. "Actions". */
+    actionsHeading?: string;
     /**
      * Whether a filter in `fieldEnd` is on. The sheet then shows `results`
      * before a word is typed, as it does for a query, so a pick with no words
@@ -157,5 +187,5 @@ export declare function PhoneSearchAvatar({ initials, color, className }: PhoneS
  *     onQueryChange={search}
  *   />
  */
-export declare function PhoneSearch({ open, onOpenChange, systemBack, query: queryProp, onQueryChange, onSubmit, placeholder, cancelLabel, action, sections, results, narrowed, children, beforeQuery, covered, emptyText, fieldStart, fieldEnd, className, }: PhoneSearchProps): ReactNode;
+export declare function PhoneSearch({ open, onOpenChange, systemBack, query: queryProp, onQueryChange, onSubmit, placeholder, cancelLabel, action, sections, results, sources, actions, actionsHeading, narrowed, children, beforeQuery, covered, emptyText, fieldStart, fieldEnd, className, }: PhoneSearchProps): ReactNode;
 //# sourceMappingURL=phone-search.d.ts.map

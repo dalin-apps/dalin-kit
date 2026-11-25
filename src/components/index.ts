@@ -57,10 +57,46 @@ export {
   CommandPalette,
   SOURCE_WAIT_MS,
   type CommandPaletteProps,
+  type PaletteAnswer,
+  type PaletteGroup,
   type PaletteItem,
+  type PaletteMenuEntry,
+  type PalettePage,
   type PaletteSource,
 } from "./command-palette.js";
-export { fold, matchParts, matchesQuery, queryTerms, type MatchPart } from "./palette-match.js";
+export {
+  Palette,
+  PaletteBody,
+  PaletteField,
+  PaletteLine,
+  PaletteList,
+  PaletteMarked,
+  PaletteNote,
+  usePalette,
+  type PaletteBodyProps,
+  type PaletteCompletion,
+  type PaletteControls,
+  type PaletteFieldProps,
+  type PaletteListProps,
+  type PaletteNoteProps,
+  type PaletteOwnResults,
+  type PaletteProps,
+  type PaletteRowState,
+} from "./palette.js";
+export { ACTIONS_GROUP, usePaletteResults, type PaletteResults, type PaletteResultsOptions } from "./palette-results.js";
+export { commandScore } from "./command-score.js";
+export {
+  SCORE_FLOOR,
+  fold,
+  matchParts,
+  matchesQuery,
+  queryTerms,
+  rankActions,
+  scoreParts,
+  scoreQuery,
+  type MatchPart,
+  type RankedItem,
+} from "./palette-match.js";
 export {
   PHONE_MARK_PX,
   PhoneHeader,

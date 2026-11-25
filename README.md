@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.11 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, the sheet, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.11 is listed under "Moving an app from 0.10.6 to 0.11", "Moving an app from 0.10.5 to 0.10.6", "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
+Version 0.12 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette and the parts it is built from, the phone header with its search, the segmented control, the filter, the sheet, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.12 is listed under "Moving an app from 0.11 to 0.12", "Moving an app from 0.10.6 to 0.11", "Moving an app from 0.10.5 to 0.10.6", "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
 
 ## Install
 
@@ -68,6 +68,54 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.11 to 0.12
+
+0.12 takes the command palette apart into parts an app can build on, ranks the actions by cmdk's command-score, adds Ctrl N and Ctrl P and nested pages, and lets `<PhoneSearch>` take the palette's own `sources` and `actions`. The owner approved the plan on 2026-11-24, after a research page that compared the palette with cmdk: the palette stays on Base UI, the kit copies cmdk's ideas and not its package, and one search definition per app drives both the desktop palette and the phone search.
+
+An app that keeps `<CommandPalette>` as it is changes its pin and nothing else. The markup, the classes and the keys it had in 0.11 are the same, and the kit's own palette tests pass unchanged. Two things move under it:
+
+- The actions come in a new order once a word is typed. The rows that hold every word still come first, now ranked by cmdk's command-score where they kept the app's order, and after them come rows only the score finds, such as "New page" for "np". With an empty field the order is the app's, as before.
+- Ctrl N and Ctrl P move the highlight down and up, the way the arrows do.
+
+`PaletteItem.onSelect` is optional now, because a row that opens a page needs none. TypeScript passes every row that compiled in 0.11.
+
+Mail and calendar can now move their own desktop palettes onto the kit's parts, `<Palette>`, `<PaletteField>`, `<PaletteList>`, `<PaletteNote>`, `<PaletteLine>` and `<PaletteBody>` (see "Building a palette from its parts" under "The command palette"). This is where each feature of those two palettes goes:
+
+| What the app's palette does today | Where it goes |
+| --- | --- |
+| Opens on Ctrl K, but not inside the editor (mail) | `hotkey={false}`, the app's own listener, and `open`/`onOpenChange` |
+| Opens on `/` and from the sidebar's glass | `appKey`, or `open` from the app |
+| Turns finished operators into chips, removed by their X or by Backspace at the start (mail) | The chips in `start` on `<PaletteField>`, the words after them as the controlled `query`, and Backspace in `onKeyDown` |
+| Keeps the scope chip in the field (mail) | `start` |
+| Offers the rest of a name or a date as faint text that Tab or ArrowRight takes (mail) | `completion` |
+| Shows a busy spinner in place of the glass (mail) | `glyph` |
+| Ends the field with the filter (both) | `filter` |
+| Draws the date hint and the "Showing results for" lines (mail) | `<PaletteLine>` |
+| Lists people, companies, messages, files and commands under small headings, recents as one plain run (mail) | `results`, with a group that has no heading for the plain run |
+| Draws an avatar, an age and a second line of its own (mail) | `rowContent` on `<PaletteList>` |
+| Marks the words and not the chips (mail) | `marks` |
+| Opens a row's menu on right-click or ArrowRight (mail) | `menu` on the row |
+| Ends the list with "Show all", the Enter glyph only while highlighted (mail) | `tail`, or a group with no heading, and the Enter hint with `verb` |
+| Dims rows left from the last answer to 60% and holds Enter on one until it is current (mail) | `dim: "waiting"` on those rows |
+| Dims stored rows to 85% after a failed search, and offers Retry (mail) | `dim: true`, and `<PaletteNote tone="error" action>` |
+| Says "Searching…", "No matches in stored mail." and "Searching Gmail for older mail…" (mail) | `<PaletteNote>` lines inside `<PaletteList>`, and `emptyText` |
+| Stands at z 40 under compose (mail) | `zIndex={40}` |
+| Hands focus on to Settings or compose as it closes (mail) | `finalFocus` |
+| Groups Say it, Events, Calendars and Actions (calendar) | `sources` or `results`, in that order |
+| Draws an event in its calendar's colour, its time at the right, a past event muted (calendar) | `icon`, `meta`, and `className` on the row |
+| Shows or hides a calendar from its row (calendar) | `meta` saying Show or Hide, and `keepOpen` where it should stay |
+| Shows each action's own key (calendar) | `keys` |
+| Says "Showing 30 of 112" under the events (calendar) | `note` on the group or the source's answer |
+| Replaces the list with the sentence's questions, which the keys answer (calendar) | `<PaletteBody status>` in the list's place, `readOnly` and `onKeyDown` on the field |
+| Lets Escape close the filter, then the questions, then the palette (calendar) | The filter's own Escape comes first, then `onEscape`, then the kit |
+| Says the questions' progress to a screen reader (calendar) | `status` on `<PaletteBody>` |
+| Wraps the arrows from the last row to the first (calendar) | Base UI's Autocomplete, which loops by default |
+| Keeps its own focus trap, outside-click listener, fade copy and z values (calendar) | Nothing: the kit's dialog does each of them |
+
+Three features have a home and change as they move. Mail's per-row Enter waits for the highlighted row to stop waiting and then runs that row, as mail's does, but a whole list from an earlier query is the kit's stale list, which dims after 120ms and holds the arrows too. Calendar's Say it row keeps its Enter cap only while it is highlighted, which it is as the list appears. Calendar's actions pick up the score's finds, which the owner chose for every app.
+
+`<PhoneSearch>` takes `sources`, `actions` and `actionsHeading`, the same types the palette takes. An app can hand both surfaces one search and delete the second copy it wrote for the phone. `sections`, `results` and `children` work as they did, and win over the sources, so an app can move one surface at a time. A row of either kind takes a long press: a `menu` opens the family's menu at the finger, and `onLongPress` is the app's own hold. Mail can drop the copy of the kit's row it drew to give People one.
 
 ## Moving an app from 0.10.6 to 0.11
 
@@ -866,9 +914,9 @@ import { CommandPalette } from "@dalin/kit/components";
 />
 ```
 
-One palette for the four apps: a Base UI Dialog holding an inline Autocomplete, 600px wide and frosted, with the app dimmed behind it. It starts from calendar's palette and takes mail's search palette look. Mount it once at the app's root. It needs `palette.css` and `menu.css`.
+One palette for the four apps: a Base UI Dialog holding an inline Autocomplete, 600px wide and frosted, with the app dimmed behind it. It starts from calendar's palette and takes mail's search palette look. Mount it once at the app's root. It needs `palette.css` and `menu.css`. It is built from parts an app can build its own palette on (see "Building a palette from its parts" below).
 
-Ctrl K opens and closes it (Cmd K on a Mac). The app's own key opens it too, when pressed outside a text field. The caret is in the field as it opens. The arrows move the focus, which always rests on a row, Enter runs that row, and Escape or a press outside closes the palette.
+Ctrl K opens and closes it (Cmd K on a Mac). The app's own key opens it too, when pressed outside a text field. The caret is in the field as it opens. The arrows move the focus, and so do Ctrl N and Ctrl P, as in cmdk, except while an IME is composing. Chrome on Windows and Linux keeps Ctrl N for a new window and never hands it to the page, so there only Ctrl P moves the highlight. The focus always rests on a row, Enter runs that row, and Escape or a press outside closes the palette.
 
 Results come in groups under sentence-case headings, and the words of the query are marked in each row's title and second line. The focused row shows an Enter keycap in the slot its own shortcut sits in. That slot is on every row, so nothing in a row moves as the focus does.
 
@@ -881,7 +929,7 @@ Per the curator's motion rule, opening it from the keyboard does not animate, an
 | Prop | Default | What it does |
 | --- | --- | --- |
 | `sources` | none | What the palette searches, in the order the groups show. Keep the array stable between renders. |
-| `actions` | none | The app's actions. The palette filters them itself and lists them last. |
+| `actions` | none | The app's actions. The palette ranks them itself and lists them last. |
 | `actionsHeading` | `"Actions"` | The heading over the actions. |
 | `open`, `onOpenChange` | the palette owns it | For an app that owns the open state, such as one with a search button. |
 | `hotkey` | `true` | Whether Ctrl K opens and closes it. An editor that uses Ctrl K for links turns it off there. |
@@ -911,11 +959,65 @@ A row, whether a result or an action, is a `PaletteItem`:
 | `keywords` | More words the action filter may match, beside the title. |
 | `done` | Draws the title struck through and muted. |
 | `keepOpen` | Leaves the palette open after the row runs. |
-| `onSelect` | Required. The palette has closed by the time it runs, unless `keepOpen`. |
+| `onSelect` | Required, unless the row opens a `page`. The palette has closed by the time it runs, unless `keepOpen`. |
+| `page` | A page the row opens in the same field (see "Pages"). |
+| `menu` | What else the row can do, as a menu (see "A row's menu"). |
 
-The action filter needs every word of the query, in any order, in the title or the keywords, and ignores case and accents. `matchesQuery`, `matchParts`, `queryTerms` and `fold` are that rule, exported for a source that wants to match and mark the same way.
+The actions are ranked as well as filtered. A row that holds every word of the query, in any order, in its title or keywords comes first, as in 0.11, and these rows are ordered by cmdk's command-score: "arch" puts "Archive" above "Show the archive". After them come the rows that do not hold every word but score 0.1 or more (`SCORE_FLOOR`), so "np" finds "New page", "swm" finds "Switch to Month view" and "todo" finds "New to-do list". Rows that score the same keep the app's order, and the matching ignores case and accents. A source keeps its own ranking. `rankActions`, `scoreQuery` and `commandScore` are exported for one that wants the palette's, beside `matchesQuery`, `matchParts`, `queryTerms` and `fold`.
 
-`--dl-palette-z` is the dim's z-index (90, over the menus), and `--dl-palette-dim` is its fill, `--dl-scrim` unless set.
+A row the score found marks letters, since it may hold none of the words. The query's letters are walked along the title in order: a letter that follows the last one marked is taken there, otherwise at the next word that starts with it, otherwise wherever it next appears. "todo" marks "to" and "do" in "New to-do list", and "np" marks the N and the P of "New page". When the letters matched the keywords and not the title, nothing is marked. `scoreParts` is that rule.
+
+command-score is copied from cmdk 1.1.1 into `src/components/command-score.ts`, under its MIT notice (Paco Coursey, from Superhuman's command-score). The kit adds types and one non-null assertion, and changes nothing else.
+
+`--dl-palette-z` is the dim's z-index (90, over the menus), and `--dl-palette-dim` is its fill, `--dl-scrim` unless set. `zIndex` on `<Palette>` sets the first for one palette.
+
+### Pages
+
+A row can open a page in the same field, as cmdk's nested pages do: "Move to…", then the folders. Give the row a `page`, `{ id, crumb, placeholder, sources, actions, actionsHeading, emptyText }`. Choosing the row opens the page with an empty field, its own placeholder and its own list, and the page's name sits before the words as a crumb. Backspace in an empty field goes back one page with the words the parent had, and so does Escape. Pressing a crumb goes back to it. Escape on the first page closes the palette. The stale list and the held Enter work the same on every page: a list from the page before is stale until the new page's sources answer.
+
+### A row's menu
+
+`menu` on a row is what else it can do, as entries `{ label, onSelect, destructive, keepOpen }` with `"separator"` between groups. A right click on the row opens it at the pointer, and ArrowRight with the caret at the end of the field opens it under the highlighted row. The row stays lit while its menu is open. An entry closes the palette as a row does, unless it says `keepOpen`. The menu stands over the palette, as the filter's does.
+
+### Building a palette from its parts
+
+`<CommandPalette>` is `<Palette>` with `<PaletteField>` and `<PaletteList>` in it. An app whose palette needs more builds on those parts and keeps the dialog, the keys, the motion rule, the toast's place in Tab and the stale-list machinery.
+
+```tsx
+import { Palette, PaletteField, PaletteLine, PaletteList, PaletteNote, usePalette } from "@dalin/kit/components";
+
+<Palette query={words} onQueryChange={setWords} results={results} zIndex={40} finalFocus={handBack}>
+  <PaletteField
+    glyph={busy ? <Spinner /> : undefined}
+    start={<Chips chips={chips} />}
+    completion={offer ? { suffix: offer.suffix, onAccept: accept } : null}
+    onKeyDown={removeLastChipOnBackspace}
+    filter={<SearchFilterMenu />}
+  />
+  {hint ? <PaletteLine>{hint}</PaletteLine> : null}
+  <PaletteList rowContent={(row) => <MailRow row={row} />}>
+    {failed ? <PaletteNote tone="error" action={{ label: "Retry", onClick: retry }}>Search could not finish.</PaletteNote> : null}
+  </PaletteList>
+</Palette>
+```
+
+`<Palette>` takes every prop `<CommandPalette>` takes except `filter`, which belongs to the field. It adds these:
+
+| Prop | What it does |
+| --- | --- |
+| `query`, `onQueryChange` | For an app that owns the words. The palette clears its own words as it closes; an app that owns them decides what an opening starts from. |
+| `results` | The app's own list, `{ groups, query, busy }`, in place of `sources` and `actions`. While `query` differs from the words in the field, the list is stale and Enter is held. |
+| `tail` | Rows that end the list under no heading, after any late group: mail's "Show all". A function of the words the list answers. |
+| `marks` | The words to mark, from the words the list answers. |
+| `onEscape` | Asked first on Escape. Return true when the key was the app's own, and the palette stays. |
+| `finalFocus` | Base UI's, for an app that hands focus on as the palette closes. |
+| `zIndex` | Written as `--dl-palette-z` on the dim and the panel, for an app that stands the palette under a window of its own. |
+
+`<PaletteField>` is the field row. `glyph` replaces the magnifying glass. `start` and `end` sit inside the row before and after the words, `filter` before the Esc cap. `completion` is `{ suffix, onAccept }`, faint text after the words that Tab or ArrowRight at the end takes. Pass null while there is nothing to offer, and leave it out in a palette that never offers one, since the field wraps the input for it. `onKeyDown` hears every key before the palette does, and `preventDefault()` keeps a key from the palette and from Base UI. `readOnly` and `busy` go to the input.
+
+`<PaletteList>` is the list, with `emptyText`, `rowContent` for a row whose insides the kit's anatomy does not fit (the keys and the Enter hint still end it), and children drawn under the rows. `<PaletteNote>` is a line there, `tone="error"` for the red alert and `action` for its button. `<PaletteLine>` is a line under the field row. `<PaletteBody status>` takes the list's place, for calendar's questions about a sentence: draw it instead of `<PaletteList>`, answer its keys in the field's `onKeyDown`, and the status region says `status`. `usePalette()` reads the words, the list, the failed sources and `retry` from inside the palette.
+
+A group, whether a source's or the app's, may carry a `note`, a line under its rows ("Showing 30 of 112"). A source can answer `{ items, note }` for that. A group with no heading draws none. A row may carry `dim` (`true` for 85%, `"waiting"` for 60% after 120ms, with Enter on it held until it is current), `className`, and `data`, which the kit never reads.
 
 ## The phone header and search
 
@@ -975,6 +1077,7 @@ Before a word is typed it shows what calendar's search shows. First comes the ap
 | `action` | none | `{ label, icon, onSelect }`: the row in the accent. |
 | `sections` | none | Shown before any query. |
 | `results` | none | Shown for a query. An empty array says nothing was found. |
+| `sources`, `actions`, `actionsHeading` | none | The palette's own search, for both surfaces (see "One search for the phone and the desktop"). |
 | `children` | none | The app's own results for a query, in place of `results`. |
 | `beforeQuery` | none | The app's own content before a query, under the sections. |
 | `covered` | `false` | Hides the sheet under something the app draws over it, without closing search. |
@@ -1008,6 +1111,23 @@ The sheet registers itself as a toast cover, so a toast raised while it is open 
 A toast over the sheet stays usable. A press on it leaves search open, and its action is in the sheet's tab order: Tab on the sheet's last stop goes to the toast, and Tab on the toast's last stop comes back to the field. Shift+Tab runs the same loop the other way. A toast the toaster holds out of the tab order, such as a tucked one, is skipped. The command palette does the same.
 
 The results follow the on-screen keyboard. A phone lays its keyboard over the page without resizing it, so the sheet measures what the keyboard covers from `visualViewport` and writes it on itself as `--dl-phone-kb`. `phone.css` pads the list by that much, and the last result scrolls clear of the keys. Where the sheet has measured nothing, the list reads the app's own `--kb-inset`, the name mail, calendar and notes already use. An app that padded the results itself can delete that rule.
+
+### One search for the phone and the desktop
+
+`<PhoneSearch>` takes the palette's own `sources`, `actions` and `actionsHeading`, with the same types, so one definition drives both surfaces:
+
+```tsx
+const sources = useMemo(() => searchSources(filter), [filter]);
+
+<CommandPalette sources={sources} actions={actions} />
+<PhoneSearch open={searching} onOpenChange={setSearching} sources={sources} actions={actions} action={newPage} />
+```
+
+Before a word is typed, each source's answer to `""` is a section, under the action row and before `sections`. The actions are not listed then, since the action row leads. With a query, the sources' groups and the ranked actions are the sections, and the query's words are marked in their rows. The list changes only once every source has answered, as the palette's does. Until then the old rows stay and a tap on one runs nothing, and a source slower than `SOURCE_WAIT_MS` joins at the end. The sheet does not dim a stale list, since nothing on it fades. `emptyText` says when nothing was found.
+
+`results` and `children` win over the sources, and `sections` is still drawn after them, so an app moves over one surface at a time. A row with a `page` runs only its `onSelect` on the phone, which has no pages.
+
+A row takes a long press: 450ms of a still finger, or a right click. A `menu`, on a source's row or on a `PhoneSearchRow`, opens the family's menu at the finger, and the row stays lit while it is up. The click the lifting finger makes is swallowed, so the row does not also open. `onLongPress` on a `PhoneSearchRow` is a hold of the app's own, for a row whose hold is no menu.
 
 `phone.css` reads three variables: `--dl-phone-inset` (16px), `--dl-phone-fill` (the sheet's fill, `#151515`) and `--dl-phone-search-z` (50, over the bottom bar).
 
@@ -1354,11 +1474,11 @@ import { TipKey, shortcutLabel } from "@dalin/kit";
 
 That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel` takes `Mod`, `Shift` and `Alt` for the platform's keys and writes every other key as given. `<TipKey>` draws the dot and the key in the muted grey, or in the app's own `className`, and renders nothing without a key. `tipText("Archive", "E")` is the same line as a string. `shortcutLabelFor(mac, keys)` and `isMacPlatform(platform)` are the pure halves. The tooltip itself stays each app's own.
 
-## Not in version 0.11
+## Not in version 0.12
 
 These are still open, so the kit has no value for them: type sizes, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
 
-These are decided and not built yet. The phone's bottom bar is glass tokens here and still each app's own component. The tooltip is frosted by the tokens and stays each app's own. The sheet is built, and no app has moved a surface onto it yet. It has no snap points, since no app's sheet rests at more than one height.
+These are decided and not built yet. The phone's bottom bar is glass tokens here and still each app's own component. The tooltip is frosted by the tokens and stays each app's own. The sheet is built, and no app has moved a surface onto it yet. The palette's parts are built, and mail and calendar still draw their own desktop palettes. It has no snap points, since no app's sheet rests at more than one height.
 
 Five requests from the wave 1 reviews are also waiting: holding a toast until a pill is expected, a hook for the bar's measured footprint, a desktop dock for mail's compose chip, a prop that forces the toast's layout, and a per-part fade in `motion.css`.
 
