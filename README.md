@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10.5 is listed under "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
+Version 0.10 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette, the phone header with its search, the segmented control, the filter, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.10.6 is listed under "Moving an app from 0.10.5 to 0.10.6", "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
 
 ## Install
 
@@ -67,6 +67,10 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.10.5 to 0.10.6
+
+A pinned toast no longer draws the progress bar on the phone. The bar is there for a card tucked behind the pill, where only its top edge shows, and a pinned toast never tucks: it stands above the pill with its words in view. A send going out under the pin wore both the spinner and the sweep. An app on 0.10.5 changes only its pin.
 
 ## Moving an app from 0.10.4 to 0.10.5
 
@@ -453,7 +457,7 @@ A tick is not announced: progress that is still progress, a pinned countdown, or
 
 ### The progress kind and the default kind
 
-`toast.loading()` raises the progress kind (`toast-progress`): the app's accent in the same recipe as the other kinds, with a spinner as its icon. On the phone its card behind the pill wears a bar along the top edge that sweeps while the work runs. Put `PROGRESS_DONE_TOAST` on the result to keep that bar, solid green, until it times out. A plain toast can carry `PROGRESS_TOAST` itself with `<ToastSpinner />` as its `icon`.
+`toast.loading()` raises the progress kind (`toast-progress`): the app's accent in the same recipe as the other kinds, with a spinner as its icon. On the phone its card behind the pill wears a bar along the top edge that sweeps while the work runs. A pinned one draws no bar, since it never goes behind the pill. Put `PROGRESS_DONE_TOAST` on the result to keep that bar, solid green, until it times out. A plain toast can carry `PROGRESS_TOAST` itself with `<ToastSpinner />` as its `icon`.
 
 Two variables set how strong the accent is in that glass: `--dl-toast-progress-tint` (22%) and `--dl-toast-progress-rim` (36%). An app whose accent is strong lowers them on `:root`. Mail's violet sat at 12% with a 28% rim:
 

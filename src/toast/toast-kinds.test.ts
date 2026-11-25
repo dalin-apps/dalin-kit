@@ -171,11 +171,12 @@ describe("the countdown kind", () => {
     for (const [selector] of bar) {
       expect(selector, selector).toMatch(/\.toast-progress/);
       expect(selector, selector).not.toContain(".toast-countdown");
+      expect(selector, selector).not.toContain(".toast-pinned");
     }
   });
 
-  it("takes the bar off a countdown that carries a progress class too, from a heavier rule", () => {
-    const [selector, body] = rulesWith(css, ".toast-countdown:is(.toast-progress, .toast-progress-done)")[0]!;
+  it("takes the bar off a countdown or a pinned toast that carries a progress class too, from a heavier rule", () => {
+    const [selector, body] = rulesWith(css, ":is(.toast-countdown, .toast-pinned):is(.toast-progress, .toast-progress-done)")[0]!;
     expect(selector.startsWith(PHONE)).toBe(true);
     expect(body).toContain("content: none");
     for (const [drawn] of rulesWith(css, "::before").filter(([, rule]) => /toast-bar-sweep|top: 6px/.test(rule))) {

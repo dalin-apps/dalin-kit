@@ -541,11 +541,14 @@
   [data-sonner-toast].toast-progress-done:not([data-swiping="true"], [data-removed="true"])::before {
   background: oklch(0.62 0.14 155);
 }
-/* A countdown shows no bar, whatever else it carries: a countdown raised
-   with `toast.loading()`, or one that also has the progress class, would
-   otherwise sweep. One class heavier than the three rules above. */
+/* A countdown or a pinned toast shows no bar, whatever else it carries. The
+   bar is for a card tucked behind the pill, and a pinned toast never tucks:
+   it stands above the pill with its words showing, so a send going out under
+   the pin said so twice. A countdown raised with `toast.loading()`, or one
+   that also has the progress class, would otherwise sweep. One class heavier
+   than the three rules above. */
 [data-sonner-toaster][data-y-position="bottom"]:where(.toast-phone)
-  [data-sonner-toast].toast-countdown:is(.toast-progress, .toast-progress-done):not([data-swiping="true"], [data-removed="true"])::before {
+  [data-sonner-toast]:is(.toast-countdown, .toast-pinned):is(.toast-progress, .toast-progress-done):not([data-swiping="true"], [data-removed="true"])::before {
   content: none;
 }
 
