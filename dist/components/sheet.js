@@ -16,6 +16,8 @@ import { useToasterTab } from "./toaster-tab.js";
 export const SHEET_NO_DRAG_ATTR = "data-dl-no-drag";
 /** Base UI's own name for the same mark, which is what its Drawer reads. */
 const BASE_IGNORE_ATTR = "data-base-ui-swipe-ignore";
+/** The scrim's share of the kit's drawn travel, as a part of the panel's height (sheet.css). */
+const PULL_VAR = "--dl-sheet-pull";
 /** How far a sheet ranks as a toast dock: with the phone's search, over the bar and a parked chip. */
 const COVER_RANK = 50;
 /**
@@ -323,7 +325,7 @@ function mouseY(event) {
  *   next frame finishes it too, and a verdict belongs to its own release
  *   alone: no later move acts on it.
  */
-function useSheetGesture(viewport, panel, sheet) {
+function useSheetGesture(viewport, panel, scrim, sheet) {
     const { open, layout, swipe, gesture, distance, swipeClose } = sheet;
     const openedAt = useRef(0);
     useEffect(() => {
@@ -386,11 +388,22 @@ function useSheetGesture(viewport, panel, sheet) {
                 win.cancelAnimationFrame(frame);
             frame = 0;
         };
+        /**
+         * Draws the dropped travel on the panel, and on the scrim as its share
+         * of the panel's height, which the dim adds to Base UI's progress: the
+         * dim follows all the travel the panel shows.
+         */
         const showGap = (px) => {
-            if (px > 0)
+            const height = panel.offsetHeight;
+            if (px > 0) {
                 panel.style.setProperty("translate", `0 ${px}px`);
-            else
+                if (height > 0)
+                    scrim?.style.setProperty(PULL_VAR, String(px / height));
+            }
+            else {
                 panel.style.removeProperty("translate");
+                scrim?.style.removeProperty(PULL_VAR);
+            }
         };
         /** Reads the dropped travel once Base UI has the panel: the finger's travel less Base UI's. */
         const learnGap = () => {
@@ -594,7 +607,7 @@ function useSheetGesture(viewport, panel, sheet) {
                 win.removeEventListener(name, onEndAfter);
             }
         };
-    }, [viewport, panel, draggable, gesture, distance, swipeClose]);
+    }, [viewport, panel, scrim, draggable, gesture, distance, swipeClose]);
 }
 /**
  * Where Base UI puts the panel after one more move of `dy`: the travel adds
@@ -625,6 +638,7 @@ export function SheetContent({ label, container, keepMounted, scrim = true, hand
     // there.
     const [panel, setPanel] = useState(null);
     const [viewport, setViewport] = useState(null);
+    const [scrimNode, setScrimNode] = useState(null);
     // The app's own ref on the panel, beside the kit's.
     const appRef = useRef(ref);
     appRef.current = ref;
@@ -636,7 +650,7 @@ export function SheetContent({ label, container, keepMounted, scrim = true, hand
         else if (own)
             own.current = node;
     }, []);
-    useSheetGesture(viewport, panel, sheet);
+    useSheetGesture(viewport, panel, scrim ? scrimNode : null, sheet);
     // The sheet hides the bottom bar, so it is a cover for the toaster, for
     // as long as it is open. A closing sheet covers nothing.
     useEffect(() => {
@@ -657,7 +671,7 @@ export function SheetContent({ label, container, keepMounted, scrim = true, hand
     };
     // The depth and the app's own variables, on the parts that read them.
     const partStyle = depth > 0 || vars ? { ...vars, ...(depth > 0 ? { "--dl-sheet-depth": depth } : null) } : undefined;
-    return (_jsxs(Drawer.Portal, { container: container, keepMounted: keepMounted, children: [scrim ? (_jsx(Drawer.Backdrop, { forceRender: true, "data-slot": "sheet-scrim", className: cx("dl-sheet-scrim", scrimClassName), style: partStyle, ...marks })) : null, _jsx(Drawer.Viewport, { ref: setViewport, "data-slot": "sheet-viewport", className: cx("dl-sheet-viewport", viewportClassName), style: partStyle, "data-layout": layout, "data-kb": virtualKeyboard ? "base" : undefined, children: _jsxs(Drawer.Popup, { ref: panelRef, "data-slot": "sheet", "aria-label": label, "aria-modal": modal !== false ? true : undefined, ...marks, ...props, className: withClass("dl-sheet", className), children: [layout === "sheet" && handle ? _jsx(SheetHandle, {}) : null, layout === "dialog" ? (_jsx(Drawer.Close, { "data-slot": "sheet-x", className: "dl-sheet-x", "aria-label": closeLabel, children: _jsx(CloseGlyph, {}) })) : null, children] }) })] }));
+    return (_jsxs(Drawer.Portal, { container: container, keepMounted: keepMounted, children: [scrim ? (_jsx(Drawer.Backdrop, { ref: setScrimNode, forceRender: true, "data-slot": "sheet-scrim", className: cx("dl-sheet-scrim", scrimClassName), style: partStyle, ...marks })) : null, _jsx(Drawer.Viewport, { ref: setViewport, "data-slot": "sheet-viewport", className: cx("dl-sheet-viewport", viewportClassName), style: partStyle, "data-layout": layout, "data-kb": virtualKeyboard ? "base" : undefined, children: _jsxs(Drawer.Popup, { ref: panelRef, "data-slot": "sheet", "aria-label": label, "aria-modal": modal !== false ? true : undefined, ...marks, ...props, className: withClass("dl-sheet", className), children: [layout === "sheet" && handle ? _jsx(SheetHandle, {}) : null, layout === "dialog" ? (_jsx(Drawer.Close, { "data-slot": "sheet-x", className: "dl-sheet-x", "aria-label": closeLabel, children: _jsx(CloseGlyph, {}) })) : null, children] }) })] }));
 }
 /**
  * The grab handle: a strip with the family's pill on it. `<SheetContent>`

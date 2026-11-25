@@ -1413,6 +1413,53 @@ describe("<Sheet>, the travel a phone keeps back", () => {
   });
 });
 
+describe("<Sheet>, the dim over the travel a phone keeps back", () => {
+  /** The scrim's opacity by sheet.css's rule, from what the kit and Base UI wrote on it. */
+  const dim = (lift = 0.55) => {
+    const style = scrim()!.style;
+    const progress = Number.parseFloat(style.getPropertyValue("--drawer-swipe-progress")) || 0;
+    const pull = Number.parseFloat(style.getPropertyValue("--dl-sheet-pull")) || 0;
+    return 1 - Math.min(1, progress + pull) * lift;
+  };
+
+  // Notes pins the family's rule: the dim is 1 - travel / height x 0.55,
+  // for all the travel the panel shows, the kit's share with Base UI's.
+  for (const part of [".dl-sheet-handle", ".dl-sheet-title"]) {
+    it(`follows all 60px of a finger on a 300px sheet, from ${part === ".dl-sheet-handle" ? "the handle" : "the body"}`, async () => {
+      await open({ height: 300 });
+      const el = one(part)!;
+      await drag(el, [
+        [316, 50],
+        [340, 200],
+        [360, 200],
+      ]);
+      // Base UI has the panel at 44px, and the kit draws the 16px it dropped.
+      expect(travel()).toBe(44);
+      expect(panel()!.style.getPropertyValue("translate")).toBe("0 16px");
+      expect(dim()).toBeCloseTo(1 - (60 / 300) * 0.55, 3);
+      await release(el, 200, "touchcancel");
+      expect(scrim()!.style.getPropertyValue("--dl-sheet-pull")).toBe("");
+      expect(dim()).toBe(1);
+    });
+  }
+
+  it("settles back to a full dim on a release that settles", async () => {
+    const log = await open({ height: 300 });
+    const grip = one(".dl-sheet-handle")!;
+    await drag(grip, [
+      [316, 50],
+      [340, 300],
+      [360, 300],
+    ]);
+    expect(dim()).toBeLessThan(0.9);
+    await release(grip, 200);
+    expect(log).toEqual([]);
+    expect(dragged()).toBe(false);
+    expect(scrim()!.style.getPropertyValue("--dl-sheet-pull")).toBe("");
+    expect(dim()).toBe(1);
+  });
+});
+
 describe("<Sheet>, a press in its first half second", () => {
   it("lets a tap on a button and on an option through, and holds back only a drag", async () => {
     const pressed = vi.fn();
@@ -1677,7 +1724,9 @@ describe("sheet.css", () => {
   it("dims the page with the family's scrim, lifting as the panel goes down", () => {
     const dim = ruleFor(css, ".dl-sheet-scrim");
     expect(dim).toContain("background: var(--dl-sheet-scrim, var(--dl-scrim, rgb(0 0 0 / 0.62)))");
-    expect(dim).toContain("opacity: calc(1 - var(--drawer-swipe-progress, 0) * var(--dl-sheet-lift, 0.55))");
+    expect(dim.replace(/\s+/g, " ")).toContain(
+      "opacity: calc( 1 - min(1, var(--drawer-swipe-progress, 0) + var(--dl-sheet-pull, 0)) * var(--dl-sheet-lift, 0.55) )",
+    );
     expect(dim).toContain("transition: opacity var(--dl-t-sheet, 260ms)");
     expect(ruleFor(css, ".dl-sheet-scrim[data-swiping]")).toBe("transition: none;");
     expect(ruleFor(css, ".dl-sheet-scrim:is([data-starting-style], [data-ending-style])")).toBe("opacity: 0;");

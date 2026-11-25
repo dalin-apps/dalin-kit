@@ -191,6 +191,8 @@ export type SheetProps = {
 export const SHEET_NO_DRAG_ATTR = "data-dl-no-drag";
 /** Base UI's own name for the same mark, which is what its Drawer reads. */
 const BASE_IGNORE_ATTR = "data-base-ui-swipe-ignore";
+/** The scrim's share of the kit's drawn travel, as a part of the panel's height (sheet.css). */
+const PULL_VAR = "--dl-sheet-pull";
 /** What `noSheetDrag()` returns: the kit's mark and Base UI's, with the same value. */
 export type SheetNoDragProps = { [SHEET_NO_DRAG_ATTR]: string; [BASE_IGNORE_ATTR]: string };
 /** How far a sheet ranks as a toast dock: with the phone's search, over the bar and a parked chip. */
@@ -564,7 +566,12 @@ function mouseY(event: Event): number | null {
  *   next frame finishes it too, and a verdict belongs to its own release
  *   alone: no later move acts on it.
  */
-function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null, sheet: SheetContextValue): void {
+function useSheetGesture(
+  viewport: HTMLElement | null,
+  panel: HTMLElement | null,
+  scrim: HTMLElement | null,
+  sheet: SheetContextValue,
+): void {
   const { open, layout, swipe, gesture, distance, swipeClose } = sheet;
   const openedAt = useRef(0);
   useEffect(() => {
@@ -623,9 +630,20 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
       if (frame) win.cancelAnimationFrame(frame);
       frame = 0;
     };
+    /**
+     * Draws the dropped travel on the panel, and on the scrim as its share
+     * of the panel's height, which the dim adds to Base UI's progress: the
+     * dim follows all the travel the panel shows.
+     */
     const showGap = (px: number) => {
-      if (px > 0) panel.style.setProperty("translate", `0 ${px}px`);
-      else panel.style.removeProperty("translate");
+      const height = panel.offsetHeight;
+      if (px > 0) {
+        panel.style.setProperty("translate", `0 ${px}px`);
+        if (height > 0) scrim?.style.setProperty(PULL_VAR, String(px / height));
+      } else {
+        panel.style.removeProperty("translate");
+        scrim?.style.removeProperty(PULL_VAR);
+      }
     };
     /** Reads the dropped travel once Base UI has the panel: the finger's travel less Base UI's. */
     const learnGap = () => {
@@ -815,8 +833,9 @@ function useSheetGesture(viewport: HTMLElement | null, panel: HTMLElement | null
         win.removeEventListener(name, onEndAfter);
       }
     };
-  }, [viewport, panel, draggable, gesture, distance, swipeClose]);
+  }, [viewport, panel, scrim, draggable, gesture, distance, swipeClose]);
 }
+
 
 /**
  * Where Base UI puts the panel after one more move of `dy`: the travel adds
@@ -904,6 +923,7 @@ export function SheetContent({
   // there.
   const [panel, setPanel] = useState<HTMLDivElement | null>(null);
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
+  const [scrimNode, setScrimNode] = useState<HTMLDivElement | null>(null);
   // The app's own ref on the panel, beside the kit's.
   const appRef = useRef(ref);
   appRef.current = ref;
@@ -914,7 +934,7 @@ export function SheetContent({
     else if (own) own.current = node;
   }, []);
 
-  useSheetGesture(viewport, panel, sheet);
+  useSheetGesture(viewport, panel, scrim ? scrimNode : null, sheet);
 
   // The sheet hides the bottom bar, so it is a cover for the toaster, for
   // as long as it is open. A closing sheet covers nothing.
@@ -942,6 +962,7 @@ export function SheetContent({
     <Drawer.Portal container={container} keepMounted={keepMounted}>
       {scrim ? (
         <Drawer.Backdrop
+          ref={setScrimNode}
           forceRender
           data-slot="sheet-scrim"
           className={cx("dl-sheet-scrim", scrimClassName)}

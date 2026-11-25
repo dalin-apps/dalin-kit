@@ -1149,6 +1149,8 @@ So where Base UI holds the panel from the press (the handle, or a body with noth
 
 Measured in headless Chromium at 390 by 844 before the fix, a drag from the handle stayed put for 16px and then trailed the finger by 16px, so a slow close needed 112px of finger. It now follows from 2px and closes past 96px.
 
+The dim follows the same travel. The scrim lifts by 1 - travel / height x `--dl-sheet-lift`, counting the kit's part of the travel as well as Base UI's, from the handle and from the body. Before, it read Base UI's part alone and trailed the panel by the 16px the kit draws: on a 300px sheet dragged 60px it read 0.919 where the rule gives 0.890. A release that settles takes the dim back to full.
+
 A sheet follows one finger. A second finger on the glass neither starts a drag of its own nor ends this one.
 
 A region with gestures of its own opts out with `noSheetDrag()`, which writes the kit's `data-dl-no-drag` and Base UI's `data-base-ui-swipe-ignore`:

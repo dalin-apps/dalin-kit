@@ -65,8 +65,12 @@
   inset: 0;
   z-index: calc(var(--dl-sheet-z, var(--dl-z-sheet, 55)) + var(--dl-sheet-depth, 0));
   background: var(--dl-sheet-scrim, var(--dl-scrim, rgb(0 0 0 / 0.62)));
-  /* Lifts as the panel is dragged away, at the rate the finger asks for. */
-  opacity: calc(1 - var(--drawer-swipe-progress, 0) * var(--dl-sheet-lift, 0.55));
+  /* Lifts as the panel is dragged away, at the rate the finger asks for:
+     Base UI's progress, and the travel the kit draws before Base UI has a
+     move (sheet.tsx, --dl-sheet-pull). */
+  opacity: calc(
+    1 - min(1, var(--drawer-swipe-progress, 0) + var(--dl-sheet-pull, 0)) * var(--dl-sheet-lift, 0.55)
+  );
   transition: opacity var(--dl-t-sheet, 260ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 .dl-sheet-scrim:is([data-starting-style], [data-ending-style]) {
