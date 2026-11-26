@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cx } from "./cx.js";
 import { CheckGlyph, ChevronLeftGlyph, ChevronRightGlyph, FilterGlyph } from "./icons.js";
 import { Menu, MenuContent, MenuGroup, MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem, MenuSeparator, MenuSub, MenuSubContent, MenuSubTrigger, MenuTrigger, } from "./menu.js";
@@ -56,25 +56,28 @@ export function FilterMenu({ label = "Filters", dot = null, choice, facets = [],
     const shown = phone && page ? facets.find((f) => f.key === page) ?? null : null;
     // What had focus as the menu opened: the field the control ends, since a
     // press on the glyph leaves the caret there. Base UI hands focus back to
-    // the glyph as the menu closes, and only when nothing else has taken it
-    // since (a dialog a pick opened keeps it). While the menu is closing, that
-    // return is passed on to the field, so the next word typed lands there. A
-    // function in `finalFocus` would skip Base UI's check, so this is done on
-    // the glyph's focus instead.
+    // the glyph once the menu has left the page, and the glyph passes that on
+    // to the field, so the next word typed lands there. A function in
+    // `finalFocus` would send focus to the field whatever had taken it since,
+    // so this is done on the glyph's focus instead.
+    //
+    // `owed` says a close still has that return coming. It is set as the menu
+    // starts to close and ends with the first of three things: the glyph takes
+    // focus (the return, passed on), the menu opens again, or the menu has
+    // left and Base UI has had its turn (`<MenuGone>`, which covers a close
+    // that sends the glyph nothing, such as Tab out of the menu). After that
+    // the glyph keeps any focus it is given, so the reader's own Tab reaches
+    // it. Nothing here is timed: until 0.14.1 the return was owed for 400ms
+    // from the close, and a menu that took longer to leave on a loaded machine
+    // left focus on the glyph.
     const before = useRef(null);
-    const closing = useRef(null);
+    const owed = useRef(false);
     const setOpen = (next) => {
         if (next) {
             const active = typeof document === "undefined" ? null : document.activeElement;
             before.current = active instanceof HTMLElement && active !== document.body ? active : null;
         }
-        else if (typeof window !== "undefined") {
-            if (closing.current !== null)
-                window.clearTimeout(closing.current);
-            closing.current = window.setTimeout(() => {
-                closing.current = null;
-            }, 400);
-        }
+        owed.current = !next;
         setOpenState(next);
         onOpenChange?.(next);
         if (!next) {
@@ -84,10 +87,9 @@ export function FilterMenu({ label = "Filters", dot = null, choice, facets = [],
     };
     const passFocusOn = (e) => {
         const field = before.current;
-        if (closing.current === null || finalFocus !== undefined)
+        if (!owed.current || finalFocus !== undefined)
             return;
-        window.clearTimeout(closing.current);
-        closing.current = null;
+        owed.current = false;
         // Opened from the keyboard, focus was on the glyph, and it stays there.
         if (!field || field === e.currentTarget || !field.isConnected)
             return;
@@ -101,7 +103,22 @@ export function FilterMenu({ label = "Filters", dot = null, choice, facets = [],
     const rest = groups
         .filter((group) => group.length > 0)
         .map((group, i) => _jsx(MenuGroupRows, { rule: i > 0, rows: group }, i));
-    return (_jsxs(Menu, { open: open, onOpenChange: setOpen, children: [tooltip ? tooltip(trigger, label) : trigger, _jsx(MenuContent, { align: align, className: cx("dl-filter-menu", menuClassName), "data-variant": variant, finalFocus: finalFocus, children: shown ? (_jsxs(_Fragment, { children: [_jsxs(MenuItem, { closeOnClick: false, className: "dl-filter-back", onClick: () => openPage(null), children: [_jsx(ChevronLeftGlyph, {}), shown.label] }), _jsx(MenuSeparator, {}), _jsx(FacetRows, { facet: shown })] })) : (_jsxs(_Fragment, { children: [choice ? (_jsxs(_Fragment, { children: [_jsxs(MenuGroup, { children: [_jsx(MenuLabel, { children: choice.label }), _jsx(MenuRadioGroup, { value: choice.value, onValueChange: (value) => choice.onChange(String(value)), children: choice.options.map((option) => (_jsx(MenuRadioItem, { value: option.value, closeOnClick: choice.closes || undefined, children: option.label }, option.value))) })] }), facets.length || groups.some((g) => g.length) ? _jsx(MenuSeparator, {}) : null] })) : null, facets.map((facet) => phone ? (_jsxs(MenuItem, { closeOnClick: false, onClick: () => openPage(facet.key), children: [_jsx("span", { className: "dl-filter-text", children: facet.label }), _jsx(ChevronRightGlyph, { className: "dl-menu-end dl-menu-chevron" })] }, facet.key)) : (_jsxs(MenuSub, { onOpenChange: (next) => (next ? onFacetOpen?.(facet.key) : undefined), children: [_jsx(MenuSubTrigger, { children: facet.label }), _jsx(MenuSubContent, { className: "dl-filter-sub", children: _jsx(FacetRows, { facet: facet }) })] }, facet.key))), rest] })) })] }));
+    return (_jsxs(Menu, { open: open, onOpenChange: setOpen, children: [tooltip ? tooltip(trigger, label) : trigger, _jsxs(MenuContent, { align: align, className: cx("dl-filter-menu", menuClassName), "data-variant": variant, finalFocus: finalFocus, children: [_jsx(MenuGone, { owed: owed }), shown ? (_jsxs(_Fragment, { children: [_jsxs(MenuItem, { closeOnClick: false, className: "dl-filter-back", onClick: () => openPage(null), children: [_jsx(ChevronLeftGlyph, {}), shown.label] }), _jsx(MenuSeparator, {}), _jsx(FacetRows, { facet: shown })] })) : (_jsxs(_Fragment, { children: [choice ? (_jsxs(_Fragment, { children: [_jsxs(MenuGroup, { children: [_jsx(MenuLabel, { children: choice.label }), _jsx(MenuRadioGroup, { value: choice.value, onValueChange: (value) => choice.onChange(String(value)), children: choice.options.map((option) => (_jsx(MenuRadioItem, { value: option.value, closeOnClick: choice.closes || undefined, children: option.label }, option.value))) })] }), facets.length || groups.some((g) => g.length) ? _jsx(MenuSeparator, {}) : null] })) : null, facets.map((facet) => phone ? (_jsxs(MenuItem, { closeOnClick: false, onClick: () => openPage(facet.key), children: [_jsx("span", { className: "dl-filter-text", children: facet.label }), _jsx(ChevronRightGlyph, { className: "dl-menu-end dl-menu-chevron" })] }, facet.key)) : (_jsxs(MenuSub, { onOpenChange: (next) => (next ? onFacetOpen?.(facet.key) : undefined), children: [_jsx(MenuSubTrigger, { children: facet.label }), _jsx(MenuSubContent, { className: "dl-filter-sub", children: _jsx(FacetRows, { facet: facet }) })] }, facet.key))), rest] }))] })] }));
+}
+/**
+ * Ends a focus return nobody collected. It is mounted in the menu, so its
+ * cleanup runs as the menu leaves the page. Base UI returns focus in a
+ * microtask it queues from a layout cleanup of that same commit; a passive
+ * cleanup runs after every layout one, so the microtask queued here runs
+ * after Base UI's, and the glyph has had its focus by then if any was coming.
+ */
+function MenuGone({ owed }) {
+    useEffect(() => () => {
+        queueMicrotask(() => {
+            owed.current = false;
+        });
+    }, [owed]);
+    return null;
 }
 function MenuGroupRows({ rule, rows }) {
     return (_jsxs(_Fragment, { children: [rule ? _jsx(MenuSeparator, {}) : null, rows.map((option) => (_jsx(OptionRow, { option: option }, option.key)))] }));
