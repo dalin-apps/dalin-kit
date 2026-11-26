@@ -1545,3 +1545,17 @@ The component tests run the real Base UI parts in jsdom, on the pinned 1.9.0. Th
 The toast tests run the real `<Toaster>` in jsdom. jsdom has no cascade to trust for `:where()` and `:has()`, so a test that needs to know which of two rules wins weighs their selectors with `test/css.ts`. A test about the docked phone stack that mounts no bar calls `withPill()` from `test/pill.ts`, since the toaster docks only beside a pill.
 
 The dev dependency is pinned to sonner 2.0.7, the version the apps ship. 2.0.8 is installed beside it as `sonner-next`, and `default-kind-next.test.ts` runs the default kind's suite on it. `sheet.test.tsx` drives the sheet's drag with touch events it builds itself. jsdom has no layout, so the test gives the panel a height, answers `elementFromPoint` with the element the finger is on, and writes each event's time. `toaster.test.ts` pins one rule that is easy to break: the toaster re-sends sonner a `pointerup` to clear a stuck flag, and that event must never go out while a pointer is down, or it ends any drag in progress.
+
+## Releasing
+
+The apps install the kit as `github:gomezsj12/dalin-kit#<sha>`, so an app PR can pin a commit that sits on an unmerged kit PR branch. Ship a stack of kit PRs by fast-forwarding, top of the stack first. Push the top PR's head SHA to each base branch in turn, then to `main`:
+
+```bash
+git push origin <sha>:refs/heads/<base>
+```
+
+GitHub marks every kit PR merged, and kit `main` becomes the exact SHA the apps pin. A merge or squash leaves the pinned SHA off `main`, so every app would need a re-pin and a re-test.
+
+Then collapse each app's PR stack from the top down with `gh pr merge <n> --merge`: the fix PR into its base, the next one down, and the bottom PR into the default branch last. Only the last merge reaches the default branch, so each app builds one production deploy. Bases named `no-preview/` build none.
+
+Production builds queue one at a time, so the last app waits for the others. If the Vercel MCP's `list_deployments` refuses, `vercel list <project> --scope <teamId> --environment production` from the app's checkout works.
