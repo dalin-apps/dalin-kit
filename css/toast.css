@@ -247,6 +247,20 @@
 [data-sonner-toaster].toast-phone.toast-still [data-sonner-toast] [data-button]:active {
   scale: none;
 }
+/* A pressable progress toast (`pressToast`, 0.13): on a computer a click on
+   the toast, or Enter or Space while it has focus, calls the app. It takes
+   the family's press, one step darker, unless the press is on its own
+   action. The kit marks the card `data-dl-press` only in the computer's
+   column, so the phone's tap still fans the stack. Its keyboard ring is the
+   family's, drawn inside the card's rim. */
+[data-sonner-toaster].toast-tuck [data-sonner-toast][data-dl-press]:active:not(:has([data-button]:active)) {
+  filter: brightness(var(--dl-press-dim, 0.92));
+}
+[data-sonner-toaster].toast-tuck [data-sonner-toast][data-dl-press]:focus-visible {
+  outline: var(--dl-focus-w, 2px) solid var(--dl-focus-ring, var(--dl-fg, #fff)) !important;
+  outline-offset: calc(-1 * var(--dl-focus-w, 2px)) !important;
+  box-shadow: 0 8px 24px oklch(0 0 0 / 0.35) !important;
+}
 /* A disabled action: the family's disabled look (2026-11-23), 45% opaque
    with the normal cursor, and no hover or press (the rules above leave it
    out). */

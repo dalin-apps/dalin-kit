@@ -9,6 +9,7 @@ export {
 export { PROGRESS_DONE_TOAST, ToastSpinner } from "./toast-spinner.js";
 export { ToastBand, type ToastBandProps } from "./toast-band.js";
 export { toastLine } from "./toast-line.js";
+export { TOAST_PRESS_ATTR, pressToast, readToastPress, type ToastPress } from "./toast-press.js";
 export { announcesUpdate, faceOf, textOf, type ToastFace } from "./toast-update.js";
 export {
   DEFAULT_PILL_SELECTOR,

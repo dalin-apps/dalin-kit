@@ -34,6 +34,8 @@ export {
   type MenuLinkItemProps,
   type MenuShortcutProps,
   type MenuSubTriggerProps,
+  MENU_PICKED_ATTR,
+  markMenuPick,
 } from "./menu.js";
 export {
   ContextMenu,
@@ -62,6 +64,7 @@ export {
   type PaletteItem,
   type PaletteMenuEntry,
   type PalettePage,
+  type PaletteSelection,
   type PaletteSource,
 } from "./command-palette.js";
 export {
@@ -83,7 +86,7 @@ export {
   type PaletteProps,
   type PaletteRowState,
 } from "./palette.js";
-export { ACTIONS_GROUP, usePaletteResults, type PaletteResults, type PaletteResultsOptions } from "./palette-results.js";
+export { ACTIONS_GROUP, SELECTION_GROUP, usePaletteResults, type PaletteResults, type PaletteResultsOptions } from "./palette-results.js";
 export { commandScore } from "./command-score.js";
 export {
   SCORE_FLOOR,

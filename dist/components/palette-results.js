@@ -8,6 +8,8 @@ import { rankActions } from "./palette-match.js";
 export const SOURCE_WAIT_MS = 400;
 /** The id of the actions' group. */
 export const ACTIONS_GROUP = "dl:actions";
+/** The id of the selection's group, which leads the list. */
+export const SELECTION_GROUP = "dl:selection";
 const NOTHING_SHOWN = { query: null, scope: "", groups: [], late: [], failed: [], actions: [], actionsHeading: "" };
 const NO_TAIL = [];
 function isPromise(value) {
@@ -23,7 +25,7 @@ function normalize(answer) {
  * at the end, and ranks the actions against the query the list answers, so
  * the whole list changes at once.
  */
-export function usePaletteResults({ active, query, scope = "", sources, actions, actionsHeading, actionsNeedWords = false, tail, }) {
+export function usePaletteResults({ active, query, scope = "", sources, actions, actionsHeading, selection, actionsNeedWords = false, tail, }) {
     const [shown, setShown] = useState(NOTHING_SHOWN);
     const [busy, setBusy] = useState(0);
     const [attempt, setAttempt] = useState(0);
@@ -134,15 +136,21 @@ export function usePaletteResults({ active, query, scope = "", sources, actions,
         for (const { item, byScore: scored } of ranked)
             if (scored)
                 byScore.add(item);
+        // The selection's verbs lead, on the page they were given for.
+        const verbs = selection && samePage ? rankActions(selection.items, answered) : [];
+        for (const { item, byScore: scored } of verbs)
+            if (scored)
+                byScore.add(item);
         const end = tail ? tail(answered) : NO_TAIL;
         const found = [
+            ...(selection ? [{ id: SELECTION_GROUP, heading: selection.heading, items: verbs.map(({ item }) => item) }] : []),
             ...shown.groups,
             { id: ACTIONS_GROUP, heading, items: ranked.map(({ item }) => item) },
             ...shown.late,
             { id: "dl:tail", items: [...end] },
         ];
         return { groups: found.filter((g) => g.items.length > 0), byScore };
-    }, [shown, scope, actions, actionsHeading, actionsNeedWords, tail]);
+    }, [shown, scope, actions, actionsHeading, selection, actionsNeedWords, tail]);
     const retry = useCallback(() => setAttempt((n) => n + 1), []);
     return { groups, answered: shown.query, stale, busy, failed: shown.failed, retry, byScore };
 }

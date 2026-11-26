@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useRef, type ComponentProps, type ReactNode } from "react";
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  type ComponentProps,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cx, withClass } from "./cx.js";
 import { CheckGlyph, ChevronRightGlyph } from "./icons.js";
@@ -165,13 +173,81 @@ export type MenuItemProps = MenuPrimitive.Item.Props & {
   inset?: boolean;
 };
 
-export function MenuItem({ className, variant = "default", inset, ...props }: MenuItemProps): ReactNode {
+/** The attribute a picked row, and every menu open as it was picked, carry while the menu closes. */
+export const MENU_PICKED_ATTR = "data-picked";
+
+/** How long the marks stay: the blink, the fade and room for a late frame. */
+const PICK_MARK_MS = 600;
+
+/** The row a pointer last let go on, and when, for a pick Base UI makes with a click of its own. */
+let lastPointerUp: { row: Element; at: number } | null = null;
+
+/**
+ * Marks a row the pointer picked, and every menu open at that moment (a
+ * submenu's parents close with it), so menu.css blinks the row off for
+ * `--dl-t-pick` before the menus fade. The marks go a moment after the
+ * close, since a menu kept mounted would otherwise carry them into its next
+ * close. Paint only: nothing waits on it.
+ */
+export function markMenuPick(row: Element): void {
+  const doc = row.ownerDocument;
+  const menus = new Set<Element>(doc.querySelectorAll(".dl-menu[data-open]"));
+  const own = row.closest(".dl-menu");
+  if (own) menus.add(own);
+  const marked = [row, ...menus];
+  for (const el of marked) el.setAttribute(MENU_PICKED_ATTR, "");
+  const view = doc.defaultView;
+  view?.setTimeout(() => {
+    for (const el of marked) el.removeAttribute(MENU_PICKED_ATTR);
+  }, PICK_MARK_MS);
+}
+
+/**
+ * Whether a click on a row came from the pointer. A key's click has no
+ * count (`detail` 0). So has the click Base UI sends itself when a press
+ * that opened the menu is let go over a row, which the row's own
+ * `pointerup` tells apart.
+ */
+function pointerPick(event: ReactMouseEvent<Element>): boolean {
+  if (event.detail > 0) return true;
+  const up = lastPointerUp;
+  return up !== null && up.row === event.currentTarget && Date.now() - up.at < 500;
+}
+
+/** The handlers that mark a pick, laid over the app's own. */
+function pickHandlers(
+  closes: boolean,
+  onClick: ((event: never) => void) | undefined,
+  onPointerUp: ((event: never) => void) | undefined,
+) {
+  return {
+    onPointerUp: (event: ReactPointerEvent<Element>) => {
+      lastPointerUp = { row: event.currentTarget, at: Date.now() };
+      (onPointerUp as ((event: ReactPointerEvent<Element>) => void) | undefined)?.(event);
+    },
+    onClick: (event: ReactMouseEvent<Element>) => {
+      if (closes && pointerPick(event)) markMenuPick(event.currentTarget);
+      (onClick as ((event: ReactMouseEvent<Element>) => void) | undefined)?.(event);
+    },
+  };
+}
+
+/**
+ * A row. A click on it runs `onClick` at once and closes the menu, and a
+ * row picked with the pointer blinks off for `--dl-t-pick` (60ms) before the
+ * menu fades (menu.css).
+ */
+export function MenuItem({ className, variant = "default", inset, closeOnClick = true, onClick, onPointerUp, ...props }: MenuItemProps): ReactNode {
+  const marks = pickHandlers(closeOnClick, onClick as never, onPointerUp as never);
   return (
     <MenuPrimitive.Item
       data-slot="menu-item"
       data-variant={variant}
       data-inset={inset ? "" : undefined}
       className={withClass("dl-menu-item", className)}
+      closeOnClick={closeOnClick}
+      onClick={marks.onClick as MenuPrimitive.Item.Props["onClick"]}
+      onPointerUp={marks.onPointerUp as MenuPrimitive.Item.Props["onPointerUp"]}
       {...props}
     />
   );
@@ -189,10 +265,13 @@ export type MenuLinkItemProps = MenuPrimitive.LinkItem.Props & {
  * the app handles itself (an in-app route, a new tab). Pass
  * `closeOnClick={false}` to keep it open.
  */
-export function MenuLinkItem({ className, variant = "default", inset, closeOnClick = true, ...props }: MenuLinkItemProps): ReactNode {
+export function MenuLinkItem({ className, variant = "default", inset, closeOnClick = true, onClick, onPointerUp, ...props }: MenuLinkItemProps): ReactNode {
+  const marks = pickHandlers(closeOnClick, onClick as never, onPointerUp as never);
   return (
     <MenuPrimitive.LinkItem
       closeOnClick={closeOnClick}
+      onClick={marks.onClick as MenuPrimitive.LinkItem.Props["onClick"]}
+      onPointerUp={marks.onPointerUp as MenuPrimitive.LinkItem.Props["onPointerUp"]}
       data-slot="menu-link-item"
       data-variant={variant}
       data-inset={inset ? "" : undefined}

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import type { PaletteItem, PaletteSource } from "./palette-types.js";
-export type { PaletteAnswer, PaletteGroup, PaletteItem, PaletteMenuEntry, PalettePage, PaletteSource } from "./palette-types.js";
+import type { PaletteItem, PaletteSelection, PaletteSource } from "./palette-types.js";
+export type { PaletteAnswer, PaletteGroup, PaletteItem, PaletteMenuEntry, PalettePage, PaletteSelection, PaletteSource, } from "./palette-types.js";
 export { SOURCE_WAIT_MS } from "./palette-results.js";
 export type CommandPaletteProps = {
     /** Whether the palette is open, for an app that owns that. Leave it out and the palette owns it. */
@@ -18,6 +18,13 @@ export type CommandPaletteProps = {
     actions?: readonly PaletteItem[];
     /** The heading over the actions. "Actions". */
     actionsHeading?: string;
+    /**
+     * What the app has selected and its verbs, as the group that leads the
+     * list: the selection's name as the heading, each verb with its own
+     * `keys`. Ranked against the words as the actions are. Null or left out
+     * while nothing is selected.
+     */
+    selection?: PaletteSelection | null;
     /** The field's placeholder, which is also its accessible name. "Search". */
     placeholder?: string;
     /** The dialog's accessible name. "Command palette". */
@@ -82,5 +89,5 @@ export type CommandPaletteProps = {
  *     actions={[{ id: "new", title: "New page", keys: ["N"], onSelect: newPage }]}
  *   />
  */
-export declare function CommandPalette({ open, onOpenChange, sources, actions, actionsHeading, placeholder, label, emptyText, hotkey, appKey, filter, className, }: CommandPaletteProps): ReactNode;
+export declare function CommandPalette({ open, onOpenChange, sources, actions, actionsHeading, selection, placeholder, label, emptyText, hotkey, appKey, filter, className, }: CommandPaletteProps): ReactNode;
 //# sourceMappingURL=command-palette.d.ts.map

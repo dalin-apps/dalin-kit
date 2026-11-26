@@ -2,7 +2,7 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { rankActions } from "./palette-match.js";
-import type { PaletteAnswer, PaletteGroup, PaletteItem, PaletteSource } from "./palette-types.js";
+import type { PaletteAnswer, PaletteGroup, PaletteItem, PaletteSelection, PaletteSource } from "./palette-types.js";
 
 /**
  * How long a query's list waits for its slowest source. Past it the list is
@@ -12,6 +12,8 @@ export const SOURCE_WAIT_MS = 400;
 
 /** The id of the actions' group. */
 export const ACTIONS_GROUP = "dl:actions";
+/** The id of the selection's group, which leads the list. */
+export const SELECTION_GROUP = "dl:selection";
 
 export type PaletteResultsOptions = {
   /** Whether to ask at all: the palette or the phone's search is open. */
@@ -26,6 +28,11 @@ export type PaletteResultsOptions = {
   sources: readonly PaletteSource[];
   actions: readonly PaletteItem[];
   actionsHeading: string;
+  /**
+   * What the app has selected and its verbs: a group ahead of every source,
+   * ranked against the words as the actions are.
+   */
+  selection?: PaletteSelection | null;
   /** Leaves the actions out while the field is empty, as the phone's search does. */
   actionsNeedWords?: boolean;
   /** Rows that end the list under no heading, after any group that joined late: mail's "Show all". */
@@ -86,6 +93,7 @@ export function usePaletteResults({
   sources,
   actions,
   actionsHeading,
+  selection,
   actionsNeedWords = false,
   tail,
 }: PaletteResultsOptions): PaletteResults {
@@ -198,15 +206,19 @@ export function usePaletteResults({
     const heading = samePage ? actionsHeading : shown.actionsHeading;
     const ranked = actionsNeedWords && answered.trim() === "" ? [] : rankActions(pageActions, answered);
     for (const { item, byScore: scored } of ranked) if (scored) byScore.add(item);
+    // The selection's verbs lead, on the page they were given for.
+    const verbs = selection && samePage ? rankActions(selection.items, answered) : [];
+    for (const { item, byScore: scored } of verbs) if (scored) byScore.add(item);
     const end = tail ? tail(answered) : NO_TAIL;
     const found: PaletteGroup[] = [
+      ...(selection ? [{ id: SELECTION_GROUP, heading: selection.heading, items: verbs.map(({ item }) => item) }] : []),
       ...shown.groups,
       { id: ACTIONS_GROUP, heading, items: ranked.map(({ item }) => item) },
       ...shown.late,
       { id: "dl:tail", items: [...end] },
     ];
     return { groups: found.filter((g) => g.items.length > 0), byScore };
-  }, [shown, scope, actions, actionsHeading, actionsNeedWords, tail]);
+  }, [shown, scope, actions, actionsHeading, selection, actionsNeedWords, tail]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 

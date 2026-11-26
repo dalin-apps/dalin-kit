@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.12 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette and the parts it is built from, the phone header with its search, the segmented control, the filter, the sheet, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.12 is listed under "Moving an app from 0.11 to 0.12", "Moving an app from 0.10.6 to 0.11", "Moving an app from 0.10.5 to 0.10.6", "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
+Version 0.13 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette and the parts it is built from, the phone header with its search, the segmented control, the filter, the sheet, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.13 is listed under "Moving an app from 0.12 to 0.13", "Moving an app from 0.11 to 0.12", "Moving an app from 0.10.6 to 0.11", "Moving an app from 0.10.5 to 0.10.6", "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
 
 ## Install
 
@@ -68,6 +68,106 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.12 to 0.13
+
+0.13 lands six details the owner picked on 2026-11-25, on live demos built for drive. He chose to put them in the kit, so all four apps change together. An app that moves its pin and changes nothing else gets two of them at once: a pick in a kit menu blinks, and the toaster can take a press. The other four wait for the app's own step below.
+
+| Detail | What the kit gives | What each app does |
+| --- | --- | --- |
+| A list row's hover and selection change at once | `--dl-t-row`, 0ms | Points its row transitions at the token |
+| The first tooltip waits about 800ms | `TIP_DELAY_MS` and `TIP_GROUP_MS` | Gives its tooltip provider the number |
+| A picked menu row blinks off for 60ms before the menu fades | The blink, in `<MenuItem>` and `menu.css` | Nothing, unless it paints its own copy of a closing menu |
+| A phone tab's glyph settles from 0.9 to 1 | `settleTab()` and `.dl-tab-settle` | Calls `settleTab` from the tap that opens a tab |
+| The palette leads with what the selection can do | `selection` on `<CommandPalette>` and `<Palette>` | Passes the selection's verbs |
+| A press on a progress toast calls the app | `pressToast(id, onPress)` | Gives the toast a press, where it wants one |
+
+### Rows that change at once
+
+`tokens.css` adds `--dl-t-row`, at 0ms: a row under the pointer, and the row the arrow keys land on, change in the same frame. Holding the down arrow used to leave a trail of half-lit rows behind it, because every row eased its fill over `--dl-t-hover`. The token is the one switch for the family, so a later pick changes one value.
+
+Each app points the background transition of its own rows at it, wherever a list, a tree, a grid or a column view eases a row's fill:
+
+```css
+.row {
+  transition: background var(--dl-t-row) var(--dl-ease);
+}
+```
+
+A row drawn with Tailwind takes `duration-(--dl-t-row)` beside `transition-colors`. In drive these are `.fm-row`, `.file-row`, `.fm-tree-row`, `.fm-card` and `.fm-crow` in `drive.css`, which read `--t-fast` today. Mail, calendar and notes look for the same thing in their message, event and page lists and in their sidebars' long lists. `--dl-t-hover` stays 120ms, for a button and anything else that is not a row.
+
+### The first tooltip's wait
+
+The first tooltip waits about 800ms everywhere, the folded rail included. A pointer crossing a toolbar on its way to a file no longer sets off names nobody asked for. Once one is up, a neighbour opens at once, with no entrance: that is Base UI's delay group, which each app has already. The entrance itself stays as it is.
+
+The tooltip is each app's own component, ported from notes, so the kit hands over the number from `@dalin/kit` (or `@dalin/kit/helpers`):
+
+```tsx
+import { TIP_DELAY_MS, TIP_GROUP_MS } from "@dalin/kit";
+
+function TooltipProvider({ delay = TIP_DELAY_MS, timeout = TIP_GROUP_MS, ...props }: TooltipPrimitive.Provider.Props) {
+  return <TooltipPrimitive.Provider data-slot="tooltip-provider" delay={delay} timeout={timeout} {...props} />;
+}
+```
+
+Then delete every number that overrides it. Mail, calendar and notes mount one provider in `src/app/layout.tsx` with `delay={150}`, and mail's refresh control passes `delay={300}`. Drive's sidebar passes `delay={150}`, and `TOOLBAR_TIP_DELAY` in `toolbar-tip.tsx` sets the toolbar's provider and its lone triggers. The wait is Base UI's timer, so there is no token for it: a stylesheet value can't reach it.
+
+### The pick's blink
+
+A menu row picked with the pointer blinks off once, for `--dl-t-pick` (60ms), and then the menu fades over `--dl-t-close` (110ms), as before. The action runs on the click and never waits for either: a star lands under the fading menu. Escape, a press outside and a pick from the keyboard close as they did, with no blink. Reduced motion has none either, the app's switch or the system's.
+
+`<MenuItem>` and `<MenuLinkItem>` mark the row and every open menu `data-picked` as they are clicked, and `menu.css` does the rest. An app on the kit's menus changes nothing. A hand-built menu can call `markMenuPick(row)` on its own row, provided the row carries `dl-menu-item` inside a `.dl-menu`.
+
+An app that paints its own copy of a closing menu has three steps. Drive is the one that does: `menuGhost` in `src/lib/exit-ghost.ts` clones the menu's positioner as it unmounts, and the copy fades.
+
+1. Mark the copy `data-dl-menu-copy`. The clone already carries the marks, since they are set on the click, before the menu unmounts. The kit's blink then runs inside the copy, past drive's `[data-ghost] *` rule that stills a copy's children: the kit's declaration is important and layered, and an important declaration in a layer beats an unlayered one.
+2. Hold the copy's own fade back by `--dl-t-pick` while it holds a picked menu: `[data-ghost]:has(.dl-menu[data-picked]) { animation-delay: var(--dl-t-pick) }`, in drive's terms.
+3. Keep the copy on the page 60ms longer. Drive's `GHOST_MS` goes from 200 to 260.
+
+### A phone tab's settle
+
+When a phone tab is tapped, its glyph settles from 0.9 to 1 over `--dl-t-tab-settle` (140ms) on the family's curve as it fills. The tab's tint and colour keep their own transition, and the press is unchanged. The bar is still each app's own markup, so the motion is a class in `motion.css` and a helper that plays it:
+
+```tsx
+import { settleTab } from "@dalin/kit";
+
+<button onClick={(event) => {
+  if (!open) settleTab(event.currentTarget.querySelector("svg"));
+  openTab();
+}}>
+```
+
+Call it only for a tab that is not open already: pressing the open tab again plays nothing. `settleTab` starts the settle from its first frame on every call, takes the class off when it ends, so nothing runs at rest, and plays nothing from the keyboard or while motion is reduced. It returns whether it played. In drive the tabs are in `src/components/mobile/bottom-row.tsx`. An app that doesn't load `motion.css` yet adds it to the root layout.
+
+### The palette's selection group
+
+The palette can lead with what the selection can do, under a heading that names it. Drive's is the selected file's Star, Tags…, Move to…, Rename F2, Download, Share… and Archive Del. The verbs show their keys from the moment the palette opens, so the palette teaches the shortcuts too.
+
+```tsx
+<CommandPalette
+  sources={sources}
+  actions={actions}
+  selection={file ? { heading: file.name, items: verbs } : null}
+/>
+```
+
+A verb is an ordinary `PaletteItem` with its `keys`. The group comes before every source and is ranked against the words the way the actions are, so "ren" puts Rename first, and the group goes when no verb matches. The list starts on its first row, so Enter on a fresh palette runs the first verb: put the one that is safe to run there. A page a verb opens lists its own rows, and the group stays on the first page. `<Palette>` takes the same prop, which is how drive's palette passes it. A palette that passes its own `results` draws its own list and leaves the prop out. The phone's search takes no selection, since a phone has no selection outside selection mode.
+
+### A press on a progress toast
+
+On a computer, a click on a progress toast, or Enter or Space while it has focus, can call the app. Drive's upload toast uses it to swap "42%, 12 min left" and "42%, 16 MB/s", and each new upload starts on time left again. Sonner takes no handler for a toast's body, so the app names the toast by its id:
+
+```tsx
+import { pressToast } from "@dalin/kit";
+
+toast.loading(line(), { id });
+const stop = pressToast(id, () => {
+  showSpeed = !showSpeed;
+  toast.loading(line(), { id });
+}, { description: "Click to switch time and speed" });
+```
+
+The toast is then a button to a screen reader, with the description said after its words, and it takes the family's press, one step darker. Its own action still belongs to the action. The press works only while the toast is the progress kind, so the result raised under the same id is a toast like any other. Call `stop()`, or `pressToast(id, null)`, once the work is done. On a phone a tap fans the stack, as it always has, and calls nothing.
 
 ## Moving an app from 0.11 to 0.12
 
@@ -370,6 +470,9 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 | `--dl-t-close` | 110ms | The same closing |
 | `--dl-t-sheet` | 260ms | A phone sheet |
 | `--dl-t-base` | 180ms | A change that is not an open or a close |
+| `--dl-t-row` | 0ms | A list row's hover and selection: at once, from 0.13 |
+| `--dl-t-pick` | 60ms | A picked menu row's blink, before the menu fades |
+| `--dl-t-tab-settle` | 140ms | A phone tab's glyph settling as the tab opens |
 | `--dl-meaning-archive` | `oklch(0.68 0.19 25)` | Archive, red |
 | `--dl-meaning-starred` | `oklch(0.75 0.15 80)` | Starred, amber |
 | `--dl-meaning-spam` | `oklch(0.72 0.17 50)` | Spam, orange |
@@ -622,6 +725,10 @@ While a finger pulls, the hook writes `data-pull="on"` on the pill, with `--pull
 | `reducedMotion` | A reader for the app's own motion switch. Left out, the part follows the switch the `<Toaster>` was told about (see "One place for the motion switch"). |
 
 `<ToastBand>` also takes `label`, its accessible name, which defaults to "Show notifications".
+
+### A press on a progress toast
+
+`pressToast(id, onPress, { description })` makes the progress toast with that id a button on a computer: a click, or Enter or Space while it has focus, calls `onPress`, and the toast takes the family's press. It works only while the toast is the progress kind, and never on a phone, where a tap fans the stack. It returns the function that takes the press off. `TOAST_PRESS_ATTR` is the attribute the pressable card carries, and `readToastPress(id)` answers for an app's tests. See "Moving an app from 0.12 to 0.13" for drive's use.
 
 ### Keyboard and screen readers
 
@@ -907,6 +1014,7 @@ What the look comes to, from `menu.css`:
 - A destructive row is red, words and icon.
 - A group's label is small and muted, in the case it was written in. Write it in sentence case. Base UI needs `MenuLabel` inside a `MenuGroup`.
 - A menu fades in over 150ms and out over 110ms. It lands at once when the keyboard opened it, and under reduced motion, which is the app's own switch where it has one. A context menu always opens at once.
+- A row picked with the pointer blinks off for 60ms, and then the menu fades: the pick, from 0.13 (see "Moving an app from 0.12 to 0.13"). The row's action has already run. Escape, a press outside and a pick from the keyboard close with no blink.
 
 `--dl-overlay-z` is the z-index of every menu and popover. It is 70, over the toaster while that stands over a sheet. The settings dialog is not one of these surfaces and stays solid.
 
@@ -961,6 +1069,7 @@ Per the curator's motion rule, opening it from the keyboard does not animate, an
 | `sources` | none | What the palette searches, in the order the groups show. Keep the array stable between renders. |
 | `actions` | none | The app's actions. The palette ranks them itself and lists them last. |
 | `actionsHeading` | `"Actions"` | The heading over the actions. |
+| `selection` | none | What the app has selected, `{ heading, items }`: a group that leads the list, under the selection's name, holding its verbs with their keys. Ranked against the words as the actions are. From 0.13. |
 | `open`, `onOpenChange` | the palette owns it | For an app that owns the open state, such as one with a search button. |
 | `hotkey` | `true` | Whether Ctrl K opens and closes it. An editor that uses Ctrl K for links turns it off there. |
 | `appKey` | none | The app's own key for search, or several: `"/"`. |
@@ -1473,7 +1582,7 @@ Five surfaces look like one and should stay as they are.
 
 ## Helpers
 
-Three things each app had copied, and the motion reader described under "One place for the motion switch". They export from `@dalin/kit` and from `@dalin/kit/helpers`.
+Three things each app had copied, the motion reader described under "One place for the motion switch", and from 0.13 the tooltip's wait and the tab's settle. They export from `@dalin/kit` and from `@dalin/kit/helpers`.
 
 ### The close fade
 
@@ -1521,7 +1630,15 @@ import { TipKey, shortcutLabel } from "@dalin/kit";
 
 That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel` takes `Mod`, `Shift` and `Alt` for the platform's keys and writes every other key as given. `<TipKey>` draws the dot and the key in the muted grey, or in the app's own `className`, and renders nothing without a key. `tipText("Archive", "E")` is the same line as a string. `shortcutLabelFor(mac, keys)` and `isMacPlatform(platform)` are the pure halves. The tooltip itself stays each app's own.
 
-## Not in version 0.12
+### The tooltip's wait
+
+`TIP_DELAY_MS` is 800, the first tooltip's wait in every app, and `TIP_GROUP_MS` is 400, how long a group stays warm after its tooltip closes. Each app hands them to its own tooltip provider (see "Moving an app from 0.12 to 0.13").
+
+### The tab's settle
+
+`settleTab(glyph)` settles the glyph of the phone tab being opened, from 0.9 to 1 over 140ms, with the class `TAB_SETTLE_CLASS` and the rule in `motion.css`. It plays nothing from the keyboard or under reduced motion, and leaves nothing running at rest.
+
+## Not in version 0.13
 
 These are still open, so the kit has no value for them: type sizes, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
 

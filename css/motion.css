@@ -1,4 +1,5 @@
-/* @dalin/kit motion.css: the close fade for hand-built menus and dialogs.
+/* @dalin/kit motion.css: the close fade for hand-built menus and dialogs,
+   and the settle of a phone tab's glyph.
 
    What it is. One rule and its keyframes. A menu or dialog an app builds by
    hand unmounts the moment it closes, so `watchLeaving` (from @dalin/kit)
@@ -45,6 +46,36 @@
 @keyframes dl-leave {
   to {
     opacity: 0;
+  }
+}
+/* The phone bar's tab (0.13, the owner's pick on 2026-11-25). The bar is
+   each app's own markup; this is the one motion it shares. The glyph of the
+   tab being opened settles from 0.9 to 1 over --dl-t-tab-settle as it
+   fills, while the tab's tint and colour keep their own transition.
+   `settleTab(glyph)` from @dalin/kit/helpers adds the class from the tap
+   and takes it off when the settle ends, so nothing runs at rest. It is
+   `scale`, never a transform, so a transform the glyph already has stays.
+   Nothing started from the keyboard plays it, and reduced motion stills
+   it. These rules are not `!important`: a copy left by the close fade
+   still stills it. */
+.dl-tab-settle {
+  animation: dl-tab-settle var(--dl-t-tab-settle, 140ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+@keyframes dl-tab-settle {
+  from {
+    scale: 0.9;
+  }
+  to {
+    scale: 1;
+  }
+}
+html[data-input="keyboard"] .dl-tab-settle,
+html[data-dl-motion="reduce"] .dl-tab-settle {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-dl-motion="full"]) .dl-tab-settle {
+    animation: none;
   }
 }
 }

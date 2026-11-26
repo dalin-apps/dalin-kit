@@ -81,6 +81,12 @@ describe("@dalin/kit", () => {
     "PROGRESS_TOAST",
     "COUNTDOWN_TOAST",
     "ToastSpinner",
+    "pressToast",
+    "TOAST_PRESS_ATTR",
+    "TIP_DELAY_MS",
+    "TIP_GROUP_MS",
+    "settleTab",
+    "TAB_SETTLE_CLASS",
   ])("exports %s from its root", (name) => {
     expect((kit as Record<string, unknown>)[name]).toBeDefined();
   });
@@ -125,6 +131,9 @@ describe("@dalin/kit/components", () => {
     "PhoneSearch",
     "PhoneSearchAvatar",
     "SOURCE_WAIT_MS",
+    "SELECTION_GROUP",
+    "markMenuPick",
+    "MENU_PICKED_ATTR",
     "ariaKeyShortcuts",
     "Sheet",
     "SheetTrigger",

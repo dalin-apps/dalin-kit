@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useCallback, useLayoutEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useRef, } from "react";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cx, withClass } from "./cx.js";
 import { CheckGlyph, ChevronRightGlyph } from "./icons.js";
@@ -88,8 +88,68 @@ export function MenuGroup(props) {
 export function MenuLabel({ className, inset, ...props }) {
     return (_jsx(MenuPrimitive.GroupLabel, { "data-slot": "menu-label", "data-inset": inset ? "" : undefined, className: withClass("dl-menu-label", className), ...props }));
 }
-export function MenuItem({ className, variant = "default", inset, ...props }) {
-    return (_jsx(MenuPrimitive.Item, { "data-slot": "menu-item", "data-variant": variant, "data-inset": inset ? "" : undefined, className: withClass("dl-menu-item", className), ...props }));
+/** The attribute a picked row, and every menu open as it was picked, carry while the menu closes. */
+export const MENU_PICKED_ATTR = "data-picked";
+/** How long the marks stay: the blink, the fade and room for a late frame. */
+const PICK_MARK_MS = 600;
+/** The row a pointer last let go on, and when, for a pick Base UI makes with a click of its own. */
+let lastPointerUp = null;
+/**
+ * Marks a row the pointer picked, and every menu open at that moment (a
+ * submenu's parents close with it), so menu.css blinks the row off for
+ * `--dl-t-pick` before the menus fade. The marks go a moment after the
+ * close, since a menu kept mounted would otherwise carry them into its next
+ * close. Paint only: nothing waits on it.
+ */
+export function markMenuPick(row) {
+    const doc = row.ownerDocument;
+    const menus = new Set(doc.querySelectorAll(".dl-menu[data-open]"));
+    const own = row.closest(".dl-menu");
+    if (own)
+        menus.add(own);
+    const marked = [row, ...menus];
+    for (const el of marked)
+        el.setAttribute(MENU_PICKED_ATTR, "");
+    const view = doc.defaultView;
+    view?.setTimeout(() => {
+        for (const el of marked)
+            el.removeAttribute(MENU_PICKED_ATTR);
+    }, PICK_MARK_MS);
+}
+/**
+ * Whether a click on a row came from the pointer. A key's click has no
+ * count (`detail` 0). So has the click Base UI sends itself when a press
+ * that opened the menu is let go over a row, which the row's own
+ * `pointerup` tells apart.
+ */
+function pointerPick(event) {
+    if (event.detail > 0)
+        return true;
+    const up = lastPointerUp;
+    return up !== null && up.row === event.currentTarget && Date.now() - up.at < 500;
+}
+/** The handlers that mark a pick, laid over the app's own. */
+function pickHandlers(closes, onClick, onPointerUp) {
+    return {
+        onPointerUp: (event) => {
+            lastPointerUp = { row: event.currentTarget, at: Date.now() };
+            onPointerUp?.(event);
+        },
+        onClick: (event) => {
+            if (closes && pointerPick(event))
+                markMenuPick(event.currentTarget);
+            onClick?.(event);
+        },
+    };
+}
+/**
+ * A row. A click on it runs `onClick` at once and closes the menu, and a
+ * row picked with the pointer blinks off for `--dl-t-pick` (60ms) before the
+ * menu fades (menu.css).
+ */
+export function MenuItem({ className, variant = "default", inset, closeOnClick = true, onClick, onPointerUp, ...props }) {
+    const marks = pickHandlers(closeOnClick, onClick, onPointerUp);
+    return (_jsx(MenuPrimitive.Item, { "data-slot": "menu-item", "data-variant": variant, "data-inset": inset ? "" : undefined, className: withClass("dl-menu-item", className), closeOnClick: closeOnClick, onClick: marks.onClick, onPointerUp: marks.onPointerUp, ...props }));
 }
 /**
  * A row that is a link: it navigates, and opens in a new tab on a middle
@@ -98,8 +158,9 @@ export function MenuItem({ className, variant = "default", inset, ...props }) {
  * the app handles itself (an in-app route, a new tab). Pass
  * `closeOnClick={false}` to keep it open.
  */
-export function MenuLinkItem({ className, variant = "default", inset, closeOnClick = true, ...props }) {
-    return (_jsx(MenuPrimitive.LinkItem, { closeOnClick: closeOnClick, "data-slot": "menu-link-item", "data-variant": variant, "data-inset": inset ? "" : undefined, className: withClass("dl-menu-item", className), ...props }));
+export function MenuLinkItem({ className, variant = "default", inset, closeOnClick = true, onClick, onPointerUp, ...props }) {
+    const marks = pickHandlers(closeOnClick, onClick, onPointerUp);
+    return (_jsx(MenuPrimitive.LinkItem, { closeOnClick: closeOnClick, onClick: marks.onClick, onPointerUp: marks.onPointerUp, "data-slot": "menu-link-item", "data-variant": variant, "data-inset": inset ? "" : undefined, className: withClass("dl-menu-item", className), ...props }));
 }
 export function MenuCheckboxItem({ className, children, ...props }) {
     return (_jsxs(MenuPrimitive.CheckboxItem, { "data-slot": "menu-checkbox-item", className: withClass("dl-menu-item", className), ...props, children: [children, _jsx(MenuPrimitive.CheckboxItemIndicator, { className: "dl-menu-end", children: _jsx(CheckGlyph, {}) })] }));
