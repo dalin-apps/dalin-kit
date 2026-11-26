@@ -2,9 +2,13 @@
 
    What it is. A frosted panel at the foot of the phone's screen, 14px at
    its top corners, with the page dimmed behind it. A 40 by 4 handle sits at
-   its top. It rises over --dl-t-sheet (260ms) on --dl-ease and sinks the
-   same way. A finger drags it from anywhere on it, the dim lifts as it
-   goes down, and a release settles it or closes it. With
+   its top. It rises over --dl-t-sheet (220ms) on --dl-ease and sinks over
+   --dl-t-sheet-out (180ms) on the same curve, so the way out is the
+   shorter of the two (0.14, the owner's pick on 2026-11-26; both were
+   260ms). A sheet an app mounts already open rises as well: <Sheet> opens
+   it a commit after it mounts, since Base UI plays no entrance for a popup
+   that is open on its first render. A finger drags it from anywhere on it,
+   the dim lifts as it goes down, and a release settles it or closes it. With
    `layout="dialog"` the same parts are a small dialog in the middle of
    the window: no handle, an X in its corner, and the family's 150ms open.
 
@@ -24,8 +28,10 @@
    writes `data-instant`, and `watchInputModality` writes `data-input` on
    <html>. Nothing moves under reduced motion either: the app's own switch
    where it has one (`data-dl-motion` on <html>), the system's otherwise.
-   A release after a drag runs for Base UI's share of the sheet time, less
-   for a faster flick (--drawer-swipe-strength).
+   A release that closes runs for Base UI's share of the way out's time,
+   less for a faster flick (--drawer-swipe-strength). One that settles the
+   sheet back takes the way out's time too: <Sheet> marks the panel and
+   the scrim `data-dl-held` from the first press that may drag.
 
    Variables an app may set, on :root, or for one sheet through `vars` on
    <SheetContent>, which writes them on the scrim and on the box that
@@ -53,8 +59,8 @@
      --dl-sheet-dialog-w The dialog layout's width. 28rem.
      --dl-sheet-dialog-t The dialog layout's open and close. --dl-t-open.
 
-   What an app must not override. The handle's pill, the corners, the
-   sheet time and its curve, and the rule that the panel rests with no
+   What an app must not override. The handle's pill, the corners, the two
+   sheet times and their curve, and the rule that the panel rests with no
    transform.
 
    Cascade. Every rule here is in the cascade layer `dalin` (see menu.css),
@@ -67,14 +73,21 @@
   background: var(--dl-sheet-scrim, var(--dl-scrim, rgb(0 0 0 / 0.62)));
   /* Lifts as the panel is dragged away, at the rate the finger asks for:
      Base UI's progress, and the travel the kit draws before Base UI has a
-     move (sheet.tsx, --dl-sheet-pull). */
-  opacity: calc(
+     move (sheet.tsx, --dl-sheet-pull). Kept in a variable of the scrim's
+     own, so the rules that land a sheet at once can name the dim again. */
+  --dl-sheet-dim: calc(
     1 - min(1, var(--drawer-swipe-progress, 0) + var(--dl-sheet-pull, 0)) * var(--dl-sheet-lift, 0.55)
   );
-  transition: opacity var(--dl-t-sheet, 260ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+  opacity: var(--dl-sheet-dim);
+  transition: opacity var(--dl-t-sheet, 220ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 .dl-sheet-scrim:is([data-starting-style], [data-ending-style]) {
   opacity: 0;
+}
+/* The dim leaves, and comes back after a drag that did not close, over the
+   way out's time. */
+.dl-sheet-scrim:is([data-dl-held], [data-ending-style]) {
+  transition-duration: var(--dl-t-sheet-out, 180ms);
 }
 /* A finger on the sheet owns the dim outright. */
 .dl-sheet-scrim[data-swiping] {
@@ -125,8 +138,8 @@
      back before its first touchmove (sheet.tsx). It leaves with Base UI's
      transform, on the same curve. */
   transition:
-    transform var(--dl-t-sheet, 260ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
-    translate var(--dl-t-sheet, 260ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+    transform var(--dl-t-sheet, 220ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1)),
+    translate var(--dl-t-sheet, 220ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 /* The frost, as a layer behind the content. Blurred, then levelled, as the
    menus are, so the words hold over a white page. */
@@ -147,9 +160,15 @@
 .dl-sheet:is([data-starting-style], [data-ending-style]) {
   transform: translateY(100%);
 }
-/* A close runs for the sheet time, or for less after a flick. */
+/* A sheet that has been under a pointer has risen: from the first press
+   that may drag (`data-dl-held`, sheet.tsx), a release that settles it back
+   takes the way out's time. The mark goes as the sheet opens again. */
+.dl-sheet[data-dl-held] {
+  transition-duration: var(--dl-t-sheet-out, 180ms);
+}
+/* A close runs for the way out's time, or for less after a flick. */
 .dl-sheet[data-ending-style] {
-  transition-duration: calc(var(--drawer-swipe-strength, 1) * var(--dl-t-sheet, 260ms));
+  transition-duration: calc(var(--drawer-swipe-strength, 1) * var(--dl-t-sheet-out, 180ms));
 }
 .dl-sheet[data-swiping] {
   user-select: none;
@@ -277,7 +296,11 @@
 
 /* Nothing moves when the keyboard opened or closed it. The panel is drawn
    where it rests from its first frame, since with no transition a start a
-   full height below would show as one frame of nothing. */
+   full height below would show as one frame of nothing. The dim is at its
+   strength from that frame too, and stays until the panel goes: with no
+   fade, its clear start showed the page undimmed under the panel for a
+   frame, which a sheet mounted already open never did before it had an
+   entrance to skip (0.14). */
 :is(.dl-sheet, .dl-sheet-scrim)[data-instant],
 html[data-input="keyboard"] :is(.dl-sheet, .dl-sheet-scrim) {
   transition: none;
@@ -285,6 +308,10 @@ html[data-input="keyboard"] :is(.dl-sheet, .dl-sheet-scrim) {
 .dl-sheet[data-instant]:is([data-starting-style], [data-ending-style]),
 html[data-input="keyboard"] .dl-sheet:is([data-starting-style], [data-ending-style]) {
   transform: none;
+}
+.dl-sheet-scrim[data-instant]:is([data-starting-style], [data-ending-style]),
+html[data-input="keyboard"] .dl-sheet-scrim:is([data-starting-style], [data-ending-style]) {
+  opacity: var(--dl-sheet-dim);
 }
 /* Reduced motion: the app's own switch where it has spoken
    (`data-dl-motion` on <html>, see menu.css), the system's setting
@@ -295,12 +322,18 @@ html[data-dl-motion="reduce"] :is(.dl-sheet, .dl-sheet-scrim) {
 html[data-dl-motion="reduce"] .dl-sheet:is([data-starting-style], [data-ending-style]) {
   transform: none;
 }
+html[data-dl-motion="reduce"] .dl-sheet-scrim:is([data-starting-style], [data-ending-style]) {
+  opacity: var(--dl-sheet-dim);
+}
 @media (prefers-reduced-motion: reduce) {
   html:not([data-dl-motion="full"]) :is(.dl-sheet, .dl-sheet-scrim) {
     transition: none;
   }
   html:not([data-dl-motion="full"]) .dl-sheet:is([data-starting-style], [data-ending-style]) {
     transform: none;
+  }
+  html:not([data-dl-motion="full"]) .dl-sheet-scrim:is([data-starting-style], [data-ending-style]) {
+    opacity: var(--dl-sheet-dim);
   }
 }
 }

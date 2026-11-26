@@ -1,6 +1,6 @@
 "use client";
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createContext, useCallback, useContext, useEffect, useImperativeHandle, useMemo, useRef, useState, } from "react";
+import { createContext, useCallback, useContext, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, } from "react";
 import { flushSync } from "react-dom";
 import { Drawer } from "@base-ui/react/drawer";
 import { startedFromKeyboard } from "../helpers/input-modality.js";
@@ -16,6 +16,12 @@ import { useToasterTab } from "./toaster-tab.js";
 export const SHEET_NO_DRAG_ATTR = "data-dl-no-drag";
 /** Base UI's own name for the same mark, which is what its Drawer reads. */
 const BASE_IGNORE_ATTR = "data-base-ui-swipe-ignore";
+/**
+ * The mark of a sheet that has been under a pointer since it opened, on the
+ * panel and the scrim. From then on a move back to rest is a settle after a
+ * drag, and takes the way out's time and not the rise's (sheet.css).
+ */
+export const SHEET_HELD_ATTR = "data-dl-held";
 /** The scrim's share of the kit's drawn travel, as a part of the panel's height (sheet.css). */
 const PULL_VAR = "--dl-sheet-pull";
 /** How far a sheet ranks as a toast dock: with the phone's search, over the bar and a parked chip. */
@@ -56,10 +62,24 @@ export function Sheet({ open: openProp, defaultOpen = false, onOpenChange, onOpe
     const open = openProp ?? ownOpen;
     const openRef = useRef(open);
     openRef.current = open;
+    // A phone sheet mounted already open still rises (0.14). Base UI plays no
+    // entrance for a popup that is open on its first render (it takes it for
+    // one drawn with the page), so a sheet an app mounts as it opens it, as
+    // calendar's are, stood at rest in its first frame and then took the
+    // whole exit to leave. So Base UI is handed a closed sheet on the first
+    // commit and the open one from a layout effect: nothing is painted in
+    // between, and the panel mounts in its starting style, as it does when
+    // `open` turns true. The dialog layout is left as it was: mounted open,
+    // it stands in place at once.
+    const [seated, setSeated] = useState(!open || layout !== "sheet");
+    useLayoutEffect(() => {
+        setSeated(true);
+    }, []);
     // Whether this open or close lands with no slide: a key started it, or
     // motion is reduced. Read as `open` changes, in render, so the first
-    // frame already knows.
-    const [instant, setInstant] = useState(false);
+    // frame already knows, and read on the first render for a sheet mounted
+    // open, which has an entrance to skip from 0.14.
+    const [instant, setInstant] = useState(() => open && (startedFromKeyboard() || reducesMotion()));
     const byKey = useRef(false);
     const [wasOpen, setWasOpen] = useState(open);
     if (wasOpen !== open) {
@@ -260,7 +280,7 @@ export function Sheet({ open: openProp, defaultOpen = false, onOpenChange, onOpe
     }, []);
     const depth = parent ? parent.depth + 1 : 0;
     const value = useMemo(() => ({ open, layout, instant, modal, swipe, virtualKeyboard, depth, gesture, distance, swipeClose }), [open, layout, instant, modal, swipe, virtualKeyboard, depth, swipeClose]);
-    return (_jsx(SheetContext.Provider, { value: value, children: _jsx(Drawer.Root, { open: open, onOpenChange: handleChange, onOpenChangeComplete: handleComplete, modal: modal, disablePointerDismissal: !dismissOnOutsidePress, actionsRef: base, children: virtualKeyboard ? _jsx(Drawer.VirtualKeyboardProvider, { children: children }) : children }) }));
+    return (_jsx(SheetContext.Provider, { value: value, children: _jsx(Drawer.Root, { open: open && seated, onOpenChange: handleChange, onOpenChangeComplete: handleComplete, modal: modal, disablePointerDismissal: !dismissOnOutsidePress, actionsRef: base, children: virtualKeyboard ? _jsx(Drawer.VirtualKeyboardProvider, { children: children }) : children }) }));
 }
 /** A button that opens the sheet, for a sheet that owns its own state. */
 export function SheetTrigger(props) {
@@ -332,6 +352,14 @@ function useSheetGesture(viewport, panel, scrim, sheet) {
         if (open)
             openedAt.current = performance.now();
     }, [open]);
+    // A sheet that opens again (`keepMounted`) rises again: the last drag's
+    // mark would give its rise the way out's time.
+    useEffect(() => {
+        if (!open)
+            return;
+        panel?.removeAttribute(SHEET_HELD_ATTR);
+        scrim?.removeAttribute(SHEET_HELD_ATTR);
+    }, [open, panel, scrim]);
     const draggable = swipe && layout === "sheet";
     useEffect(() => {
         if (!viewport || !panel)
@@ -456,6 +484,11 @@ function useSheetGesture(viewport, panel, scrim, sheet) {
                     selecting: selectingIn(panel),
                 }) !== null;
             viewport.toggleAttribute(BASE_IGNORE_ATTR, blocked);
+            if (!blocked) {
+                // From here a move back to rest is a settle, not the rise.
+                panel.setAttribute(SHEET_HELD_ATTR, "");
+                scrim?.setAttribute(SHEET_HELD_ATTR, "");
+            }
             tracking = y === null ? null : start;
             last = { y: y ?? 0, t: now };
             startY = last.y;

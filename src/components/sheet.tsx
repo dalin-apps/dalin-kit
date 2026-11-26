@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useImperativeHandle,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -48,9 +49,10 @@ import { useToasterTab } from "./toaster-tab.js";
  *
  * What it does, with the reason for each where the reason is not plain:
  *
- * - It rises from the foot of the screen over `--dl-t-sheet` and sinks the
- *   same way, with the page dimmed by `--dl-scrim` behind it. Opened or
- *   closed from the keyboard, or under reduced motion, it lands at once.
+ * - It rises from the foot of the screen over `--dl-t-sheet` (220ms) and
+ *   sinks over `--dl-t-sheet-out` (180ms), with the page dimmed by
+ *   `--dl-scrim` behind it. A sheet mounted already open rises too. Opened
+ *   or closed from the keyboard, or under reduced motion, it lands at once.
  * - It drags from anywhere on it, once its scrolling body is at the top.
  *   Base UI's Drawer does that part. The kit adds the start rules Base UI
  *   lacks (sheet-release.ts) and judges the release by the family's rule.
@@ -191,6 +193,12 @@ export type SheetProps = {
 export const SHEET_NO_DRAG_ATTR = "data-dl-no-drag";
 /** Base UI's own name for the same mark, which is what its Drawer reads. */
 const BASE_IGNORE_ATTR = "data-base-ui-swipe-ignore";
+/**
+ * The mark of a sheet that has been under a pointer since it opened, on the
+ * panel and the scrim. From then on a move back to rest is a settle after a
+ * drag, and takes the way out's time and not the rise's (sheet.css).
+ */
+export const SHEET_HELD_ATTR = "data-dl-held";
 /** The scrim's share of the kit's drawn travel, as a part of the panel's height (sheet.css). */
 const PULL_VAR = "--dl-sheet-pull";
 /** What `noSheetDrag()` returns: the kit's mark and Base UI's, with the same value. */
@@ -274,10 +282,25 @@ export function Sheet({
   const openRef = useRef(open);
   openRef.current = open;
 
+  // A phone sheet mounted already open still rises (0.14). Base UI plays no
+  // entrance for a popup that is open on its first render (it takes it for
+  // one drawn with the page), so a sheet an app mounts as it opens it, as
+  // calendar's are, stood at rest in its first frame and then took the
+  // whole exit to leave. So Base UI is handed a closed sheet on the first
+  // commit and the open one from a layout effect: nothing is painted in
+  // between, and the panel mounts in its starting style, as it does when
+  // `open` turns true. The dialog layout is left as it was: mounted open,
+  // it stands in place at once.
+  const [seated, setSeated] = useState(!open || layout !== "sheet");
+  useLayoutEffect(() => {
+    setSeated(true);
+  }, []);
+
   // Whether this open or close lands with no slide: a key started it, or
   // motion is reduced. Read as `open` changes, in render, so the first
-  // frame already knows.
-  const [instant, setInstant] = useState(false);
+  // frame already knows, and read on the first render for a sheet mounted
+  // open, which has an entrance to skip from 0.14.
+  const [instant, setInstant] = useState(() => open && (startedFromKeyboard() || reducesMotion()));
   const byKey = useRef(false);
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
@@ -490,7 +513,7 @@ export function Sheet({
   return (
     <SheetContext.Provider value={value}>
       <Drawer.Root
-        open={open}
+        open={open && seated}
         onOpenChange={handleChange}
         onOpenChangeComplete={handleComplete}
         modal={modal}
@@ -577,6 +600,13 @@ function useSheetGesture(
   useEffect(() => {
     if (open) openedAt.current = performance.now();
   }, [open]);
+  // A sheet that opens again (`keepMounted`) rises again: the last drag's
+  // mark would give its rise the way out's time.
+  useEffect(() => {
+    if (!open) return;
+    panel?.removeAttribute(SHEET_HELD_ATTR);
+    scrim?.removeAttribute(SHEET_HELD_ATTR);
+  }, [open, panel, scrim]);
   const draggable = swipe && layout === "sheet";
 
   useEffect(() => {
@@ -690,6 +720,11 @@ function useSheetGesture(
           selecting: selectingIn(panel),
         }) !== null;
       viewport.toggleAttribute(BASE_IGNORE_ATTR, blocked);
+      if (!blocked) {
+        // From here a move back to rest is a settle, not the rise.
+        panel.setAttribute(SHEET_HELD_ATTR, "");
+        scrim?.setAttribute(SHEET_HELD_ATTR, "");
+      }
       tracking = y === null ? null : start;
       last = { y: y ?? 0, t: now };
       startY = last.y;

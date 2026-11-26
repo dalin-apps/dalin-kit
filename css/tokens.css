@@ -211,7 +211,11 @@
   --dl-t-hover: 120ms;
   --dl-t-open: 150ms;
   --dl-t-close: 110ms;
-  --dl-t-sheet: 260ms;
+  /* A phone sheet rises over the first and leaves over the second, on
+     --dl-ease (0.14, the owner's pick on 2026-11-26): the way out is the
+     shorter, since it is the one you wait on. Both were 260ms. */
+  --dl-t-sheet: 220ms;
+  --dl-t-sheet-out: 180ms;
   /* A state change that is not an open or a close: a fold, a fade between
      two faces. Calendar, notes and drive each wrote 180ms as their own
      --t-base. */
@@ -225,8 +229,9 @@
   /* A menu row picked by the pointer blinks off for this long before the
      menu fades (menu.css). The action has already run. */
   --dl-t-pick: 60ms;
-  /* The glyph of a phone tab being opened settles from 0.9 to 1 over this
-     (phone.css, `.dl-tab-settle`). */
+  /* A pressed phone control settles back from the pressed size over this
+     as the finger lifts (0.14: `data-released`, motion.css and create.css),
+     as does the glyph of a phone tab being opened (`.dl-tab-settle`). */
   --dl-t-tab-settle: 140ms;
 
   /* Meaning colours, mail's hues, the same in every app: a row or icon whose

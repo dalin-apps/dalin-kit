@@ -120,6 +120,7 @@ export {
   type PhoneSearchSection,
 } from "./phone-search.js";
 export {
+  SHEET_HELD_ATTR,
   SHEET_NO_DRAG_ATTR,
   Sheet,
   SheetBody,

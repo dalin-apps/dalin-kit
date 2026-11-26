@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.13 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette and the parts it is built from, the phone header with its search, the segmented control, the filter, the sheet, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.13 is listed under "Moving an app from 0.12 to 0.13", "Moving an app from 0.11 to 0.12", "Moving an app from 0.10.6 to 0.11", "Moving an app from 0.10.5 to 0.10.6", "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
+Version 0.14 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette and the parts it is built from, the phone header with its search, the segmented control, the filter, the sheet, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.14 is listed under "Moving an app from 0.13 to 0.14", "Moving an app from 0.12 to 0.13", "Moving an app from 0.11 to 0.12", "Moving an app from 0.10.6 to 0.11", "Moving an app from 0.10.5 to 0.10.6", "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
 
 ## Install
 
@@ -69,6 +69,72 @@ The toast and the helpers import from `@dalin/kit`, and every component from `@d
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
 
+## Moving an app from 0.13 to 0.14
+
+0.14 lands three details the owner picked on 2026-11-26, on live demos built for calendar's phone. They are family picks, so they go in the kit and all four apps change together. An app that moves its pin and changes nothing else gets the first two at once: its sheets rise and leave on the new times, and a fresh sheet takes a drag sooner. The third waits for the app's own step below.
+
+| Detail | What the kit gives | What each app does |
+| --- | --- | --- |
+| A sheet rises over 220ms and leaves over 180ms, one mounted already open included | `--dl-t-sheet` (220ms), `--dl-t-sheet-out` (180ms), and the rise in `<Sheet>` | Nothing, unless it wrote 260ms somewhere of its own |
+| A fresh sheet takes a drag after 150ms, not 500ms | `SHEET_OPEN_GUARD_MS`, 150 | Nothing |
+| The phone's press starts as the finger lands, and lets go as one 140ms settle | `watchPress()`, `data-pressed`, `data-released`, and the class `dl-press` | Starts the watcher, marks its tabs, and takes those controls out of its own `:active` press |
+
+### A sheet that rises as fast as it leaves
+
+A phone sheet rises over `--dl-t-sheet`, now 220ms, and leaves over the new `--dl-t-sheet-out`, 180ms, both on `--dl-ease`. Both were 260ms. The way out is the one a reader waits on, so it is the shorter of the two. The dim fades in and out on the same two times.
+
+A sheet an app mounts already open rises as well. Before 0.14 it did not: Base UI plays no entrance for a popup that is open on its first render, so a sheet mounted as it opens stood at rest in its first frame, at full dim, and then took the whole 260ms to leave. Calendar mounts every phone sheet that way (`useHeld`), so its sheets appeared in one frame and left slowly. `<Sheet>` now hands Base UI a closed sheet on its first commit and the open one from a layout effect, before anything is painted, so the panel mounts in its starting style and slides up. `onOpenChange` hears nothing for it, as before, and `onOpenChangeComplete(true)` still comes once, now after the rise.
+
+What stays as it was:
+
+- A sheet opened or closed from the keyboard, or under reduced motion, lands at once. A sheet mounted open reads both on its first render and carries `data-instant` from its first frame. The key is read from `watchInputModality`'s mark, which all four apps keep. The dim is at its strength from that frame too: with no fade, its clear start would show the page undimmed under the panel for a frame.
+- The dialog layout keeps its own 150ms (`--dl-sheet-dialog-t`), and a dialog-layout sheet mounted already open still stands in place at once. The pick was the phone's sheet.
+- A drag released short of the closing distance settles back over the way out's 180ms. `<Sheet>` marks the panel and the scrim `data-dl-held` (`SHEET_HELD_ATTR`) from the first press that may drag, and `sheet.css` reads it. A release that closes runs for Base UI's share of the 180ms, less after a flick.
+
+An app has nothing to change unless it wrote the old time itself: a `setTimeout` of 260 that waits for a kit sheet to leave, a test that advances 260ms, or a rule of its own that names `--dl-t-sheet` for a close. Wait on `onOpenChangeComplete(false)` instead of a number. An app that wants a sheet to stand in place on its first frame, as it did before, has no switch for it: say so to the owner.
+
+### A fresh sheet that takes a drag sooner
+
+`SHEET_OPEN_GUARD_MS` is 150, where it was 500. No drag starts in the sheet's first 150ms, which is the tap that opened it still ending, and the mouse events a phone sends after that tap. At 500ms a deliberate second press paid for it: a press that landed inside the guard stayed ignored however long it was held. The press is still judged once, as it lands.
+
+The guard is shorter than the rise, so a press between 150ms and 220ms takes hold of a sheet that is still arriving. The curve is nearly home by then: measured in headless Chromium on a 300px sheet, the panel stood under 5px from rest 170ms into its rise. A tap on a button inside the guard still lands, as before. An app changes nothing.
+
+### The press that starts when the finger lands
+
+The family's phone press is a control 0.97 of its size and brighter. It was drawn from `:active`, and a touch browser applies `:active` only once it knows the touch is a tap. On calendar's phone the plus, held for 250ms, stayed at full size and shrank about 70ms after the finger had lifted. A tab showed nothing while held, then its press and its 0.9 settle together (0.873), and a one-frame pop back to full size 180ms later. The owner's words, from drive: "the animation needs to be synced up with the user's press. not after."
+
+So the press is now an attribute, written as the pointer lands:
+
+```tsx
+import { watchPress } from "@dalin/kit";
+
+useEffect(() => watchPress(), []);
+```
+
+Call it once, from the effect at the app's root that calls `watchInputModality`. From `pointerdown` it marks the pressed control `data-pressed`, for as long as the finger is down. On the lift it takes that off and marks the control `data-released` for one settle back from the pressed size, over `--dl-t-tab-settle` (140ms) on the family's curve, and takes that off when the settle ends, so nothing runs at rest. A touch that turns into a scroll (`pointercancel`), or a pointer that slides off the control, lets go with no settle. A key sends no pointer event, so nothing started from the keyboard moves. Under reduced motion the control only brightens and no settle plays: the watcher asks the kit's one motion reader, or its own `reducedMotion` option, as drive passes to `settleTab` today.
+
+Two kinds of control take it:
+
+- The create button on a phone: `dl-create`, `dl-create-glass`, and a button around a glass layer, inside `.dl-phone`. `create.css` draws the press and the settle. Nothing to mark.
+- Anything the app marks `dl-press`, which is how a phone tab takes it, since the bar is each app's own markup. `motion.css` draws it.
+
+```tsx
+<button className="ph-tab dl-press" onClick={() => openTab(key)}>
+```
+
+While the watcher runs, `<html>` carries `data-dl-press`, and `create.css` then draws nothing from `:active` on the phone: a late `:active` would press the control again after the finger had gone. An app that has not started the watcher keeps the `:active` press on its create button exactly as it was in 0.13, so moving the pin alone breaks nothing. The desktop's press is still `:active`, one step darker, which a mouse shows at once.
+
+Each app has four steps:
+
+1. Call `watchPress()` at its root, and load `motion.css` if it does not yet.
+2. Add `dl-press` to each tab of its phone bar. Calendar's are `.ph-tab` in `src/components/phone/bottom-bar.tsx` and drive's are `.mb-tab` in `src/components/mobile/bottom-row.tsx`.
+3. Take those tabs and the create button out of the app's own `:active` press, or it will shrink them a second time after the lift. Calendar's rule in `src/app/phone.css` presses every `button`, `a` and `[role="button"]` in `.phone`, so it gains `:not(.dl-press, .dl-create, .dl-create-glass)`, and its reduced-motion twin the same. A tab must not list `scale` or `filter` in a transition of its own either: a running transition outranks the settle. Calendar's tabs ease `background` and `color` alone, which is fine.
+4. Drop the `settleTab` call from the tab's click, or leave it: on a tab that carries `dl-press` it plays nothing, since the lift already settles the tab.
+
+What changes for the tab's settle. In 0.13 the glyph of the tab being opened grew from 0.9 to 1. From 0.14 the whole tab settles from the pressed size, 0.97, on every lift, the open tab's included, since the press shrank it and it has to come back. That is the one move: 0.97 under the finger, then 140ms to rest. The 0.9 is gone from the family. `settleTab` is still exported for a tab without `dl-press`, and its glyph now starts from the pressed size too.
+
+Not covered, and unchanged: the header's icons, the search rows and Cancel, the phone filter and a toast's action still press from `:active`. The pick named the create button and the tabs. An app's control with a filter of its own at rest (calendar's `--press-base`) keeps the app's own press, since `dl-press` writes `filter` whole. The name `data-pressed` is also what notes writes on its title field and what Base UI writes on a pressed Toggle: the kit's rules read it only on `dl-press`, on the create classes, and on the parent of a glass layer, and the watcher takes it off the control it marked and no other.
+
 ## Moving an app from 0.12 to 0.13
 
 0.13 lands six details the owner picked on 2026-11-25, on live demos built for drive. He chose to put them in the kit, so all four apps change together. An app that moves its pin and changes nothing else gets two of them at once: a pick in a kit menu blinks, and the toaster can take a press. The other four wait for the app's own step below.
@@ -125,6 +191,8 @@ An app that paints its own copy of a closing menu has three steps. Drive is the 
 3. Keep the copy on the page 60ms longer. Drive's `GHOST_MS` goes from 200 to 260.
 
 ### A phone tab's settle
+
+From 0.14 the settle starts from the pressed size and a tab marked `dl-press` settles as a whole on the lift: see "The press that starts when the finger lands" above. What follows is 0.13 as it shipped.
 
 When a phone tab is tapped, its glyph settles from 0.9 to 1 over `--dl-t-tab-settle` (140ms) on the family's curve as it fills. The tab's tint and colour keep their own transition, and the press is unchanged. The bar is still each app's own markup, so the motion is a class in `motion.css` and a helper that plays it:
 
@@ -468,11 +536,12 @@ Everything else is additive: `covered`, `beforeQuery` and a row's `meta` on `<Ph
 | `--dl-t-hover` | 120ms | Hover |
 | `--dl-t-open` | 150ms | A menu or dialog opening |
 | `--dl-t-close` | 110ms | The same closing |
-| `--dl-t-sheet` | 260ms | A phone sheet |
+| `--dl-t-sheet` | 220ms | A phone sheet rising. 260ms until 0.14 |
+| `--dl-t-sheet-out` | 180ms | A phone sheet leaving, and settling back after a drag. New in 0.14 |
 | `--dl-t-base` | 180ms | A change that is not an open or a close |
 | `--dl-t-row` | 0ms | A list row's hover and selection: at once, from 0.13 |
 | `--dl-t-pick` | 60ms | A picked menu row's blink, before the menu fades |
-| `--dl-t-tab-settle` | 140ms | A phone tab's glyph settling as the tab opens |
+| `--dl-t-tab-settle` | 140ms | A pressed phone control settling back as the finger lifts: the create button and a tab |
 | `--dl-meaning-archive` | `oklch(0.68 0.19 25)` | Archive, red |
 | `--dl-meaning-starred` | `oklch(0.75 0.15 80)` | Starred, amber |
 | `--dl-meaning-spam` | `oklch(0.72 0.17 50)` | Spam, orange |
@@ -887,6 +956,8 @@ Where the button draws a ring of its own, that makes two. Add `dl-create-no-ring
 ```
 
 The recipe needs relative colour syntax: Chrome 119, Safari 16.4 or Firefox 128.
+
+A press is the hover's glass one step darker on the desktop, from `:active`. On the phone, inside `.dl-phone`, the glass is 0.97 and brighter from the moment the finger lands and settles back over 140ms as it lifts, once the app has called `watchPress()` (see "The press" under Helpers). Without the watcher the phone's press is drawn from `:active`, as it was before 0.14, which a touch browser shows only after the tap.
 
 ## The wordmark
 
@@ -1361,7 +1432,7 @@ import { Sheet, SheetBody, SheetClose, SheetContent, SheetFooter, SheetTitle } f
 
 One bottom sheet for the four apps, on Base UI's Drawer. Each app had built its own by hand, three of them in calendar alone, and each copy had its own drag, focus trap and exit. It needs `sheet.css`.
 
-The panel is the overlay glass with 14px top corners and the 40 by 4 handle at its top. It rises from the foot of the screen over `--dl-t-sheet` (260ms) on `--dl-ease` and sinks the same way, with the page dimmed by `--dl-scrim` behind it. Nothing behind it moves or shrinks: the owner picked the dim alone on 2026-11-24. Opened or closed from the keyboard, or under reduced motion, it lands at once.
+The panel is the overlay glass with 14px top corners and the 40 by 4 handle at its top. It rises from the foot of the screen over `--dl-t-sheet` (220ms) on `--dl-ease` and sinks over `--dl-t-sheet-out` (180ms) on the same curve, with the page dimmed by `--dl-scrim` behind it. Both were 260ms until 0.14. A sheet mounted already open rises too: `<Sheet>` opens it a commit after it mounts, before anything is painted, since Base UI plays no entrance for a popup that is open on its first render. Nothing behind it moves or shrinks: the owner picked the dim alone on 2026-11-24. Opened or closed from the keyboard, or under reduced motion, it lands at once.
 
 | Part | What it is |
 | --- | --- |
@@ -1412,12 +1483,12 @@ A finger drags the sheet from anywhere on it, the body and its buttons included,
 
 A press starts no drag in four cases, which are vaul's rules and which Base UI lacks:
 
-- in the sheet's first 500ms, while the tap that opened it is still ending;
+- in the sheet's first 150ms (`SHEET_OPEN_GUARD_MS`, 500 until 0.14), while the tap that opened it is still ending;
 - for 100ms after anything inside it scrolled;
 - on a `<select>`;
 - while text inside it is selected.
 
-These hold back a drag and nothing else. A tap on a button or an option in the first 500ms still lands.
+These hold back a drag and nothing else. A tap on a button or an option in the first 150ms still lands.
 
 Chromium on a phone sends no touchmove until the finger has gone some 15px from the press, and Base UI's Drawer takes the origin of a drag from the first touchmove. The browser does send pointer moves inside that distance.
 
@@ -1461,7 +1532,7 @@ The flick is one rule for every sheet: faster than 0.5px a millisecond, once the
 
 Base UI's Drawer has a rule of its own: past half the height, or the same flick with no least travel, averaged over the whole drag. Whichever distance the sheet has, the kit's rule wins, and this is how. The kit listens on both sides of Base UI's own handlers. Before Base UI hears a release, the kit reads how far the finger has travelled, with the lift's own place counted, and how fast it was moving. Then it decides.
 
-If Base UI then asks to close and the kit's answer was no, the kit refuses that close with Base UI's `eventDetails.cancel()` and the sheet settles. If the kit's answer was yes and Base UI asked for nothing, the kit closes the sheet itself, in the same task as the release. The panel slides out from where the finger let go: traced frame by frame in headless Chromium, it holds there and then goes straight down over 260ms, never back up. Where both say yes, Base UI runs the close, in less than the sheet time after a fast flick. `onOpenChange` hears `"swipe"` in every case.
+If Base UI then asks to close and the kit's answer was no, the kit refuses that close with Base UI's `eventDetails.cancel()` and the sheet settles. If the kit's answer was yes and Base UI asked for nothing, the kit closes the sheet itself, in the same task as the release. The panel slides out from where the finger let go: traced frame by frame in headless Chromium, it holds there and then goes straight down over the way out's time (260ms when this was traced, 180ms from 0.14), never back up. Where both say yes, Base UI runs the close, in less than the way out's time after a fast flick. A release that settles the sheet back takes the way out's 180ms as well: the panel and the scrim carry `data-dl-held` from the first press that may drag. `onOpenChange` hears `"swipe"` in every case.
 
 A release that something inside the sheet stops on its way up to the window is still finished, in the next frame. One that Base UI never heard, stopped before Base UI's own handler, is left to Base UI, and no later move closes the sheet on it.
 
@@ -1566,9 +1637,9 @@ Set one on `:root` for every sheet. For one sheet, pass it in `vars` on `<SheetC
 
 A variable in the panel's `className` or `style` reaches the panel alone. That's enough for the panel's own (`--dl-sheet-fill`, `--dl-sheet-blur`, `--dl-sheet-w`, `--dl-sheet-top`, `--dl-sheet-inset`, `--dl-sheet-dialog-w`). The scrim and the box never see it, so `--dl-sheet-z`, `--dl-sheet-scrim`, `--dl-sheet-lift`, `--dl-sheet-kb` and the dialog's `--dl-sheet-dialog-t` go in `vars`.
 
-Every part carries a class (`dl-sheet`, `dl-sheet-scrim`, `dl-sheet-viewport`, `dl-sheet-handle`, `dl-sheet-body` and so on), a `data-slot`, and on the panel, the scrim and the viewport `data-layout`. The panel and the scrim also carry Base UI's state: `data-open`, `data-starting-style`, `data-ending-style` and `data-swiping`. The rules sit in the `dalin` layer, so the app's own class wins.
+Every part carries a class (`dl-sheet`, `dl-sheet-scrim`, `dl-sheet-viewport`, `dl-sheet-handle`, `dl-sheet-body` and so on), a `data-slot`, and on the panel, the scrim and the viewport `data-layout`. The panel and the scrim also carry Base UI's state: `data-open`, `data-starting-style`, `data-ending-style` and `data-swiping`, the kit's `data-instant` for an open or close that lands at once, and `data-dl-held` once a press that may drag has landed. The rules sit in the `dalin` layer, so the app's own class wins.
 
-An app must not override the handle's pill, the corners, the sheet time and its curve, or the rule that the panel rests with no transform.
+An app must not override the handle's pill, the corners, the two sheet times and their curve, or the rule that the panel rests with no transform.
 
 ### What is not a sheet
 
@@ -1582,7 +1653,7 @@ Five surfaces look like one and should stay as they are.
 
 ## Helpers
 
-Three things each app had copied, the motion reader described under "One place for the motion switch", and from 0.13 the tooltip's wait and the tab's settle. They export from `@dalin/kit` and from `@dalin/kit/helpers`.
+Three things each app had copied, the motion reader described under "One place for the motion switch", from 0.13 the tooltip's wait and the tab's settle, and from 0.14 the press. They export from `@dalin/kit` and from `@dalin/kit/helpers`.
 
 ### The close fade
 
@@ -1636,9 +1707,21 @@ That reads "Undo · Ctrl+Z" on a PC and "Undo · ⌘Z" on a Mac. `shortcutLabel`
 
 ### The tab's settle
 
-`settleTab(glyph)` settles the glyph of the phone tab being opened, from 0.9 to 1 over 140ms, with the class `TAB_SETTLE_CLASS` and the rule in `motion.css`. It plays nothing from the keyboard or under reduced motion, and leaves nothing running at rest.
+`settleTab(glyph)` settles the glyph of the phone tab being opened, from the pressed size (0.97, and 0.9 until 0.14) to 1 over 140ms, with the class `TAB_SETTLE_CLASS` and the rule in `motion.css`. It plays nothing from the keyboard or under reduced motion, and leaves nothing running at rest. It also plays nothing on a tab the press is already settling: a tab marked `dl-press` settles as a whole on the lift, so an app that marks its tabs can drop the call.
 
-## Not in version 0.13
+### The press
+
+```tsx
+import { watchPress } from "@dalin/kit";
+
+useEffect(() => watchPress(), []);
+```
+
+It draws the phone's press from the pointer and not from `:active`. From `pointerdown` the pressed control carries `data-pressed` (`PRESSED_ATTR`), until the pointer lifts, is cancelled or slides off it. A lift on the control then marks it `data-released` (`RELEASED_ATTR`) for the 140ms settle, and the mark goes when the settle ends. `<html>` carries `data-dl-press` (`PRESS_WATCH_ATTR`) while a watcher runs, which is how `create.css` knows to leave `:active` alone on the phone.
+
+It marks the create button (`dl-create`, `dl-create-glass`, and the button around a glass layer) and any control with the class `dl-press` (`PRESS_CLASS`), and leaves one that is disabled or busy alone. `pressTarget(target)` is that rule for one event target. `watchPress({ reducedMotion })` takes the app's own motion reader for this watcher alone; left out, it follows the kit's. The steps for an app are under "Moving an app from 0.13 to 0.14".
+
+## Not in version 0.14
 
 These are still open, so the kit has no value for them: type sizes, shadows beyond the overlay's, and a sidebar component (the rows are tokens, and each app keeps its own markup).
 
