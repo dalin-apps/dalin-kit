@@ -126,6 +126,55 @@ html[data-dl-motion="reduce"] .dl-menu.dl-context-menu[data-ending-style]:not([d
   }
 }
 
+/* The pick (0.13, the owner's pick on 2026-11-25). A row picked with the
+   pointer blinks off once, for --dl-t-pick (60ms), and only then does the
+   menu fade over --dl-t-close. The action ran on the click and waits for
+   none of it: this is paint. <MenuItem> marks the row and every open menu
+   `data-picked` as it is clicked. Escape, a press outside and a pick from
+   the keyboard close with no blink, since Base UI marks a keyboard pick
+   `data-instant`, and `data-input="keyboard"` stills it besides.
+
+   A copy an app paints of a closing menu (drive's exit ghost) carries the
+   marks with it. Mark the copy's outer element `data-dl-menu-copy` and the
+   blink runs in it too, past the app's own rule that stills a copy's
+   children: these declarations are important, and an important one in a
+   layer beats an unlayered one. The copy's own fade is the app's, and it
+   waits --dl-t-pick. The blink's conditions sit in :where(), so the rules
+   that still it below outweigh it. */
+.dl-menu[data-picked][data-ending-style]:not([data-instant]) {
+  transition-delay: var(--dl-t-pick, 60ms);
+}
+.dl-menu[data-picked]:where([data-ending-style], [data-dl-menu-copy] *):where(:not([data-instant]))
+  .dl-menu-item[data-picked] {
+  animation: dl-menu-pick var(--dl-t-pick, 60ms) step-end both !important;
+}
+@keyframes dl-menu-pick {
+  0% {
+    background: transparent;
+  }
+  100% {
+    background: var(--dl-overlay-hover, oklch(1 0 0 / 0.08));
+  }
+}
+html[data-input="keyboard"] .dl-menu[data-picked][data-ending-style] {
+  transition-delay: 0s;
+}
+html[data-input="keyboard"] .dl-menu[data-picked] .dl-menu-item[data-picked],
+html[data-dl-motion="reduce"] .dl-menu[data-picked] .dl-menu-item[data-picked] {
+  animation: none !important;
+}
+html[data-dl-motion="reduce"] .dl-menu[data-picked][data-ending-style] {
+  transition-delay: 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-dl-motion="full"]) .dl-menu[data-picked] .dl-menu-item[data-picked] {
+    animation: none !important;
+  }
+  html:not([data-dl-motion="full"]) .dl-menu[data-picked][data-ending-style] {
+    transition-delay: 0s;
+  }
+}
+
 /* The rows scroll inside the surface, and the surface itself never clips:
    the arrow stands outside its box. */
 .dl-menu-list {

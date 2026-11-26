@@ -216,6 +216,18 @@
      two faces. Calendar, notes and drive each wrote 180ms as their own
      --t-base. */
   --dl-t-base: 180ms;
+  /* A list row's hover and selection (0.13, the owner's pick on
+     2026-11-25): at once, so a held arrow key leaves no trail of half-lit
+     rows. One switch for the family: every app points the background
+     transition of its list, tree, grid and column rows here, and a later
+     pick changes this one value. */
+  --dl-t-row: 0ms;
+  /* A menu row picked by the pointer blinks off for this long before the
+     menu fades (menu.css). The action has already run. */
+  --dl-t-pick: 60ms;
+  /* The glyph of a phone tab being opened settles from 0.9 to 1 over this
+     (phone.css, `.dl-tab-settle`). */
+  --dl-t-tab-settle: 140ms;
 
   /* Meaning colours, mail's hues, the same in every app: a row or icon whose
      place has a meaning shows its filled icon in this colour on hover and

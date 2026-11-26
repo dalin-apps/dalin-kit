@@ -67,7 +67,7 @@ const KIT_POPUP_PROPS = ["role", "aria-label", "aria-labelledby", "aria-modal", 
  *     </PaletteList>
  *   </Palette>
  */
-export function Palette({ open: openProp, onOpenChange, query: queryProp, onQueryChange, sources = NO_SOURCES, actions = NO_ACTIONS, actionsHeading = "Actions", tail, results: ownResults, marks: marksOf, placeholder = "Search", label = "Command palette", emptyText, hotkey = true, appKey, onEscape, finalFocus, zIndex, className, children, style, onKeyDownCapture, onPointerDownCapture, ...passed }) {
+export function Palette({ open: openProp, onOpenChange, query: queryProp, onQueryChange, sources = NO_SOURCES, actions = NO_ACTIONS, actionsHeading = "Actions", selection, tail, results: ownResults, marks: marksOf, placeholder = "Search", label = "Command palette", emptyText, hotkey = true, appKey, onEscape, finalFocus, zIndex, className, children, style, onKeyDownCapture, onPointerDownCapture, ...passed }) {
     const attributes = { ...passed };
     for (const name of KIT_POPUP_PROPS)
         delete attributes[name];
@@ -167,6 +167,7 @@ export function Palette({ open: openProp, onOpenChange, query: queryProp, onQuer
         sources: top ? (top.sources ?? NO_SOURCES) : sources,
         actions: top ? (top.actions ?? NO_ACTIONS) : actions,
         actionsHeading: top ? (top.actionsHeading ?? "Actions") : actionsHeading,
+        selection: top ? null : selection,
         tail: top ? undefined : tail,
     });
     const results = useMemo(() => {

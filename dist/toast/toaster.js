@@ -7,6 +7,7 @@ import { measureToastCover, refreshToastDock, setNamedToastCover, useToastDockSt
 import { holdTabStops } from "./tab-stops.js";
 import { watchCutTitles } from "./title-hint.js";
 import { useToastTags } from "./toast-tags.js";
+import { useToastPress } from "./toast-press.js";
 import { ToastSpinner } from "./toast-spinner.js";
 import { MOTION_CLASS, scopeSonnerReducedMotion } from "./sonner-motion.js";
 import { motionReaderFor, setMotionAttr, setToasterMotionReader } from "../helpers/motion.js";
@@ -569,6 +570,9 @@ export function Toaster({ gateOpen = true, phoneMaxWidth, className: appClassNam
         return () => setNamedToastCover(false);
     }, [coverUp]);
     const find = useToastTags(root, toasts);
+    // A progress toast the app gave a press (`pressToast`) is a button on a
+    // computer. On a phone a tap fans the stack, so nothing is pressable there.
+    useToastPress(root, find, tucked);
     const { phase, again, calm } = useAnnouncePhase(toasts, 
     // The desktop column announces always. The phone announces only while
     // its stack is docked and tucked: a toast that arrives in a fanned stack

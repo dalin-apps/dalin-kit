@@ -1,7 +1,7 @@
 import { type HTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import { type PaletteResults } from "./palette-results.js";
-import type { PaletteGroup, PaletteItem, PalettePage, PaletteSource } from "./palette-types.js";
+import type { PaletteGroup, PaletteItem, PalettePage, PaletteSelection, PaletteSource } from "./palette-types.js";
 /** A list the app built itself, in place of the palette asking `sources`: mail's and calendar's own searches. */
 export type PaletteOwnResults = {
     /** The groups to draw, in order. */
@@ -53,6 +53,15 @@ type PaletteOwnProps = {
     actions?: readonly PaletteItem[];
     /** The heading over the actions. "Actions". */
     actionsHeading?: string;
+    /**
+     * What the app has selected and its verbs, as the group that leads the
+     * first page: drive's file with Star, Tags…, Move to…, Rename, Download,
+     * Share… and Archive. The heading names the selection, and each verb shows
+     * its own `keys`. Ranked against the words as the actions are. Null or
+     * left out while nothing is selected. A palette that passes `results`
+     * draws its own list and leaves this out.
+     */
+    selection?: PaletteSelection | null;
     /** Rows that end the list under no heading, after any late group: mail's "Show all". A function of the words the list answers. */
     tail?: (query: string) => readonly PaletteItem[];
     /** The app's own list, in place of `sources`, `actions` and `tail`. */
@@ -124,7 +133,7 @@ type KitPopupProp = "role" | "aria-label" | "aria-labelledby" | "aria-modal" | "
  *     </PaletteList>
  *   </Palette>
  */
-export declare function Palette({ open: openProp, onOpenChange, query: queryProp, onQueryChange, sources, actions, actionsHeading, tail, results: ownResults, marks: marksOf, placeholder, label, emptyText, hotkey, appKey, onEscape, finalFocus, zIndex, className, children, style, onKeyDownCapture, onPointerDownCapture, ...passed }: PaletteProps): ReactNode;
+export declare function Palette({ open: openProp, onOpenChange, query: queryProp, onQueryChange, sources, actions, actionsHeading, selection, tail, results: ownResults, marks: marksOf, placeholder, label, emptyText, hotkey, appKey, onEscape, finalFocus, zIndex, className, children, style, onKeyDownCapture, onPointerDownCapture, ...passed }: PaletteProps): ReactNode;
 /** A ghost completion over the field: the rest of a name, laid after the words in a fainter ink. */
 export type PaletteCompletion = {
     /** What would follow the words: "na Ito" after "da". */

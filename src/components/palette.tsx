@@ -25,7 +25,7 @@ import { Kbd } from "./kbd.js";
 import { RowMenu, pointAnchor, underAnchor, type RowMenuState } from "./palette-menu.js";
 import { matchParts, scoreParts } from "./palette-match.js";
 import { usePaletteResults, type PaletteResults } from "./palette-results.js";
-import type { PaletteGroup, PaletteItem, PaletteMenuEntry, PalettePage, PaletteSource } from "./palette-types.js";
+import type { PaletteGroup, PaletteItem, PaletteMenuEntry, PalettePage, PaletteSelection, PaletteSource } from "./palette-types.js";
 import { useToasterTab } from "./toaster-tab.js";
 
 /** The keys that move the highlight. They do nothing while the list answers an earlier query. */
@@ -156,6 +156,15 @@ type PaletteOwnProps = {
   actions?: readonly PaletteItem[];
   /** The heading over the actions. "Actions". */
   actionsHeading?: string;
+  /**
+   * What the app has selected and its verbs, as the group that leads the
+   * first page: drive's file with Star, Tags…, Move to…, Rename, Download,
+   * Share… and Archive. The heading names the selection, and each verb shows
+   * its own `keys`. Ranked against the words as the actions are. Null or
+   * left out while nothing is selected. A palette that passes `results`
+   * draws its own list and leaves this out.
+   */
+  selection?: PaletteSelection | null;
   /** Rows that end the list under no heading, after any late group: mail's "Show all". A function of the words the list answers. */
   tail?: (query: string) => readonly PaletteItem[];
   /** The app's own list, in place of `sources`, `actions` and `tail`. */
@@ -240,6 +249,7 @@ export function Palette({
   sources = NO_SOURCES,
   actions = NO_ACTIONS,
   actionsHeading = "Actions",
+  selection,
   tail,
   results: ownResults,
   marks: marksOf,
@@ -358,6 +368,7 @@ export function Palette({
     sources: top ? (top.sources ?? NO_SOURCES) : sources,
     actions: top ? (top.actions ?? NO_ACTIONS) : actions,
     actionsHeading: top ? (top.actionsHeading ?? "Actions") : actionsHeading,
+    selection: top ? null : selection,
     tail: top ? undefined : tail,
   });
   const results: PaletteResults = useMemo(() => {

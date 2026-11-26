@@ -1,4 +1,4 @@
-import type { PaletteGroup, PaletteItem, PaletteSource } from "./palette-types.js";
+import type { PaletteGroup, PaletteItem, PaletteSelection, PaletteSource } from "./palette-types.js";
 /**
  * How long a query's list waits for its slowest source. Past it the list is
  * shown without that source, whose group joins at the end when it answers.
@@ -6,6 +6,8 @@ import type { PaletteGroup, PaletteItem, PaletteSource } from "./palette-types.j
 export declare const SOURCE_WAIT_MS = 400;
 /** The id of the actions' group. */
 export declare const ACTIONS_GROUP = "dl:actions";
+/** The id of the selection's group, which leads the list. */
+export declare const SELECTION_GROUP = "dl:selection";
 export type PaletteResultsOptions = {
     /** Whether to ask at all: the palette or the phone's search is open. */
     active: boolean;
@@ -19,6 +21,11 @@ export type PaletteResultsOptions = {
     sources: readonly PaletteSource[];
     actions: readonly PaletteItem[];
     actionsHeading: string;
+    /**
+     * What the app has selected and its verbs: a group ahead of every source,
+     * ranked against the words as the actions are.
+     */
+    selection?: PaletteSelection | null;
     /** Leaves the actions out while the field is empty, as the phone's search does. */
     actionsNeedWords?: boolean;
     /** Rows that end the list under no heading, after any group that joined late: mail's "Show all". */
@@ -48,5 +55,5 @@ export type PaletteResults = {
  * at the end, and ranks the actions against the query the list answers, so
  * the whole list changes at once.
  */
-export declare function usePaletteResults({ active, query, scope, sources, actions, actionsHeading, actionsNeedWords, tail, }: PaletteResultsOptions): PaletteResults;
+export declare function usePaletteResults({ active, query, scope, sources, actions, actionsHeading, selection, actionsNeedWords, tail, }: PaletteResultsOptions): PaletteResults;
 //# sourceMappingURL=palette-results.d.ts.map

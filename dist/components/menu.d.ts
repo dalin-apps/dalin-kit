@@ -65,7 +65,22 @@ export type MenuItemProps = MenuPrimitive.Item.Props & {
     /** Lines the words up with rows that have an icon, for a row with none. */
     inset?: boolean;
 };
-export declare function MenuItem({ className, variant, inset, ...props }: MenuItemProps): ReactNode;
+/** The attribute a picked row, and every menu open as it was picked, carry while the menu closes. */
+export declare const MENU_PICKED_ATTR = "data-picked";
+/**
+ * Marks a row the pointer picked, and every menu open at that moment (a
+ * submenu's parents close with it), so menu.css blinks the row off for
+ * `--dl-t-pick` before the menus fade. The marks go a moment after the
+ * close, since a menu kept mounted would otherwise carry them into its next
+ * close. Paint only: nothing waits on it.
+ */
+export declare function markMenuPick(row: Element): void;
+/**
+ * A row. A click on it runs `onClick` at once and closes the menu, and a
+ * row picked with the pointer blinks off for `--dl-t-pick` (60ms) before the
+ * menu fades (menu.css).
+ */
+export declare function MenuItem({ className, variant, inset, closeOnClick, onClick, onPointerUp, ...props }: MenuItemProps): ReactNode;
 export type MenuLinkItemProps = MenuPrimitive.LinkItem.Props & {
     variant?: MenuItemVariant;
     inset?: boolean;
@@ -77,7 +92,7 @@ export type MenuLinkItemProps = MenuPrimitive.LinkItem.Props & {
  * the app handles itself (an in-app route, a new tab). Pass
  * `closeOnClick={false}` to keep it open.
  */
-export declare function MenuLinkItem({ className, variant, inset, closeOnClick, ...props }: MenuLinkItemProps): ReactNode;
+export declare function MenuLinkItem({ className, variant, inset, closeOnClick, onClick, onPointerUp, ...props }: MenuLinkItemProps): ReactNode;
 export declare function MenuCheckboxItem({ className, children, ...props }: MenuPrimitive.CheckboxItem.Props): ReactNode;
 export declare function MenuRadioGroup(props: MenuPrimitive.RadioGroup.Props): ReactNode;
 export declare function MenuRadioItem({ className, children, ...props }: MenuPrimitive.RadioItem.Props): ReactNode;

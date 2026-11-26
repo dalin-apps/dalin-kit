@@ -101,6 +101,18 @@ export type PaletteGroup = {
     note?: ReactNode;
 };
 /**
+ * What the app has selected, and what can be done to it: drive's file and
+ * its Star, Tags…, Move to…, Rename F2, Download, Share… and Archive Del.
+ * The palette leads with it, under a heading that names the selection, and
+ * ranks its rows against the words as it ranks the actions.
+ */
+export type PaletteSelection = {
+    /** The selection's name, as the group's heading: "Budget 2025-02.xlsx", "3 files". */
+    heading: string;
+    /** The verbs, each with its own `keys`, in the order the app wants them with no words typed. */
+    items: readonly PaletteItem[];
+};
+/**
  * A page a row opens in the palette's own field (cmdk's nested pages):
  * "Move to", then the folders. Backspace on an empty field and Escape go
  * back one page.

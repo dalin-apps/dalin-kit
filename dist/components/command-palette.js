@@ -42,7 +42,7 @@ export { SOURCE_WAIT_MS } from "./palette-results.js";
  *     actions={[{ id: "new", title: "New page", keys: ["N"], onSelect: newPage }]}
  *   />
  */
-export function CommandPalette({ open, onOpenChange, sources, actions, actionsHeading, placeholder, label, emptyText, hotkey, appKey, filter, className, }) {
-    return (_jsxs(Palette, { open: open, onOpenChange: onOpenChange, sources: sources, actions: actions, actionsHeading: actionsHeading, placeholder: placeholder, label: label, emptyText: emptyText, hotkey: hotkey, appKey: appKey, className: className, children: [_jsx(PaletteField, { filter: filter }), _jsx(PaletteList, {})] }));
+export function CommandPalette({ open, onOpenChange, sources, actions, actionsHeading, selection, placeholder, label, emptyText, hotkey, appKey, filter, className, }) {
+    return (_jsxs(Palette, { open: open, onOpenChange: onOpenChange, sources: sources, actions: actions, actionsHeading: actionsHeading, selection: selection, placeholder: placeholder, label: label, emptyText: emptyText, hotkey: hotkey, appKey: appKey, className: className, children: [_jsx(PaletteField, { filter: filter }), _jsx(PaletteList, {})] }));
 }
 //# sourceMappingURL=command-palette.js.map
