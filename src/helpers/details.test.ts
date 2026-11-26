@@ -3,7 +3,8 @@
  *
  * The helpers and tokens behind three family details from the drive pass
  * (0.13): rows that change at once, the first tooltip's wait, and the
- * settle of a phone tab's glyph.
+ * settle of a phone tab's glyph. The press that the settle now starts from
+ * (0.14) is in press.test.ts.
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { readCss, ruleFor, ruleNaming } from "../../test/css.js";
@@ -98,12 +99,14 @@ describe("settleTab", () => {
 });
 
 describe("motion.css, the tab's settle", () => {
-  it("grows the glyph from 0.9 to 1 over --dl-t-tab-settle, on the family's curve, as scale", () => {
+  it("grows the glyph from the pressed size to 1 over --dl-t-tab-settle, on the family's curve, as scale", () => {
     expect(ruleFor(motion, ".dl-tab-settle")).toContain(
       "animation: dl-tab-settle var(--dl-t-tab-settle, 140ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1))",
     );
     const frames = /@keyframes dl-tab-settle\s*\{([\s\S]*?)\n\}/.exec(motion)?.[1] ?? "";
-    expect(frames).toMatch(/from\s*\{\s*scale: 0\.9;/);
+    // From 0.14 it starts where the press left the tab (0.97), not at 0.9, which multiplied with the press.
+    expect(frames).toMatch(/from\s*\{\s*scale: var\(--dl-press-scale, 0\.97\);/);
+    expect(motion).not.toContain("0.9;");
     expect(frames).toMatch(/to\s*\{\s*scale: 1;/);
     expect(frames).not.toContain("transform");
     expect(token("--dl-t-tab-settle")).toBe("140ms");

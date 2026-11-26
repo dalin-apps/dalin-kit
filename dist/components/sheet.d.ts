@@ -17,9 +17,10 @@ import { type SheetDismissDistance } from "./sheet-release.js";
  *
  * What it does, with the reason for each where the reason is not plain:
  *
- * - It rises from the foot of the screen over `--dl-t-sheet` and sinks the
- *   same way, with the page dimmed by `--dl-scrim` behind it. Opened or
- *   closed from the keyboard, or under reduced motion, it lands at once.
+ * - It rises from the foot of the screen over `--dl-t-sheet` (220ms) and
+ *   sinks over `--dl-t-sheet-out` (180ms), with the page dimmed by
+ *   `--dl-scrim` behind it. A sheet mounted already open rises too. Opened
+ *   or closed from the keyboard, or under reduced motion, it lands at once.
  * - It drags from anywhere on it, once its scrolling body is at the top.
  *   Base UI's Drawer does that part. The kit adds the start rules Base UI
  *   lacks (sheet-release.ts) and judges the release by the family's rule.
@@ -153,6 +154,12 @@ export type SheetProps = {
 export declare const SHEET_NO_DRAG_ATTR = "data-dl-no-drag";
 /** Base UI's own name for the same mark, which is what its Drawer reads. */
 declare const BASE_IGNORE_ATTR = "data-base-ui-swipe-ignore";
+/**
+ * The mark of a sheet that has been under a pointer since it opened, on the
+ * panel and the scrim. From then on a move back to rest is a settle after a
+ * drag, and takes the way out's time and not the rise's (sheet.css).
+ */
+export declare const SHEET_HELD_ATTR = "data-dl-held";
 /** What `noSheetDrag()` returns: the kit's mark and Base UI's, with the same value. */
 export type SheetNoDragProps = {
     [SHEET_NO_DRAG_ATTR]: string;

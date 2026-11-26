@@ -176,22 +176,71 @@
 /* On the phone (anything inside `.dl-phone`, the class an app puts on its
    phone layout): the glass shrinks a little and brightens. It is written
    as `scale`, not `transform`, so a circle the app places with a transform
-   stays where it is. */
-.dl-phone :is(.dl-create, .dl-create-glass):active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])),
-.dl-phone :active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])) > .dl-create-glass {
+   stays where it is.
+
+   From 0.14 the look starts as the finger lands (the owner's pick on
+   2026-11-26). A touch browser applies `:active` only once the tap is
+   over, so the plus sat at full size under a held finger and shrank after
+   it lifted. `watchPress()` (from @dalin/kit) marks the control
+   `data-pressed` from pointerdown and `data-released` for the settle after
+   the lift, and marks <html> `data-dl-press` while it runs. With that mark
+   on, `:active` draws nothing here, or it would press the control again
+   once the finger had gone. An app that has not started the watcher keeps
+   the `:active` press, as before. */
+:where(html:not([data-dl-press])) .dl-phone :is(.dl-create, .dl-create-glass):active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])),
+:where(html:not([data-dl-press])) .dl-phone :active:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])) > .dl-create-glass,
+.dl-phone :is(.dl-create, .dl-create-glass)[data-pressed]:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])),
+.dl-phone [data-pressed]:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])) > .dl-create-glass {
   scale: var(--dl-press-scale, 0.97);
   filter: brightness(var(--dl-press-bright, 1.12));
 }
-/* Under reduced motion it only brightens: the app's own switch where it
-   has spoken (`data-dl-motion` on <html>), the system's setting otherwise. */
+/* The lift: one settle back from the pressed size, over --dl-t-tab-settle
+   (140ms) on the family's curve, the same one a phone tab plays
+   (motion.css). `watchPress` takes the mark off when it ends, so nothing
+   runs at rest. */
+.dl-phone :is(.dl-create, .dl-create-glass)[data-released],
+.dl-phone [data-released] > .dl-create-glass {
+  animation: dl-press-settle var(--dl-t-tab-settle, 140ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+/* The press lands in one frame and leaves as that one settle, so neither
+   eases its scale or its filter through the hover's transition: a running
+   transition outranks an animation, and the 120ms ease would play in the
+   settle's place. */
+.dl-phone :is(.dl-create, .dl-create-glass):is([data-pressed], [data-released]),
+.dl-phone :is([data-pressed], [data-released]) > .dl-create-glass {
+  transition-property: background, border-color;
+}
+/* The same keyframes as motion.css, under the same name, so this sheet
+   needs no other. It ends on the control's own resting values. */
+@keyframes dl-press-settle {
+  from {
+    scale: var(--dl-press-scale, 0.97);
+    filter: brightness(var(--dl-press-bright, 1.12));
+  }
+}
+/* Under reduced motion it only brightens, and lets go at once: the app's
+   own switch where it has spoken (`data-dl-motion` on <html>), the
+   system's setting otherwise. */
 html[data-dl-motion="reduce"] .dl-phone :is(.dl-create, .dl-create-glass):active,
-html[data-dl-motion="reduce"] .dl-phone :active > .dl-create-glass {
+html[data-dl-motion="reduce"] .dl-phone :active > .dl-create-glass,
+html[data-dl-motion="reduce"] .dl-phone :is(.dl-create, .dl-create-glass)[data-pressed],
+html[data-dl-motion="reduce"] .dl-phone [data-pressed] > .dl-create-glass {
   scale: none;
+}
+html[data-dl-motion="reduce"] .dl-phone :is(.dl-create, .dl-create-glass)[data-released],
+html[data-dl-motion="reduce"] .dl-phone [data-released] > .dl-create-glass {
+  animation: none;
 }
 @media (prefers-reduced-motion: reduce) {
   html:not([data-dl-motion="full"]) .dl-phone :is(.dl-create, .dl-create-glass):active,
-  html:not([data-dl-motion="full"]) .dl-phone :active > .dl-create-glass {
+  html:not([data-dl-motion="full"]) .dl-phone :active > .dl-create-glass,
+  html:not([data-dl-motion="full"]) .dl-phone :is(.dl-create, .dl-create-glass)[data-pressed],
+  html:not([data-dl-motion="full"]) .dl-phone [data-pressed] > .dl-create-glass {
     scale: none;
+  }
+  html:not([data-dl-motion="full"]) .dl-phone :is(.dl-create, .dl-create-glass)[data-released],
+  html:not([data-dl-motion="full"]) .dl-phone [data-released] > .dl-create-glass {
+    animation: none;
   }
 }
 

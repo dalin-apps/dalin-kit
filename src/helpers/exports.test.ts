@@ -87,6 +87,12 @@ describe("@dalin/kit", () => {
     "TIP_GROUP_MS",
     "settleTab",
     "TAB_SETTLE_CLASS",
+    "watchPress",
+    "pressTarget",
+    "PRESSED_ATTR",
+    "RELEASED_ATTR",
+    "PRESS_WATCH_ATTR",
+    "PRESS_CLASS",
   ])("exports %s from its root", (name) => {
     expect((kit as Record<string, unknown>)[name]).toBeDefined();
   });
@@ -146,6 +152,8 @@ describe("@dalin/kit/components", () => {
     "SheetFooter",
     "SheetClose",
     "SHEET_NO_DRAG_ATTR",
+    "SHEET_HELD_ATTR",
+    "SHEET_OPEN_GUARD_MS",
     "noSheetDrag",
     "sheetShouldDismiss",
     "sheetReleaseVelocity",

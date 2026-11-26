@@ -16,6 +16,6 @@ export { commandScore } from "./command-score.js";
 export { SCORE_FLOOR, fold, matchParts, matchesQuery, queryTerms, rankActions, scoreParts, scoreQuery, } from "./palette-match.js";
 export { PHONE_MARK_PX, PhoneHeader, PhoneHeaderIcon, } from "./phone-header.js";
 export { PhoneSearch, PhoneSearchAvatar, } from "./phone-search.js";
-export { SHEET_NO_DRAG_ATTR, Sheet, SheetBody, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHandle, SheetHeader, SheetTitle, SheetTrigger, noSheetDrag, } from "./sheet.js";
+export { SHEET_HELD_ATTR, SHEET_NO_DRAG_ATTR, Sheet, SheetBody, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHandle, SheetHeader, SheetTitle, SheetTrigger, noSheetDrag, } from "./sheet.js";
 export { SHEET_DISMISS_FRACTION, SHEET_DISMISS_PX, SHEET_FLING_MIN_PX, SHEET_FLING_VELOCITY, SHEET_FLING_WINDOW_MS, SHEET_OPEN_GUARD_MS, SHEET_SCROLL_GUARD_MS, resolveSheetDismissDistance, sheetDismissDistance, sheetDragBlock, sheetReleaseVelocity, sheetShouldDismiss, } from "./sheet-release.js";
 //# sourceMappingURL=index.js.map

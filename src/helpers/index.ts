@@ -13,3 +13,12 @@ export { MOTION_ATTR, reducesMotion, setMotionAttr, setMotionReader, systemReduc
 export { SEG_SLIDE_ATTR, placeSegLift, slideSegLift } from "./seg-slide.js";
 export { TIP_DELAY_MS, TIP_GROUP_MS } from "./tip-delay.js";
 export { TAB_SETTLE_CLASS, settleTab } from "./tab-settle.js";
+export {
+  PRESSED_ATTR,
+  PRESS_CLASS,
+  PRESS_WATCH_ATTR,
+  RELEASED_ATTR,
+  pressTarget,
+  watchPress,
+  type PressOptions,
+} from "./press.js";

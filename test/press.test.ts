@@ -4,6 +4,10 @@
  * pressed control shrinks (--dl-press-scale) and brightens
  * (--dl-press-bright), and under reduced motion it only brightens. A control
  * that is disabled or busy shows no press, and no box appears behind an icon.
+ *
+ * From 0.14 the create button's and a phone tab's press starts from the
+ * pointer (`watchPress`): src/helpers/press.test.ts has that half. The
+ * `:active` rules read here are what an app without the watcher still gets.
  */
 import { describe, expect, it } from "vitest";
 import { outweighs, readCss, rulesWith, splitList } from "./css.js";

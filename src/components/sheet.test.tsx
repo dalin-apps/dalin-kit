@@ -11,13 +11,14 @@
  */
 import { StrictMode, act, useRef, useState, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { readCss, ruleFor, rulesWith } from "../../test/css.js";
+import { outweighs, readCss, ruleFor, rulesWith, splitList } from "../../test/css.js";
 import { all, click, key, mount, one, press, settle, withDom, withToast } from "../../test/dom.js";
 import { INPUT_ATTR } from "../helpers/input-modality.js";
 import { setMotionReader } from "../helpers/motion.js";
 import { readToastCovered } from "../toast/toast-dock.js";
 import { SHEET_DISMISS_PX } from "./sheet-release.js";
 import {
+  SHEET_HELD_ATTR,
   SHEET_NO_DRAG_ATTR,
   Sheet,
   SheetBody,
@@ -43,7 +44,7 @@ const scrim = () => one(".dl-sheet-scrim");
 const viewport = () => one(".dl-sheet-viewport");
 const layers = (): unknown[] => ((window.history.state as { dalinKit?: unknown[] } | null)?.dalinKit ?? []);
 
-/** The page's clock, read once the sheet's first half second is well past. */
+/** The page's clock, read once the sheet's open guard is well past. */
 let now = 0;
 beforeEach(() => {
   now = performance.now() + 5000;
@@ -543,15 +544,25 @@ describe("<Sheet>, when a drag may start", () => {
     [360, 100],
   ];
 
-  it("starts no drag in the sheet's first half second", async () => {
+  it("starts no drag in the sheet's first 150ms", async () => {
+    // Read before the sheet mounts, so the press below is inside the guard however long the mount took.
+    const before = performance.now();
     await open();
     const title = one(".dl-sheet-title")!;
-    now = performance.now() + 100;
+    now = before + 100;
     await drag(title, far);
     expect(dragged()).toBe(false);
-    await release(title);
-    // The same press a little later drags.
-    now = performance.now() + 5000;
+    // Held past the guard, the press is still the one that was ignored.
+    await release(title, 400);
+    expect(dragged()).toBe(false);
+    expect(panel()!.hasAttribute(SHEET_HELD_ATTR)).toBe(false);
+  });
+
+  it("takes a drag from a press 200ms after it opened, which the old half second ignored", async () => {
+    await open();
+    const title = one(".dl-sheet-title")!;
+    // After the mount and its settle: 200ms on is past the guard and well inside 500.
+    now = performance.now() + 200;
     await drag(title, far);
     expect(dragged()).toBe(true);
     await release(title, 200);
@@ -1250,6 +1261,188 @@ describe("<Sheet>, landing at once", () => {
   });
 });
 
+describe("<Sheet>, a sheet mounted already open", () => {
+  /**
+   * What the scrim and the panel carried as they were added to the page:
+   * `stop()` returns one line for each, the scrim first. An observer hears
+   * of a node in the microtask after it is added, so before the frame in
+   * which Base UI takes the starting style off. Reading the panel after
+   * `mount()` would race that frame.
+   */
+  function arrivals(): () => string[] {
+    const parts = [".dl-sheet-scrim", ".dl-sheet"] as const;
+    const seen = new Map<string, string>();
+    const watch = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          for (const part of parts) {
+            const el = node.matches(part) ? node : node.querySelector(part);
+            if (!el || seen.has(part)) continue;
+            const marks = ["data-starting-style", "data-instant"].filter((name) => el.hasAttribute(name));
+            seen.set(part, [part, ...marks].join(" "));
+          }
+        }
+      }
+    });
+    watch.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      watch.disconnect();
+      return parts.map((part) => seen.get(part) ?? `${part} never arrived`);
+    };
+  }
+  const Open = (props: Partial<SheetProps>): ReactNode => (
+    <Sheet {...props}>
+      <SheetContent label="Event">
+        <SheetBody>Rows</SheetBody>
+      </SheetContent>
+    </Sheet>
+  );
+
+  it.each([
+    ["the app's `open`", { open: true }],
+    ["`defaultOpen`", { defaultOpen: true }],
+  ] as const)("rises: with %s the panel and the dim mount in their starting style, and leave it a frame on", async (_, props) => {
+    const stop = arrivals();
+    await mount(<Open {...props} />);
+    await settle(60);
+    // Base UI alone draws a sheet that is open on its first render at rest, with no starting style.
+    expect(stop()).toEqual([".dl-sheet-scrim data-starting-style", ".dl-sheet data-starting-style"]);
+    expect(panel()!.hasAttribute("data-starting-style")).toBe(false);
+    expect(scrim()!.hasAttribute("data-starting-style")).toBe(false);
+    expect(panel()!.hasAttribute("data-open")).toBe(true);
+    expect(panel()!.hasAttribute("data-instant")).toBe(false);
+  });
+
+  it("rises under strict mode too", async () => {
+    const stop = arrivals();
+    await mount(
+      <StrictMode>
+        <Open open />
+      </StrictMode>,
+    );
+    await settle(60);
+    expect(stop()).toEqual([".dl-sheet-scrim data-starting-style", ".dl-sheet data-starting-style"]);
+    expect(panel()!.hasAttribute("data-starting-style")).toBe(false);
+    expect(panel()!.hasAttribute("data-open")).toBe(true);
+  });
+
+  it("tells the app it opened, once, and never that it closed", async () => {
+    const heard: string[] = [];
+    await mount(
+      <Open
+        open
+        onOpenChange={(next) => heard.push(next ? "open" : "close")}
+        onOpenChangeComplete={(next) => heard.push(next ? "done:open" : "done:closed")}
+      />,
+    );
+    await settle(80);
+    expect(heard).toEqual(["done:open"]);
+  });
+
+  it("takes focus on the panel and covers the bar for the toaster, as a sheet opened later does", async () => {
+    await mount(<Open open />);
+    await settle(60);
+    expect(document.activeElement).toBe(panel());
+    expect(readToastCovered()).toBe(true);
+  });
+
+  it("lands at once when the last thing done was a key: no slide to skip a frame late", async () => {
+    document.documentElement.setAttribute(INPUT_ATTR, "keyboard");
+    const stop = arrivals();
+    await mount(<Open open />);
+    await settle(60);
+    expect(stop()).toEqual([".dl-sheet-scrim data-starting-style data-instant", ".dl-sheet data-starting-style data-instant"]);
+    expect(panel()!.hasAttribute("data-instant")).toBe(true);
+  });
+
+  it("lands at once under the app's reduced motion", async () => {
+    const off = setMotionReader(() => true);
+    try {
+      const stop = arrivals();
+      await mount(<Open open />);
+      await settle(60);
+      expect(stop()).toEqual([".dl-sheet-scrim data-starting-style data-instant", ".dl-sheet data-starting-style data-instant"]);
+    } finally {
+      off();
+    }
+  });
+
+  it("closes as any sheet does once the app turns `open` off", async () => {
+    const done = vi.fn();
+    await mount(<Open open onOpenChangeComplete={done} />);
+    await settle(60);
+    await mount(<Open open={false} onOpenChangeComplete={done} />);
+    await settle(80);
+    expect(panel()).toBeNull();
+    expect(done.mock.calls.map(([next]) => next)).toEqual([true, false]);
+  });
+
+  it("leaves a sheet mounted closed closed", async () => {
+    const done = vi.fn();
+    await mount(<Open open={false} onOpenChangeComplete={done} />);
+    await settle(60);
+    expect(panel()).toBeNull();
+    expect(done).not.toHaveBeenCalled();
+  });
+
+  it("leaves the dialog layout as it was: mounted open, it stands in place at once", async () => {
+    const stop = arrivals();
+    await mount(<Open open layout="dialog" />);
+    await settle(60);
+    expect(stop()).toEqual([".dl-sheet-scrim", ".dl-sheet"]);
+  });
+});
+
+describe("<Sheet>, the mark of a sheet that has been held", () => {
+  const far: readonly Step[] = [
+    [300, 16],
+    [360, 100],
+  ];
+
+  it("has none as it rises, and takes it on the panel and the dim from the first press that may drag", async () => {
+    await open();
+    expect(panel()!.hasAttribute(SHEET_HELD_ATTR)).toBe(false);
+    expect(scrim()!.hasAttribute(SHEET_HELD_ATTR)).toBe(false);
+    const title = one(".dl-sheet-title")!;
+    await drag(title, far);
+    expect(panel()!.hasAttribute(SHEET_HELD_ATTR)).toBe(true);
+    expect(scrim()!.hasAttribute(SHEET_HELD_ATTR)).toBe(true);
+    // Let go short of the distance: the settle back runs with the mark still on.
+    await release(title, 200);
+    expect(panel()).not.toBeNull();
+    expect(dragged()).toBe(false);
+    expect(panel()!.hasAttribute(SHEET_HELD_ATTR)).toBe(true);
+  });
+
+  it("takes none from a press that may not drag: a sheet with `swipe` off, or the dialog layout", async () => {
+    await open({ swipe: false });
+    await drag(one(".dl-sheet-title")!, far);
+    expect(panel()!.hasAttribute(SHEET_HELD_ATTR)).toBe(false);
+    await release(one(".dl-sheet-title")!, 200);
+    await mount(<Demo layout="dialog" />);
+    await settle(60);
+    await mouse(one(".dl-sheet-title")!, "pointerdown", 300, 600, 1);
+    expect(panel()!.hasAttribute(SHEET_HELD_ATTR)).toBe(false);
+    await mouse(one(".dl-sheet-title")!, "pointerup", 300, 16, 0);
+  });
+
+  it("drops it as a sheet kept mounted opens again, so that rise takes the rise's time", async () => {
+    const Kept = ({ shown }: { shown: boolean }): ReactNode => <Demo open={shown} content={{ keepMounted: true }} />;
+    await mount(<Kept shown />);
+    await settle(60);
+    const title = one(".dl-sheet-title")!;
+    await drag(title, far);
+    await release(title, 200);
+    expect(panel()!.hasAttribute(SHEET_HELD_ATTR)).toBe(true);
+    await mount(<Kept shown={false} />);
+    await settle(80);
+    await mount(<Kept shown />);
+    expect(panel()!.hasAttribute(SHEET_HELD_ATTR)).toBe(false);
+    expect(scrim()!.hasAttribute(SHEET_HELD_ATTR)).toBe(false);
+  });
+});
+
 describe("<Sheet>, the keyboard", () => {
   it("leaves Base UI's keyboard handling off, and reads the app's inset", async () => {
     await open();
@@ -1460,10 +1653,11 @@ describe("<Sheet>, the dim over the travel a phone keeps back", () => {
   });
 });
 
-describe("<Sheet>, a press in its first half second", () => {
+describe("<Sheet>, a press inside its open guard", () => {
   it("lets a tap on a button and on an option through, and holds back only a drag", async () => {
     const pressed = vi.fn();
     const picked = vi.fn();
+    const before = performance.now();
     await open({
       body: (
         <>
@@ -1476,13 +1670,13 @@ describe("<Sheet>, a press in its first half second", () => {
         </>
       ),
     });
-    // Just opened.
-    now = performance.now() + 100;
+    // Just opened: every time below is inside the guard, counted from before the mount.
+    now = before + 20;
     for (const target of [one("#early")!, one("#option")!]) {
       (document as { elementFromPoint?: unknown }).elementFromPoint = () => target;
       await act(async () => {
         touch("touchstart", target, 300, now);
-        now += 60;
+        now += 30;
         touch("touchend", target, 300, now);
         for (const name of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) {
           target.dispatchEvent(new MouseEvent(name, { bubbles: true, cancelable: true, button: 0, detail: 1 }));
@@ -1699,15 +1893,33 @@ describe("sheet.css", () => {
     expect(rest).toContain("border-bottom: 0");
   });
 
-  it("opens and closes over the sheet time, on the family's curve", () => {
-    expect(rest).toMatch(/transition:\s*transform var\(--dl-t-sheet, 260ms\) var\(--dl-ease,[^;]*,\s*translate var\(--dl-t-sheet, 260ms\) var\(--dl-ease,/);
+  it("rises over 220ms and leaves over 180ms, on the family's curve (0.14; both were 260ms)", () => {
+    const tokens = readCss("tokens");
+    expect(tokens).toMatch(/--dl-t-sheet: 220ms;/);
+    expect(tokens).toMatch(/--dl-t-sheet-out: 180ms;/);
+    expect(tokens).toMatch(/--dl-ease: cubic-bezier\(0\.2, 0\.8, 0\.2, 1\);/);
+    // The rule at rest is the rise's: a transition takes its time from the style it moves to.
+    expect(rest).toMatch(/transition:\s*transform var\(--dl-t-sheet, 220ms\) var\(--dl-ease,[^;]*,\s*translate var\(--dl-t-sheet, 220ms\) var\(--dl-ease,/);
     expect(ruleFor(css, ".dl-sheet:is([data-starting-style], [data-ending-style])")).toBe("transform: translateY(100%);");
+    expect(css).not.toContain("260ms");
   });
 
-  it("runs a release for Base UI's share of the sheet time, never longer", () => {
+  it("runs a close for Base UI's share of the way out's time, never longer", () => {
     expect(ruleFor(css, ".dl-sheet[data-ending-style]")).toBe(
-      "transition-duration: calc(var(--drawer-swipe-strength, 1) * var(--dl-t-sheet, 260ms));",
+      "transition-duration: calc(var(--drawer-swipe-strength, 1) * var(--dl-t-sheet-out, 180ms));",
     );
+  });
+
+  it("settles a held sheet back over the way out's time, and a flick's close still wins", () => {
+    const held = ".dl-sheet[data-dl-held]";
+    expect(SHEET_HELD_ATTR).toBe("data-dl-held");
+    expect(ruleFor(css, held)).toBe("transition-duration: var(--dl-t-sheet-out, 180ms);");
+    // As heavy as the rules that must beat it, and earlier in the sheet.
+    for (const later of [".dl-sheet[data-ending-style]", '.dl-sheet[data-layout="dialog"]']) {
+      expect(outweighs(held, later)).toBe(false);
+      expect(css.indexOf(`${later} {`)).toBeGreaterThan(css.indexOf(`${held} {`));
+    }
+    expect(css.indexOf(":is(.dl-sheet, .dl-sheet-scrim)[data-instant]")).toBeGreaterThan(css.indexOf(`${held} {`));
   });
 
   it("clears the home indicator, and hands that room to the keyboard while it is up", () => {
@@ -1725,9 +1937,13 @@ describe("sheet.css", () => {
     const dim = ruleFor(css, ".dl-sheet-scrim");
     expect(dim).toContain("background: var(--dl-sheet-scrim, var(--dl-scrim, rgb(0 0 0 / 0.62)))");
     expect(dim.replace(/\s+/g, " ")).toContain(
-      "opacity: calc( 1 - min(1, var(--drawer-swipe-progress, 0) + var(--dl-sheet-pull, 0)) * var(--dl-sheet-lift, 0.55) )",
+      "--dl-sheet-dim: calc( 1 - min(1, var(--drawer-swipe-progress, 0) + var(--dl-sheet-pull, 0)) * var(--dl-sheet-lift, 0.55) )",
     );
-    expect(dim).toContain("transition: opacity var(--dl-t-sheet, 260ms)");
+    expect(dim).toContain("opacity: var(--dl-sheet-dim);");
+    expect(dim).toContain("transition: opacity var(--dl-t-sheet, 220ms)");
+    expect(ruleFor(css, ".dl-sheet-scrim:is([data-dl-held], [data-ending-style])")).toBe(
+      "transition-duration: var(--dl-t-sheet-out, 180ms);",
+    );
     expect(ruleFor(css, ".dl-sheet-scrim[data-swiping]")).toBe("transition: none;");
     expect(ruleFor(css, ".dl-sheet-scrim:is([data-starting-style], [data-ending-style])")).toBe("opacity: 0;");
   });
@@ -1803,6 +2019,14 @@ describe("sheet.css", () => {
     expect(still).toContain('html:not([data-dl-motion="full"]) :is(.dl-sheet, .dl-sheet-scrim)');
     const placed = rulesWith(css, "").filter(([, body]) => body === "transform: none;").map(([selector]) => selector);
     expect(placed).toHaveLength(3);
+    // The dim stands at its strength beside it: with no fade, a clear start is a frame of undimmed page.
+    const dimmed = rulesWith(css, "").filter(([, body]) => body === "opacity: var(--dl-sheet-dim);").map(([selector]) => selector);
+    expect(dimmed).toEqual(placed.map((selector) => selector.replaceAll(".dl-sheet:is(", ".dl-sheet-scrim:is(").replace(".dl-sheet[data-instant]", ".dl-sheet-scrim[data-instant]")));
+    for (const selector of dimmed) {
+      for (const part of splitList(selector)) {
+        expect(outweighs(part, ".dl-sheet-scrim:is([data-starting-style], [data-ending-style])"), part).toBe(true);
+      }
+    }
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
   });
 

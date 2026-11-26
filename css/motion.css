@@ -1,5 +1,6 @@
 /* @dalin/kit motion.css: the close fade for hand-built menus and dialogs,
-   and the settle of a phone tab's glyph.
+   the phone's press from the pointer, and the settle of a phone tab's
+   glyph.
 
    What it is. One rule and its keyframes. A menu or dialog an app builds by
    hand unmounts the moment it closes, so `watchLeaving` (from @dalin/kit)
@@ -48,22 +49,79 @@
     opacity: 0;
   }
 }
+/* The phone's press, from the pointer (0.14, the owner's pick on
+   2026-11-26). The family's phone press is 0.97 and brighter (tokens.css),
+   and it was drawn from `:active`, which a touch browser applies only once
+   the tap is over: the look answered the lift, not the finger. So
+   `watchPress()` from @dalin/kit marks a control `data-pressed` as the
+   pointer lands and `data-released` for the settle after the lift, and
+   these rules draw both for a control of the app's own that carries
+   `dl-press`: a phone tab, whose bar is each app's markup. The kit's create
+   button takes the same marks in create.css.
+
+   Pressed, the control is 0.97 and brighter from the first frame, for as
+   long as the finger is down. Lifted, it settles back once over
+   --dl-t-tab-settle (140ms) on the family's curve, from the pressed size.
+   A press that is cancelled or slides off lets go with no settle. It is
+   `scale`, never a transform, so a transform the control already has
+   stays. Nothing started from the keyboard plays it, since a key sends no
+   pointer event, and reduced motion keeps the brightness alone.
+
+   What stays the app's. A control marked `dl-press` must not list `scale`
+   or `filter` in a transition of its own: a running transition outranks
+   the settle. And the app's own `:active` press must leave these controls
+   out, or it presses them again once the finger has gone. */
+.dl-press[data-pressed]:not(:is(:disabled, [aria-disabled="true"], [aria-busy="true"])) {
+  scale: var(--dl-press-scale, 0.97);
+  filter: brightness(var(--dl-press-bright, 1.12));
+}
+.dl-press[data-released] {
+  animation: dl-press-settle var(--dl-t-tab-settle, 140ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
+}
+/* It ends on the control's own resting values, whatever they are. */
+@keyframes dl-press-settle {
+  from {
+    scale: var(--dl-press-scale, 0.97);
+    filter: brightness(var(--dl-press-bright, 1.12));
+  }
+}
+html[data-dl-motion="reduce"] .dl-press[data-pressed] {
+  scale: none;
+}
+html[data-dl-motion="reduce"] .dl-press[data-released] {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-dl-motion="full"]) .dl-press[data-pressed] {
+    scale: none;
+  }
+  html:not([data-dl-motion="full"]) .dl-press[data-released] {
+    animation: none;
+  }
+}
 /* The phone bar's tab (0.13, the owner's pick on 2026-11-25). The bar is
-   each app's own markup; this is the one motion it shares. The glyph of the
-   tab being opened settles from 0.9 to 1 over --dl-t-tab-settle as it
-   fills, while the tab's tint and colour keep their own transition.
-   `settleTab(glyph)` from @dalin/kit/helpers adds the class from the tap
-   and takes it off when the settle ends, so nothing runs at rest. It is
-   `scale`, never a transform, so a transform the glyph already has stays.
-   Nothing started from the keyboard plays it, and reduced motion stills
-   it. These rules are not `!important`: a copy left by the close fade
-   still stills it. */
+   each app's own markup. The glyph of the tab being opened settles to 1
+   over --dl-t-tab-settle as it fills, while the tab's tint and colour keep
+   their own transition. `settleTab(glyph)` from @dalin/kit/helpers adds
+   the class from the tap and takes it off when the settle ends, so nothing
+   runs at rest.
+
+   From 0.14 the settle starts from the pressed size (--dl-press-scale,
+   0.97) and not from 0.9: on a phone the 0.9 multiplied with the press, so
+   a tab moved twice and then popped. A tab that carries `dl-press` settles
+   as a whole on the lift (above), and `settleTab` plays nothing over that.
+   This class is what is left for a tab without it.
+
+   It is `scale`, never a transform, so a transform the glyph already has
+   stays. Nothing started from the keyboard plays it, and reduced motion
+   stills it. These rules are not `!important`: a copy left by the close
+   fade still stills it. */
 .dl-tab-settle {
   animation: dl-tab-settle var(--dl-t-tab-settle, 140ms) var(--dl-ease, cubic-bezier(0.2, 0.8, 0.2, 1));
 }
 @keyframes dl-tab-settle {
   from {
-    scale: 0.9;
+    scale: var(--dl-press-scale, 0.97);
   }
   to {
     scale: 1;

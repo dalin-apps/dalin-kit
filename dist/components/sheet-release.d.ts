@@ -26,8 +26,14 @@ export declare const SHEET_FLING_VELOCITY = 0.5;
 export declare const SHEET_FLING_MIN_PX = 16;
 /** A finger still for this long before it lifts has no speed left. */
 export declare const SHEET_FLING_STALE_MS = 80;
-/** No drag starts this soon after the sheet opens: the tap that opened it is still ending. */
-export declare const SHEET_OPEN_GUARD_MS = 500;
+/**
+ * No drag starts this soon after the sheet opens: the tap that opened it is
+ * still ending, and a phone sends that tap's mouse events after it. It was
+ * 500 until 0.14, where a deliberate second press paid for it: a press that
+ * landed inside the guard stayed ignored however long it was held (the
+ * owner's pick on 2026-11-26).
+ */
+export declare const SHEET_OPEN_GUARD_MS = 150;
 /** No drag starts this soon after the sheet's body scrolled: a scroll that just reached the top is still a scroll. */
 export declare const SHEET_SCROLL_GUARD_MS = 100;
 /**
@@ -84,8 +90,9 @@ export declare function sheetReleaseVelocity(samples: readonly SheetSample[], re
 export type SheetDragBlock = "opening" | "scrolled" | "select" | "selection" | null;
 /**
  * The start rules Base UI's Drawer lacks, which are vaul's. A press starts
- * no drag in the sheet's first half second, for a tenth of a second after
- * its body scrolled, on a `<select>`, or while text in it is selected.
+ * no drag in the sheet's first 150ms (`SHEET_OPEN_GUARD_MS`), for a tenth
+ * of a second after its body scrolled, on a `<select>`, or while text in it
+ * is selected.
  * Base UI already holds a drag back while a scrolling body is off its top,
  * and leaves alone a region that opts out (`SHEET_NO_DRAG_ATTR`).
  */

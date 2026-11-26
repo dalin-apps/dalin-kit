@@ -163,9 +163,17 @@ describe("the start rules", () => {
     expect(sheetDragBlock(free)).toBeNull();
   });
 
-  it("starts no drag in the sheet's first half second", () => {
-    expect(sheetDragBlock({ ...free, sinceOpen: SHEET_OPEN_GUARD_MS - 1 })).toBe("opening");
-    expect(sheetDragBlock({ ...free, sinceOpen: SHEET_OPEN_GUARD_MS })).toBeNull();
+  it("guards the sheet's first 150ms, the length of the tap that opened it (500 until 0.14)", () => {
+    expect(SHEET_OPEN_GUARD_MS).toBe(150);
+  });
+
+  it("starts no drag inside the guard, and one from its last millisecond on", () => {
+    expect(sheetDragBlock({ ...free, sinceOpen: 0 })).toBe("opening");
+    expect(sheetDragBlock({ ...free, sinceOpen: 149 })).toBe("opening");
+    expect(sheetDragBlock({ ...free, sinceOpen: 150 })).toBeNull();
+    // A deliberate second press, which the old half second ignored for its whole length.
+    expect(sheetDragBlock({ ...free, sinceOpen: 200 })).toBeNull();
+    expect(sheetDragBlock({ ...free, sinceOpen: 499 })).toBeNull();
   });
 
   it("starts none for a tenth of a second after the body scrolled", () => {
