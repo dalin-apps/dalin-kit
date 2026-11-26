@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FocusEvent, type ReactElement, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FocusEvent, type ReactElement, type ReactNode, type RefObject } from "react";
 import { cx } from "./cx.js";
 import { CheckGlyph, ChevronLeftGlyph, ChevronRightGlyph, FilterGlyph } from "./icons.js";
 import {
@@ -175,23 +175,28 @@ export function FilterMenu({
 
   // What had focus as the menu opened: the field the control ends, since a
   // press on the glyph leaves the caret there. Base UI hands focus back to
-  // the glyph as the menu closes, and only when nothing else has taken it
-  // since (a dialog a pick opened keeps it). While the menu is closing, that
-  // return is passed on to the field, so the next word typed lands there. A
-  // function in `finalFocus` would skip Base UI's check, so this is done on
-  // the glyph's focus instead.
+  // the glyph once the menu has left the page, and the glyph passes that on
+  // to the field, so the next word typed lands there. A function in
+  // `finalFocus` would send focus to the field whatever had taken it since,
+  // so this is done on the glyph's focus instead.
+  //
+  // `owed` says a close still has that return coming. It is set as the menu
+  // starts to close and ends with the first of three things: the glyph takes
+  // focus (the return, passed on), the menu opens again, or the menu has
+  // left and Base UI has had its turn (`<MenuGone>`, which covers a close
+  // that sends the glyph nothing, such as Tab out of the menu). After that
+  // the glyph keeps any focus it is given, so the reader's own Tab reaches
+  // it. Nothing here is timed: until 0.14.1 the return was owed for 400ms
+  // from the close, and a menu that took longer to leave on a loaded machine
+  // left focus on the glyph.
   const before = useRef<HTMLElement | null>(null);
-  const closing = useRef<number | null>(null);
+  const owed = useRef(false);
   const setOpen = (next: boolean) => {
     if (next) {
       const active = typeof document === "undefined" ? null : document.activeElement;
       before.current = active instanceof HTMLElement && active !== document.body ? active : null;
-    } else if (typeof window !== "undefined") {
-      if (closing.current !== null) window.clearTimeout(closing.current);
-      closing.current = window.setTimeout(() => {
-        closing.current = null;
-      }, 400);
     }
+    owed.current = !next;
     setOpenState(next);
     onOpenChange?.(next);
     if (!next) {
@@ -201,9 +206,8 @@ export function FilterMenu({
   };
   const passFocusOn = (e: FocusEvent<HTMLElement>) => {
     const field = before.current;
-    if (closing.current === null || finalFocus !== undefined) return;
-    window.clearTimeout(closing.current);
-    closing.current = null;
+    if (!owed.current || finalFocus !== undefined) return;
+    owed.current = false;
     // Opened from the keyboard, focus was on the glyph, and it stays there.
     if (!field || field === e.currentTarget || !field.isConnected) return;
     field.focus({ preventScroll: true });
@@ -241,6 +245,7 @@ export function FilterMenu({
         data-variant={variant}
         finalFocus={finalFocus}
       >
+        <MenuGone owed={owed} />
         {shown ? (
           <>
             <MenuItem closeOnClick={false} className="dl-filter-back" onClick={() => openPage(null)}>
@@ -288,6 +293,25 @@ export function FilterMenu({
       </MenuContent>
     </Menu>
   );
+}
+
+/**
+ * Ends a focus return nobody collected. It is mounted in the menu, so its
+ * cleanup runs as the menu leaves the page. Base UI returns focus in a
+ * microtask it queues from a layout cleanup of that same commit; a passive
+ * cleanup runs after every layout one, so the microtask queued here runs
+ * after Base UI's, and the glyph has had its focus by then if any was coming.
+ */
+function MenuGone({ owed }: { owed: RefObject<boolean> }): null {
+  useEffect(
+    () => () => {
+      queueMicrotask(() => {
+        owed.current = false;
+      });
+    },
+    [owed],
+  );
+  return null;
 }
 
 function MenuGroupRows({ rule, rows }: { rule: boolean; rows: readonly FilterOption[] }): ReactNode {

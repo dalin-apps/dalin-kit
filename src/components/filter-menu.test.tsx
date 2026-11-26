@@ -5,6 +5,7 @@
  * phone, and filter.css for the look.
  */
 import { renderToStaticMarkup } from "react-dom/server";
+import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { readCss, rulesWith } from "../../test/css.js";
 import { all, click, key, mount, one, settle, withDom } from "../../test/dom.js";
@@ -17,6 +18,38 @@ const css = readCss("filter");
 
 function rowNamed(name: string): HTMLElement | undefined {
   return all('[role^="menuitem"]').find((el) => el.textContent?.includes(name));
+}
+
+/**
+ * A menu that takes its time to leave. jsdom runs no animations, so Base UI
+ * unmounts a closing popup at once; with one still running on the popup it
+ * waits for it, as it does in a browser. `hold()` starts one on whatever
+ * asks from then on, `finish()` ends it, and `restore()` puts jsdom back.
+ */
+function slowLeaving(): { hold: () => void; finish: () => Promise<void>; restore: () => void } {
+  let running: object[] = [];
+  let end = () => {};
+  const proto = Element.prototype as { getAnimations?: () => object[] };
+  proto.getAnimations = () => running;
+  return {
+    hold: () => {
+      const finished = new Promise<void>((resolve) => (end = resolve));
+      running = [{ finished, pending: false, playState: "running", effect: { getTiming: () => ({ duration: 450, iterations: 1 }) } }];
+    },
+    finish: async () => {
+      running = [];
+      await act(async () => end());
+      await settle(60);
+    },
+    restore: () => {
+      delete proto.getAnimations;
+    },
+  };
+}
+
+/** Focus as the reader's own Tab gives it. */
+async function tabTo(el: HTMLElement): Promise<void> {
+  await act(async () => el.focus());
 }
 
 function base(overrides: Partial<FilterMenuProps> = {}): FilterMenuProps {
@@ -156,6 +189,138 @@ describe("FilterMenu", () => {
     await click(rowNamed("Unread"));
     await settle(200);
     expect(document.activeElement).toBe(input);
+  });
+
+  it("gives focus back to the field however long the menu takes to leave", async () => {
+    const leaving = slowLeaving();
+    try {
+      await mount(
+        <div>
+          <input className="field" />
+          <FilterMenu {...base()} />
+        </div>,
+      );
+      const input = one<HTMLInputElement>(".field")!;
+      input.focus();
+      await click(one('[data-slot="filter-trigger"]'));
+      leaving.hold();
+      await click(rowNamed("Unread"));
+      // Longer than the 400ms the hand-off waited until 0.14.1: a loaded
+      // machine took 424ms, and the next word typed went nowhere.
+      await settle(450);
+      expect(one(".dl-filter-menu")).not.toBeNull();
+      expect(document.activeElement).not.toBe(input);
+      await leaving.finish();
+      expect(one(".dl-filter-menu")).toBeNull();
+      expect(document.activeElement).toBe(input);
+    } finally {
+      leaving.restore();
+    }
+  });
+
+  it("gives it back after a pick in a facet's submenu too, once both have left", async () => {
+    const leaving = slowLeaving();
+    try {
+      await mount(
+        <div>
+          <input className="field" />
+          <FilterMenu {...base()} />
+        </div>,
+      );
+      const input = one<HTMLInputElement>(".field")!;
+      input.focus();
+      await click(one('[data-slot="filter-trigger"]'));
+      await click(all('[data-slot="menu-sub-trigger"]')[0]);
+      leaving.hold();
+      await click(rowNamed("Ada"));
+      await settle(450);
+      await leaving.finish();
+      expect(one(".dl-filter-menu")).toBeNull();
+      expect(document.activeElement).toBe(input);
+    } finally {
+      leaving.restore();
+    }
+  });
+
+  it("leaves the glyph the focus the reader's own Tab gives it, once the hand-off is done", async () => {
+    await mount(
+      <div>
+        <input className="field" />
+        <FilterMenu {...base()} />
+      </div>,
+    );
+    const input = one<HTMLInputElement>(".field")!;
+    const trigger = one('[data-slot="filter-trigger"]')!;
+    input.focus();
+    await click(trigger);
+    await click(rowNamed("Unread"));
+    await settle(60);
+    expect(document.activeElement).toBe(input);
+    await tabTo(trigger);
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("owes the field nothing after a close that sent the glyph no focus, so Tab still reaches the glyph", async () => {
+    await mount(
+      <div>
+        <input className="field" />
+        <FilterMenu {...base()} />
+        <button type="button" className="after">After</button>
+      </div>,
+    );
+    const input = one<HTMLInputElement>(".field")!;
+    const trigger = one('[data-slot="filter-trigger"]')!;
+    input.focus();
+    await click(trigger);
+    // Tab out of the open menu: Base UI's guard at the menu's end closes it
+    // and sends focus on to what follows the glyph, never to the glyph.
+    await tabTo(all("[data-base-ui-focus-guard]").at(-1)!);
+    await settle(60);
+    expect(one(".dl-filter-menu")).toBeNull();
+    expect(document.activeElement).toBe(one(".after"));
+    // Shift+Tab back to the glyph: its focus is the reader's, and stays.
+    await tabTo(trigger);
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("starts each opening owing nothing from the close before", async () => {
+    const leaving = slowLeaving();
+    try {
+      await mount(
+        <div>
+          <input className="field" />
+          <FilterMenu {...base()} />
+        </div>,
+      );
+      const trigger = one('[data-slot="filter-trigger"]')!;
+      one<HTMLInputElement>(".field")!.focus();
+      await click(trigger);
+      leaving.hold();
+      await click(rowNamed("Unread"));
+      // Opened again while it was still leaving: the menu never left, so no return is coming.
+      await click(trigger);
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      await tabTo(trigger);
+      expect(document.activeElement).toBe(trigger);
+      await leaving.finish();
+    } finally {
+      leaving.restore();
+    }
+  });
+
+  it("keeps focus on the glyph when the keyboard opened the menu from it", async () => {
+    await mount(
+      <div>
+        <input className="field" />
+        <FilterMenu {...base()} />
+      </div>,
+    );
+    const trigger = one('[data-slot="filter-trigger"]')!;
+    await tabTo(trigger);
+    await click(trigger);
+    await click(rowNamed("Unread"));
+    await settle(60);
+    expect(document.activeElement).toBe(trigger);
   });
 
   it("lets a dialog a pick opens take focus as it mounts, after the menu has closed", async () => {
