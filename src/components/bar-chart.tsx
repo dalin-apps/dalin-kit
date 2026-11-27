@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject } from "react";
 import { cx } from "./cx.js";
-import { TICK_CH, axisMarks, niceCeil, placeTip, scaleTicks, stackTotals } from "./chart-scale.js";
+import { TICK_CH, axisMarks, barValue, niceCeil, placeTip, scaleTicks, stackTotals } from "./chart-scale.js";
 
 export type BarSeries = {
   /** The series' name as the callout says it, after its figure: "received", "h Personal". */
@@ -78,12 +78,12 @@ type Geometry = {
 };
 
 /** Everything the drawing needs from the figures and the box, worked out once per render. */
-function layout(props: Required<Pick<BarChartProps, "series" | "labels" | "mirror" | "formatValue">>, width: number, height: number): Geometry {
+function layout(props: Required<Pick<BarChartProps, "series" | "labels" | "mirror" | "formatValue">>, width: number, height: number): Geometry | null {
   const { series, labels, mirror, formatValue } = props;
   const n = labels.length;
-  const totals = mirror ? (series[0]?.values ?? []).slice(0, n).map((v) => Math.max(0, v)) : stackTotals(series, n);
+  const totals = mirror ? Array.from({ length: n }, (_, i) => barValue(series[0]?.values[i])) : stackTotals(series, n);
   const top = niceCeil(Math.max(0, ...totals));
-  const low = mirror ? niceCeil(Math.max(0, ...(series[1]?.values ?? []).slice(0, n))) : 0;
+  const low = mirror ? niceCeil(Math.max(0, ...Array.from({ length: n }, (_, i) => barValue(series[1]?.values[i])))) : 0;
   const marks = mirror ? [top, 0, -low] : scaleTicks(top);
   const texts = marks.map((m) => formatValue(Math.abs(m)));
   const left = Math.max(30, Math.max(...texts.map((t) => t.length)) * TICK_CH + 12);
@@ -91,6 +91,8 @@ function layout(props: Required<Pick<BarChartProps, "series" | "labels" | "mirro
   const plotTop = PAD.top;
   const bottom = height - PAD.bottom;
   const plotH = bottom - plotTop;
+  // A box too narrow or too short for a plot draws nothing rather than bars of negative size.
+  if (right - left < n || plotH < 20) return null;
   // Mirrored, the half that rises takes most of the height: it is the larger series in every use so far.
   const up = mirror ? plotH * 0.7 : plotH;
   const zero = plotTop + up;
@@ -148,14 +150,14 @@ export function BarChart({
   const n = labels.length;
   // The data can shrink under a selection: a bar that is gone is not read.
   const sel = at !== null && at < n ? at : null;
-  const say = (i: number) =>
-    describe?.(i) ?? `${labels[i]}: ${series.map((s) => `${formatValue(s.values[i] ?? 0)} ${s.name}`).join(", ")}`;
+  const say = (i: number) => describe?.(i) ?? defaultLine(series, labels, formatValue, i);
 
   const ready = width > 0 && n > 0;
   const g = ready ? layout({ series, labels, mirror, formatValue }, width, height) : null;
+  const reads = g !== null;
 
   const barAt = (e: PointerEvent<SVGSVGElement>) => {
-    if (!g) return null;
+    if (!g || g.slot <= 0) return null;
     const rect = e.currentTarget.getBoundingClientRect();
     // A zoomed page reports the rect in zoomed pixels, so scale back to the box's own.
     const scale = rect.width > 0 ? width / rect.width : 1;
@@ -163,10 +165,21 @@ export function BarChart({
     return Math.max(0, Math.min(n - 1, i));
   };
   const point = (e: PointerEvent<SVGSVGElement>) => setAt(barAt(e));
+  // A finger keeps reading the bars as it drifts above or below the chart.
+  const press = (e: PointerEvent<SVGSVGElement>) => {
+    if (e.pointerType !== "mouse") e.currentTarget.setPointerCapture?.(e.pointerId);
+    point(e);
+  };
   const leave = () => setAt(null);
   const key = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape" && sel !== null) {
+      e.preventDefault();
+      setAt(null);
+      setSpoken("");
+      return;
+    }
     const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (step === 0 || n === 0) return;
+    if (step === 0 || !reads) return;
     e.preventDefault();
     const next = Math.max(0, Math.min(n - 1, (sel ?? (step > 0 ? -1 : n)) + step));
     setAt(next);
@@ -189,8 +202,8 @@ export function BarChart({
       className={cx("dl-chart", className)}
       style={{ height }}
       role="group"
-      aria-label={`${summary}. Arrow keys read each bar.`}
-      tabIndex={0}
+      aria-label={reads ? `${summary}. Arrow keys read each bar.` : summary}
+      tabIndex={reads ? 0 : undefined}
       onKeyDown={key}
       onBlur={() => {
         setAt(null);
@@ -204,8 +217,11 @@ export function BarChart({
           height={height}
           viewBox={`0 0 ${width} ${height}`}
           aria-hidden="true"
-          onPointerDown={point}
+          onPointerDown={press}
           onPointerMove={point}
+          onPointerUp={(e) => {
+            if (e.pointerType !== "mouse") leave();
+          }}
           onPointerLeave={leave}
           onPointerCancel={leave}
         >
@@ -255,18 +271,29 @@ export function BarChart({
   );
 }
 
+/**
+ * The callout's line when the app gives none: the bar's name, then each
+ * series' figure and name. With more than two series, one with nothing in
+ * it that day is left out, so the line stays short enough to read.
+ */
+function defaultLine(series: readonly BarSeries[], labels: readonly string[], formatValue: (v: number) => string, i: number): string {
+  const all = series.map((s) => ({ s, v: barValue(s.values[i]) }));
+  const some = series.length > 2 && all.some((x) => x.v > 0) ? all.filter((x) => x.v > 0) : all;
+  return `${labels[i]}: ${some.map((x) => `${formatValue(x.v)} ${x.s.name}`).join(", ")}`;
+}
+
 /** One bar's series, stacked from the zero line up, a hair apart. */
 function stacked(series: readonly BarSeries[], i: number, g: Geometry, bw: number, rx: number): ReactNode {
   let sum = 0;
   return (
     <g key={i}>
       {series.map((s, k) => {
-        const v = Math.max(0, s.values[i] ?? 0);
+        const v = barValue(s.values[i]);
         if (v === 0) return null;
-        const top = g.y(sum + v);
-        const h = g.y(sum) - top - (sum > 0 ? 1.5 : 0);
+        const base = g.y(sum) - (sum > 0 ? 1.5 : 0);
+        const h = Math.max(1, base - g.y(sum + v));
         sum += v;
-        return <rect key={k} x={g.x(i) - bw / 2} y={top} width={bw} height={Math.max(1, h)} rx={rx} fill={s.color} />;
+        return <rect key={k} x={g.x(i) - bw / 2} y={base - h} width={bw} height={h} rx={rx} fill={s.color} />;
       })}
     </g>
   );
@@ -274,13 +301,12 @@ function stacked(series: readonly BarSeries[], i: number, g: Geometry, bw: numbe
 
 /** One bar's two series, either side of the zero line. */
 function mirrored(series: readonly BarSeries[], i: number, g: Geometry, bw: number, rx: number): ReactNode {
-  const up = Math.max(0, series[0]?.values[i] ?? 0);
-  const down = Math.max(0, series[1]?.values[i] ?? 0);
+  const up = barValue(series[0]?.values[i]);
+  const down = barValue(series[1]?.values[i]);
+  const upH = Math.max(1, g.zero - 1 - g.y(up));
   return (
     <g key={i}>
-      {up > 0 ? (
-        <rect x={g.x(i) - bw / 2} y={g.y(up)} width={bw} height={Math.max(1, g.zero - g.y(up) - 1)} rx={rx} fill={series[0]!.color} />
-      ) : null}
+      {up > 0 ? <rect x={g.x(i) - bw / 2} y={g.zero - 1 - upH} width={bw} height={upH} rx={rx} fill={series[0]!.color} /> : null}
       {down > 0 ? (
         <rect x={g.x(i) - bw / 2} y={g.zero + 1} width={bw} height={Math.max(1, g.y(-down) - g.zero - 1)} rx={rx} fill={series[1]!.color} />
       ) : null}

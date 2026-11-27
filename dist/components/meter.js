@@ -19,11 +19,11 @@ function levelOf(share, warns) {
  * `data.css` styles it.
  */
 export function Meter({ share, label, valueText, color, warns = true, thin = false, className }) {
-    const held = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0;
+    const held = typeof share === "number" && Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0;
     const percent = fillPercent(held);
     const level = levelOf(held, warns);
     const style = color ? { "--dl-meter-c": color } : undefined;
-    return (_jsxs("span", { "data-slot": "meter", className: cx("dl-meter", thin && "dl-meter--thin", className), "data-level": level === "ok" ? undefined : level, role: "meter", "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": percent, "aria-valuetext": valueText ?? `${percent} percent`, "aria-label": label, style: style, children: [_jsxs("span", { className: "dl-meter-track", children: [held > 0 ? _jsx("span", { className: "dl-meter-fill", style: { width: `${Math.max(1, held * 100)}%` } }) : null, thin && warns ? _jsx("span", { className: "dl-meter-tick" }) : null] }), thin ? (_jsx("span", { className: "dl-meter-pct", "aria-hidden": "true", children: held > 0 && held < 0.005 ? "<1%" : `${percent}%` })) : null] }));
+    return (_jsxs("span", { "data-slot": "meter", className: cx("dl-meter", thin && "dl-meter--thin", className), "data-level": level === "ok" ? undefined : level, role: "meter", "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": percent, "aria-valuetext": valueText ?? (held > 0 && held < 0.005 ? "under 1 percent" : `${percent} percent`), "aria-label": label, style: style, children: [_jsxs("span", { className: "dl-meter-track", children: [held > 0 ? _jsx("span", { className: "dl-meter-fill", style: { width: `${Math.max(1, held * 100)}%` } }) : null, thin && warns ? _jsx("span", { className: "dl-meter-tick" }) : null] }), thin ? (_jsx("span", { className: "dl-meter-pct", "aria-hidden": "true", children: held > 0 && held < 0.005 ? "<1%" : `${percent}%` })) : null] }));
 }
 /**
  * The word beside a meter: "Nearly full" from 80%, "Full" from 95%, and

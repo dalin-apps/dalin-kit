@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 export type MeterProps = {
-    /** How full, as a fraction from 0 to 1. Out of range is held to the nearest end. */
-    share: number;
+    /** How full, as a fraction from 0 to 1. Out of range is held to the nearest end, and no figure reads as empty. */
+    share: number | null | undefined;
     /** The meter's name for a screen reader: "dalin space, used". */
     label: string;
     /** What it reads as when a percent says too little: "620 MB of 1 GB". */

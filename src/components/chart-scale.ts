@@ -24,12 +24,17 @@ export function scaleTicks(top: number): number[] {
   return top % 2 === 0 ? [0, top / 2, top] : [0, top];
 }
 
+/** A figure the chart can draw: a missing, negative or non-finite one counts as nothing. */
+export function barValue(v: number | null | undefined): number {
+  return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 0;
+}
+
 /** Each bar's total when its series are stacked. */
 export function stackTotals(series: ReadonlyArray<{ values: readonly number[] }>, count: number): number[] {
   const out: number[] = [];
   for (let i = 0; i < count; i++) {
     let sum = 0;
-    for (const s of series) sum += Math.max(0, s.values[i] ?? 0);
+    for (const s of series) sum += barValue(s.values[i]);
     out.push(sum);
   }
   return out;

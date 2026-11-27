@@ -23,13 +23,17 @@ export function niceCeil(peak) {
 export function scaleTicks(top) {
     return top % 2 === 0 ? [0, top / 2, top] : [0, top];
 }
+/** A figure the chart can draw: a missing, negative or non-finite one counts as nothing. */
+export function barValue(v) {
+    return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 0;
+}
 /** Each bar's total when its series are stacked. */
 export function stackTotals(series, count) {
     const out = [];
     for (let i = 0; i < count; i++) {
         let sum = 0;
         for (const s of series)
-            sum += Math.max(0, s.values[i] ?? 0);
+            sum += barValue(s.values[i]);
         out.push(sum);
     }
     return out;

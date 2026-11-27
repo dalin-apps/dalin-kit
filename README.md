@@ -1481,7 +1481,7 @@ import { BarChart, ChartKey } from "@dalin/kit/components";
   labels={days}
   mirror
   series={[
-    { name: "received", values: received, color: "var(--accent)" },
+    { name: "received", values: received, color: "var(--dl-accent)" },
     { name: "sent", values: sent, color: "oklch(0.8 0.08 285)" },
   ]}
 />

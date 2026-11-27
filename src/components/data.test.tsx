@@ -11,7 +11,7 @@ import { readCss, ruleFor } from "../../test/css.js";
 import { mount, withDom } from "../../test/dom.js";
 import { FILL_FULL, FILL_HIGH, fillLevel, fillPercent, fillWord } from "../helpers/fill-level.js";
 import { BarChart, ChartKey } from "./bar-chart.js";
-import { axisMarks, niceCeil, placeTip, scaleTicks, stackTotals } from "./chart-scale.js";
+import { axisMarks, barValue, niceCeil, placeTip, scaleTicks, stackTotals } from "./chart-scale.js";
 import { Meter, MeterWord } from "./meter.js";
 import { RowBar } from "./row-bar.js";
 
@@ -102,8 +102,18 @@ describe("<Meter>", () => {
     expect(render(<Meter share={0.62} label="x" />).querySelector(".dl-meter-pct")).toBeNull();
   });
 
-  it("writes a share too small to round as under one percent", () => {
-    expect(render(<Meter share={0.0001} label="x" thin />).querySelector(".dl-meter-pct")?.textContent).toBe("<1%");
+  it("reads no figure as empty", () => {
+    for (const share of [null, undefined, Number.NaN]) {
+      const el = render(<Meter share={share} label="x" />);
+      expect(el.getAttribute("aria-valuenow")).toBe("0");
+      expect(el.querySelector(".dl-meter-fill")).toBeNull();
+    }
+  });
+
+  it("writes a share too small to round as under one percent, on screen and aloud", () => {
+    const el = render(<Meter share={0.0001} label="x" thin />);
+    expect(el.querySelector(".dl-meter-pct")?.textContent).toBe("<1%");
+    expect(el.getAttribute("aria-valuetext")).toBe("under 1 percent");
     expect(render(<Meter share={0} label="x" thin />).querySelector(".dl-meter-pct")?.textContent).toBe("0%");
   });
 });
@@ -153,6 +163,11 @@ describe("the chart's arithmetic", () => {
 
   it("stacks each bar's series", () => {
     expect(stackTotals([{ values: [2, 5, 0] }, { values: [1, 2] }], 3)).toEqual([3, 7, 0]);
+  });
+
+  it("counts a missing, negative or non-finite figure as nothing", () => {
+    expect([undefined, null, -3, Number.NaN, Number.POSITIVE_INFINITY, 4].map(barValue)).toEqual([0, 0, 0, 0, 0, 4]);
+    expect(stackTotals([{ values: [Number.NaN, 50] }], 2)).toEqual([0, 50]);
   });
 
   it("names every day of a week when the names fit, which calendar's own rule did not", () => {
@@ -318,6 +333,83 @@ describe("<BarChart>", () => {
     expect(host.querySelector(".dl-chart-live")?.textContent).toBe(long);
   });
 
+  it("scales to the bars it can draw when one figure is not a number", () => {
+    const el = render(<BarChart width={300} labels={["a", "b"]} summary="x" series={[{ name: "x", values: [Number.NaN, 50], color: "c" }]} />);
+    expect(el.innerHTML).not.toContain("NaN");
+    expect([...el.querySelectorAll("text.dl-chart-tick")].slice(0, 3).map((t) => t.textContent)).toEqual(["0", "25", "50"]);
+    expect(el.querySelectorAll("svg rect[fill]")).toHaveLength(1);
+  });
+
+  it("never lets a bar too small to see cross the zero line or the bar beneath it", () => {
+    const el = render(
+      <BarChart
+        mirror
+        width={300}
+        labels={["a", "b"]}
+        summary="x"
+        series={[
+          { name: "in", values: [0.5, 100], color: "violet" },
+          { name: "out", values: [5, 0], color: "lavender" },
+        ]}
+      />,
+    );
+    const zero = Number(el.querySelector(".dl-chart-zero")!.getAttribute("y1"));
+    for (const b of el.querySelectorAll('svg rect[fill="violet"]')) {
+      expect(Number(b.getAttribute("y")) + Number(b.getAttribute("height"))).toBeLessThanOrEqual(zero);
+    }
+    const stacked = render(
+      <BarChart width={300} labels={["a"]} summary="x" series={[{ name: "a", values: [100], color: "p" }, { name: "b", values: [0.1], color: "q" }]} />,
+    );
+    const lower = stacked.querySelector('svg rect[fill="p"]')!;
+    const upper = stacked.querySelector('svg rect[fill="q"]')!;
+    expect(Number(upper.getAttribute("y")) + Number(upper.getAttribute("height"))).toBeLessThanOrEqual(Number(lower.getAttribute("y")));
+  });
+
+  it("draws nothing in a box too small for a plot, and takes no focus then", () => {
+    const el = render(<BarChart width={36} labels={["a", "b"]} summary="Mail" series={[{ name: "x", values: [1, 2], color: "c" }]} />);
+    expect(el.querySelector("svg")).toBeNull();
+    expect(el.hasAttribute("tabindex")).toBe(false);
+    expect(el.getAttribute("aria-label")).toBe("Mail");
+  });
+
+  it("names only the series with something in them when a bar stacks more than two", async () => {
+    const four = ["Personal", "School", "Work", "Family"].map((name, k) => ({ name, values: [k === 0 ? 2 : 0], color: "c" }));
+    const host = await mount(<BarChart series={four} labels={["Sun"]} summary="x" width={300} formatValue={(v) => `${v} h`} />);
+    const chart = host.querySelector<HTMLElement>(".dl-chart")!;
+    await act(async () => void chart.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    expect(host.querySelector(".dl-chart-tip")?.textContent).toBe("Sun: 2 h Personal");
+  });
+
+  it("lets Escape put the callout away", async () => {
+    const host = await mount(<BarChart series={series} labels={labels} summary="x" width={460} />);
+    const chart = host.querySelector<HTMLElement>(".dl-chart")!;
+    const press = (key: string) => act(async () => void chart.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true })));
+    await press("ArrowRight");
+    expect(host.querySelector(".dl-chart-tip")).not.toBeNull();
+    await press("Escape");
+    expect(host.querySelector(".dl-chart-tip")).toBeNull();
+    expect(host.querySelector(".dl-chart-live")?.textContent).toBe("");
+  });
+
+  it("reads the bar under a pointer, through a zoom, and lets go when the pointer leaves or is cancelled", async () => {
+    const host = await mount(<BarChart series={series} labels={labels} summary="x" width={460} />);
+    const svg = host.querySelector<SVGSVGElement>("svg")!;
+    // The page is zoomed to 200%: the rect is twice the box's own width.
+    svg.getBoundingClientRect = () => ({ left: 100, top: 0, width: 920, height: 360, right: 1020, bottom: 360, x: 100, y: 0, toJSON: () => ({}) });
+    // React builds its leave from the browser's pointerout, with nothing under the pointer after it.
+    const fire = (type: string, clientX: number) =>
+      act(async () => void svg.dispatchEvent(new PointerEvent(type, { clientX, pointerType: "mouse", bubbles: true, relatedTarget: document.body })));
+    // The last bar's middle, in the box's own pixels, is near 400; at 200% that is 100 + 800.
+    await fire("pointermove", 900);
+    expect(host.querySelector(".dl-chart-tip")?.textContent).toContain("Sat");
+    await fire("pointerout", 900);
+    expect(host.querySelector(".dl-chart-tip")).toBeNull();
+    await fire("pointerdown", 260);
+    expect(host.querySelector(".dl-chart-tip")?.textContent).toContain("Sun");
+    await fire("pointercancel", 260);
+    expect(host.querySelector(".dl-chart-tip")).toBeNull();
+  });
+
   it("draws nothing for no bars, and still keeps its place", () => {
     const el = render(<BarChart series={[]} labels={[]} summary="x" width={300} height={120} />);
     expect(el.querySelector("svg")).toBeNull();
@@ -341,8 +433,9 @@ describe("data.css", () => {
     expect(ruleFor(css, '.dl-meter[data-level="full"]')).toContain("--dl-meter-fill: oklch(0.58 0.18 25)");
   });
 
-  it("puts the tick where amber starts", () => {
-    expect(ruleFor(css, ".dl-meter-tick")).toContain("left: 80%");
+  it("puts the tick where amber starts, on the side the fill grows from", () => {
+    expect(ruleFor(css, ".dl-meter-tick")).toContain("inset-inline-start: 80%");
+    expect(ruleFor(css, ".dl-meter-fill")).toContain("inset-inline-start: 0");
   });
 
   it("writes the warning words and the percent in inks that clear 4.5:1 on a settings card", () => {
@@ -353,6 +446,8 @@ describe("data.css", () => {
     expect(contrast(oklch(0.58, 0.18, 25), card)).toBeLessThan(4.5);
     expect(ruleFor(css, '.dl-meter-word[data-level="full"]')).toContain("oklch(0.74 0.15 25)");
     expect(ruleFor(css, '.dl-meter[data-level="full"]')).toContain("--dl-meter-ink: oklch(0.74 0.15 25)");
+    expect(ruleFor(css, '.dl-meter-word[data-level="high"]')).toContain("oklch(0.8 0.13 80)");
+    expect(ruleFor(css, '.dl-meter[data-level="high"]')).toContain("--dl-meter-ink: oklch(0.8 0.13 80)");
   });
 
   it("draws the chart's type at 12px, never scaled with the box", () => {

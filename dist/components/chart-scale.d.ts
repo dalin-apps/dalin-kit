@@ -11,6 +11,8 @@
 export declare function niceCeil(peak: number): number;
 /** The scale's lines: zero, the top, and the middle only where it is a whole number. */
 export declare function scaleTicks(top: number): number[];
+/** A figure the chart can draw: a missing, negative or non-finite one counts as nothing. */
+export declare function barValue(v: number | null | undefined): number;
 /** Each bar's total when its series are stacked. */
 export declare function stackTotals(series: ReadonlyArray<{
     values: readonly number[];

@@ -3,8 +3,8 @@ import { cx } from "./cx.js";
 import { fillLevel, fillPercent, fillWord, type FillLevel } from "../helpers/fill-level.js";
 
 export type MeterProps = {
-  /** How full, as a fraction from 0 to 1. Out of range is held to the nearest end. */
-  share: number;
+  /** How full, as a fraction from 0 to 1. Out of range is held to the nearest end, and no figure reads as empty. */
+  share: number | null | undefined;
   /** The meter's name for a screen reader: "dalin space, used". */
   label: string;
   /** What it reads as when a percent says too little: "620 MB of 1 GB". */
@@ -45,7 +45,7 @@ function levelOf(share: number, warns: boolean): FillLevel {
  * `data.css` styles it.
  */
 export function Meter({ share, label, valueText, color, warns = true, thin = false, className }: MeterProps): ReactNode {
-  const held = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0;
+  const held = typeof share === "number" && Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0;
   const percent = fillPercent(held);
   const level = levelOf(held, warns);
   const style = color ? ({ "--dl-meter-c": color } as CSSProperties) : undefined;
@@ -58,7 +58,7 @@ export function Meter({ share, label, valueText, color, warns = true, thin = fal
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={percent}
-      aria-valuetext={valueText ?? `${percent} percent`}
+      aria-valuetext={valueText ?? (held > 0 && held < 0.005 ? "under 1 percent" : `${percent} percent`)}
       aria-label={label}
       style={style}
     >

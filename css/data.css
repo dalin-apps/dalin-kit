@@ -59,7 +59,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 0;
+  inset-inline-start: 0;
   max-width: 100%;
   border-radius: inherit;
   background: var(--dl-meter-fill);
@@ -72,7 +72,7 @@
 .dl-meter-tick {
   position: absolute;
   top: -3px;
-  left: 80%;
+  inset-inline-start: 80%;
   width: 1.5px;
   height: 10px;
   background: var(--dl-fg-muted, #b8b8b8);
@@ -80,7 +80,7 @@
 .dl-meter-pct {
   flex: none;
   min-width: 4ch;
-  text-align: right;
+  text-align: end;
   font-size: 12px;
   line-height: 1;
   font-weight: 600;
