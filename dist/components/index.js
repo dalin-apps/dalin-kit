@@ -18,4 +18,8 @@ export { PHONE_MARK_PX, PhoneHeader, PhoneHeaderIcon, } from "./phone-header.js"
 export { PhoneSearch, PhoneSearchAvatar, } from "./phone-search.js";
 export { SHEET_HELD_ATTR, SHEET_NO_DRAG_ATTR, Sheet, SheetBody, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHandle, SheetHeader, SheetTitle, SheetTrigger, noSheetDrag, } from "./sheet.js";
 export { SHEET_DISMISS_FRACTION, SHEET_DISMISS_PX, SHEET_FLING_MIN_PX, SHEET_FLING_VELOCITY, SHEET_FLING_WINDOW_MS, SHEET_OPEN_GUARD_MS, SHEET_SCROLL_GUARD_MS, resolveSheetDismissDistance, sheetDismissDistance, sheetDragBlock, sheetReleaseVelocity, sheetShouldDismiss, } from "./sheet-release.js";
+export { Meter, MeterWord } from "./meter.js";
+export { RowBar } from "./row-bar.js";
+export { BarChart, ChartKey } from "./bar-chart.js";
+export { axisMarks, niceCeil, placeTip, scaleTicks, stackTotals } from "./chart-scale.js";
 //# sourceMappingURL=index.js.map

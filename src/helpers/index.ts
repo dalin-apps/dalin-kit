@@ -22,3 +22,4 @@ export {
   watchPress,
   type PressOptions,
 } from "./press.js";
+export { FILL_FULL, FILL_HIGH, fillLevel, fillPercent, fillWord, type FillLevel } from "./fill-level.js";

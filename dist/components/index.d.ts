@@ -18,4 +18,8 @@ export { PHONE_MARK_PX, PhoneHeader, PhoneHeaderIcon, type PhoneHeaderIconProps,
 export { PhoneSearch, PhoneSearchAvatar, type PhoneSearchAction, type PhoneSearchAvatarProps, type PhoneSearchChangeDetails, type PhoneSearchCompletion, type PhoneSearchProps, type PhoneSearchRow, type PhoneSearchRowState, type PhoneSearchSection, } from "./phone-search.js";
 export { SHEET_HELD_ATTR, SHEET_NO_DRAG_ATTR, Sheet, SheetBody, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHandle, SheetHeader, SheetTitle, SheetTrigger, noSheetDrag, type SheetActions, type SheetChangeDetails, type SheetChangeReason, type SheetContentProps, type SheetLayout, type SheetNativeDetails, type SheetNoDragProps, type SheetProps, type SheetVars, } from "./sheet.js";
 export { SHEET_DISMISS_FRACTION, SHEET_DISMISS_PX, SHEET_FLING_MIN_PX, SHEET_FLING_VELOCITY, SHEET_FLING_WINDOW_MS, SHEET_OPEN_GUARD_MS, SHEET_SCROLL_GUARD_MS, resolveSheetDismissDistance, sheetDismissDistance, sheetDragBlock, sheetReleaseVelocity, sheetShouldDismiss, type SheetDismissDistance, type SheetDragBlock, type SheetSample, } from "./sheet-release.js";
+export { Meter, MeterWord, type MeterProps, type MeterWordProps } from "./meter.js";
+export { RowBar, type RowBarProps } from "./row-bar.js";
+export { BarChart, ChartKey, type BarChartProps, type BarSeries, type ChartKeyItem } from "./bar-chart.js";
+export { axisMarks, niceCeil, placeTip, scaleTicks, stackTotals, type TipPlace } from "./chart-scale.js";
 //# sourceMappingURL=index.d.ts.map

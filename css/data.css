@@ -1,0 +1,188 @@
+/* @dalin/kit data.css: the family's meter, the bar in a row, and the bar
+   chart (<Meter>, <MeterWord>, <RowBar>, <BarChart>, <ChartKey>).
+
+   What it is. The three ways the apps draw an amount, picked by the owner
+   on 2026-11-27 after an audit found each app drawing them its own way.
+
+   The meter. One bar for "how full". It keeps its colour until 80%, turns
+   amber there and red at 95% (fill-level.ts). The settings row wears it at
+   6px. The thin form is 4px with a tick where amber starts and the percent
+   beside it, drive's storage card.
+
+   The bar in a row. A list that compares amounts draws one bar per row on
+   one scale, with a faint track so a sliver still reads as a sliver. It
+   takes about a third of the row. On a phone the row's own layout moves it
+   to a line of its own.
+
+   The chart. Bars drawn in real pixels, with type that is 12px at every
+   width, a callout of one line, and no motion.
+
+   How an app adopts it. Import this file once. Give a meter or a row bar
+   its colour through its `color` prop where the thing measured has one.
+
+   What an app may set. `--dl-meter-track` and `--dl-rowbar-track` where the
+   surface under them is not the settings card's. Nothing else: the
+   thresholds, the two warning colours and the heights are the family's.
+
+   Cascade. Every rule here is in the cascade layer `dalin` (see menu.css),
+   so a utility an app passes through `className` wins over the default. */
+@layer dalin {
+/* ---- the meter ---- */
+.dl-meter {
+  --dl-meter-fill: var(--dl-meter-c, var(--dl-accent));
+  /* The percent beside a thin meter: the fill's colour, lifted to read as
+     12px text on a card. */
+  --dl-meter-ink: color-mix(in oklch, var(--dl-meter-c, var(--dl-accent)) 55%, white);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.dl-meter[data-level="high"] {
+  --dl-meter-fill: oklch(0.74 0.13 80);
+  --dl-meter-ink: oklch(0.8 0.13 80);
+}
+.dl-meter[data-level="full"] {
+  --dl-meter-fill: oklch(0.58 0.18 25);
+  /* The fill's red is 3.2:1 as text on a card. This one clears 4.5:1. */
+  --dl-meter-ink: oklch(0.74 0.15 25);
+}
+.dl-meter-track {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--dl-meter-track, #2f2f2f);
+}
+.dl-meter-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  max-width: 100%;
+  border-radius: inherit;
+  background: var(--dl-meter-fill);
+}
+.dl-meter--thin .dl-meter-track {
+  height: 4px;
+  border-radius: 2px;
+}
+/* Where amber starts. It stands 3px proud of the track above and below. */
+.dl-meter-tick {
+  position: absolute;
+  top: -3px;
+  left: 80%;
+  width: 1.5px;
+  height: 10px;
+  background: var(--dl-fg-muted, #b8b8b8);
+}
+.dl-meter-pct {
+  flex: none;
+  min-width: 4ch;
+  text-align: right;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--dl-meter-ink);
+}
+/* The word beside a meter: its level's ink, never the fill's own red. */
+.dl-meter-word[data-level="high"] {
+  color: oklch(0.8 0.13 80);
+}
+.dl-meter-word[data-level="full"] {
+  color: oklch(0.74 0.15 25);
+}
+
+/* ---- the bar in a row ---- */
+.dl-rowbar {
+  display: block;
+  flex: 0 0 34%;
+  min-width: 40px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--dl-rowbar-track, #2f2f2f);
+  overflow: hidden;
+}
+.dl-rowbar-fill {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 3px;
+  background: var(--dl-rowbar-c, var(--dl-accent));
+}
+
+/* ---- the bar chart ---- */
+.dl-chart {
+  position: relative;
+  min-width: 0;
+}
+.dl-chart:focus-visible {
+  outline: 2px solid var(--dl-focus-ring, var(--dl-accent));
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.dl-chart-svg {
+  display: block;
+  overflow: visible;
+  /* A sideways drag reads the bars; a vertical one still scrolls the page. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+.dl-chart-grid {
+  stroke: var(--dl-chart-grid, #2c2c2c);
+}
+.dl-chart-zero {
+  stroke: var(--dl-border-strong, #3d3d3d);
+}
+.dl-chart-tick {
+  fill: var(--dl-fg-faint, #8f97a0);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+/* The bar being read stands in a faint column. */
+.dl-chart-col {
+  fill: rgb(255 255 255 / 0.06);
+}
+/* The callout: drive's, a filled box of one line. */
+.dl-chart-tip {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: var(--dl-chart-tip, #2f2f2f);
+  color: var(--dl-fg, #fff);
+  font-size: 12px;
+  line-height: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* What a key press reads out. Off screen, and still read. */
+.dl-chart-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.dl-chart-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  font-size: 12px;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  color: var(--dl-fg-muted, #b8b8b8);
+}
+.dl-chart-key b {
+  font-weight: 600;
+}
+}

@@ -160,3 +160,7 @@ export {
   type SheetDragBlock,
   type SheetSample,
 } from "./sheet-release.js";
+export { Meter, MeterWord, type MeterProps, type MeterWordProps } from "./meter.js";
+export { RowBar, type RowBarProps } from "./row-bar.js";
+export { BarChart, ChartKey, type BarChartProps, type BarSeries, type ChartKeyItem } from "./bar-chart.js";
+export { axisMarks, niceCeil, placeTip, scaleTicks, stackTotals, type TipPlace } from "./chart-scale.js";

@@ -7,4 +7,5 @@ export { SEG_SLIDE_ATTR, placeSegLift, slideSegLift } from "./seg-slide.js";
 export { TIP_DELAY_MS, TIP_GROUP_MS } from "./tip-delay.js";
 export { TAB_SETTLE_CLASS, settleTab } from "./tab-settle.js";
 export { PRESSED_ATTR, PRESS_CLASS, PRESS_WATCH_ATTR, RELEASED_ATTR, pressTarget, watchPress, } from "./press.js";
+export { FILL_FULL, FILL_HIGH, fillLevel, fillPercent, fillWord } from "./fill-level.js";
 //# sourceMappingURL=index.js.map
