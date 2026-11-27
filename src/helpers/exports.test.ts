@@ -93,6 +93,11 @@ describe("@dalin/kit", () => {
     "RELEASED_ATTR",
     "PRESS_WATCH_ATTR",
     "PRESS_CLASS",
+    "fillLevel",
+    "fillWord",
+    "fillPercent",
+    "FILL_HIGH",
+    "FILL_FULL",
   ])("exports %s from its root", (name) => {
     expect((kit as Record<string, unknown>)[name]).toBeDefined();
   });
@@ -161,6 +166,12 @@ describe("@dalin/kit/components", () => {
     "sheetDragBlock",
     "SHEET_DISMISS_PX",
     "resolveSheetDismissDistance",
+    "Meter",
+    "MeterWord",
+    "RowBar",
+    "BarChart",
+    "ChartKey",
+    "niceCeil",
   ])("exports %s", (name) => {
     expect((components as Record<string, unknown>)[name]).toBeDefined();
   });

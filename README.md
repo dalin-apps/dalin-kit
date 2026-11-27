@@ -2,7 +2,7 @@
 
 The parts the four dalin apps share: mail, calendar, notes and drive. Each app hand-built its own sidebar, toasts, menus and tokens, and they drifted. The kit holds what the owner has decided is the same everywhere, so a decision is made once and every app reads it.
 
-Version 0.14 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette and the parts it is built from, the phone header with its search, the segmented control, the filter, the sheet, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.14.1 is listed under "Moving an app from 0.14 to 0.14.1", "Moving an app from 0.13 to 0.14", "Moving an app from 0.12 to 0.13", "Moving an app from 0.11 to 0.12", "Moving an app from 0.10.6 to 0.11", "Moving an app from 0.10.5 to 0.10.6", "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
+Version 0.15 holds the tokens, the page's selection colours, the toast, the create button, the wordmark with its family switcher, frosted menus and popovers, an empty state, the command palette and the parts it is built from, the phone header with its search, the segmented control, the filter, the sheet, the meter, the bar in a row and the bar chart, and the helpers each app had copied. A question that is still open has nothing here. What an app changes to take 0.15 is listed under "Moving an app from 0.14.1 to 0.15", "Moving an app from 0.14 to 0.14.1", "Moving an app from 0.13 to 0.14", "Moving an app from 0.12 to 0.13", "Moving an app from 0.11 to 0.12", "Moving an app from 0.10.6 to 0.11", "Moving an app from 0.10.5 to 0.10.6", "Moving an app from 0.10.4 to 0.10.5", "Moving an app from 0.10.3 to 0.10.4", "Moving an app from 0.10.2 to 0.10.3", "Moving an app from 0.10.1 to 0.10.2", "Moving an app from 0.10 to 0.10.1" and "Moving an app from 0.9 to 0.10", and the steps before it under the sections after that.
 
 ## Install
 
@@ -35,6 +35,7 @@ import "@dalin/kit/phone.css";
 import "@dalin/kit/seg.css";
 import "@dalin/kit/filter.css";
 import "@dalin/kit/sheet.css";
+import "@dalin/kit/data.css";
 ```
 
 Each part has a stylesheet of its own, so an app adds one as it adopts that part. The family switcher, the command palette and the filter also need `menu.css`.
@@ -68,6 +69,22 @@ Before 0.6 a third line set `--dl-focus-ring: var(--dl-accent)`. The kit defines
 The toast and the helpers import from `@dalin/kit`, and every component from `@dalin/kit/components`.
 
 Then delete the app's own copy of whatever the kit now covers. Two copies of a toast rule fight, because both carry `!important`.
+
+## Moving an app from 0.14.1 to 0.15
+
+0.15 adds the three ways the family draws an amount: `<Meter>`, `<RowBar>` and `<BarChart>` from `@dalin/kit/components`, styled by the new `data.css`, with `fillLevel` and its two thresholds among the helpers (see "The meter, the bar in a row and the bar chart" below). The owner picked them on 2026-11-27, after an audit found each app drawing its meters and charts its own way. No part that was already in the kit changed, so an app that adopts none of them changes only its pin.
+
+| The app had | It takes |
+|---|---|
+| Its own meter in a settings row, red from 90% (notes, mail, calendar) | `<Meter share label valueText>`, amber from 80% and red from 95%, with `<MeterWord share>` beside it |
+| A meter in a source's colour (drive's storage card) | `<Meter thin color>`: the tick, and the percent beside it |
+| A meter that must never warn (drive's Previews, calendar's Live updates) | `<Meter warns={false}>` |
+| A split bar over a key of coloured squares or dots (all four) | `<RowBar share color>` in each row that already lists the figure, and the split bar goes |
+| Its own bar chart in Settings (notes, mail, calendar) | `<BarChart series labels summary>`, with `mirror` for mail and `axis="every"` for calendar's week |
+| A key of coloured squares under a chart (mail) | `<ChartKey items>` on the heading's line |
+| Its own `fillLevel` (drive) | `fillLevel`, `fillWord`, `FILL_HIGH` and `FILL_FULL` from `@dalin/kit` |
+
+Three things to check after the swap. A meter needs a `label`, because the old ones had no name a screen reader could say. A row that gains a `<RowBar>` needs room for it: the bar takes about a third of the row on a computer, and on a phone the row's own layout has to move it to a line of its own. And a list that showed something the new part has no slot for keeps it: list what the old surface showed before porting it.
 
 ## Moving an app from 0.14 to 0.14.1
 
@@ -1419,6 +1436,75 @@ The menu holds, in order, an optional `choice` (a radio group under its label), 
 A press on the glyph keeps focus where it was, so the caret stays in the field. A pick of the `choice` keeps the menu open unless the choice says `closes`, and as the menu closes it hands focus back to what had it when it opened (the field, or the glyph when the keyboard opened it), unless something else has taken it since, such as a dialog the pick opened, or `finalFocus` says otherwise (it is `<MenuContent>`'s prop, passed through). The hand-off waits for the menu to leave, however long that takes, and is over once it has: from then on the glyph keeps a focus the reader's own Tab gives it. The kit has no tooltip of its own, so `tooltip` wraps the trigger in the app's. The control is 28px with a 16px glyph on a computer, and 44px with a 20px glyph on a phone. Its menu stands two steps over the command palette, so it opens over the palette from its `filter` slot.
 
 An app must not override the glyph, its filled form, the absence of a box, or the dot's size and place.
+
+## The meter, the bar in a row and the bar chart
+
+The four apps drew amounts three ways, and each app drew each of them differently. The owner looked at all of them on 2026-11-27 and picked one of each. They are in `@dalin/kit/components`, and `data.css` styles them.
+
+### The meter
+
+```tsx
+import { Meter, MeterWord } from "@dalin/kit/components";
+
+<Meter share={used / quota} label="dalin space, used" valueText="620 MB of 1 GB" />
+<MeterWord share={used / quota} />
+```
+
+`share` is a fraction from 0 to 1. The fill is the app's accent, or the `color` it is given, until 80%. From 80% it is amber and from 95% it is red, and `<MeterWord>` says "Nearly full" and then "Full". Before 80% the word renders nothing. The thresholds are `FILL_HIGH` and `FILL_FULL`, and `fillLevel(share)` answers `"ok"`, `"high"` or `"full"` for anything else that has to agree with the meter, such as a ring.
+
+`thin` draws the 4px meter of drive's storage card: a tick at 80%, where amber starts, and the percent beside the track in the fill's colour. `warns={false}` is for a meter where full is the aim. It keeps its colour and draws no tick.
+
+An empty place draws no fill. A place that holds anything draws at least 1%, so the two never look alike. The same rule is in `fillPercent`, which never reads 0 for a place that holds something or 100 for one with room left.
+
+The words and the percent have inks of their own. The fill's red is 3.2:1 as 12px text on a card, so the word "Full" is written in a lighter red that clears 4.5:1.
+
+### The bar in a row
+
+```tsx
+import { RowBar } from "@dalin/kit/components";
+
+<RowBar share={bytes / largest} />
+<RowBar share={hours / most} color={calendarColor} />
+```
+
+A list that compares amounts gives each row one bar, on one scale: `share` is the row's value over the largest row's. The track stays faint behind it, so a sliver reads as a sliver and not as a missing bar. It replaces the split bar over a key of coloured squares, which labelled nothing and had to be decoded.
+
+The bar is decoration for the figure the row already shows, so a screen reader skips it. It goes between the name and the figure, as a flex item about a third of the row wide. On a phone, let the row wrap and give the bar the full width under the name.
+
+### The bar chart
+
+```tsx
+import { BarChart, ChartKey } from "@dalin/kit/components";
+
+<BarChart
+  summary="Mail received and sent over the last 30 days"
+  labels={days}
+  mirror
+  series={[
+    { name: "received", values: received, color: "var(--dl-accent)" },
+    { name: "sent", values: sent, color: "oklch(0.8 0.08 285)" },
+  ]}
+/>
+```
+
+It is built the way drive's Home chart was: it measures its box and draws in real pixels, so its type is 12px at every width. The three charts it replaces stretched a fixed `viewBox`, and calendar's labels came out near 8px on a phone.
+
+| Prop | What it does |
+|---|---|
+| `series` | One or more series. They stack in each bar, the first at the bottom |
+| `labels` | One name per bar, for the axis and the callout |
+| `axis` | `"ends"` names the first bar, the last, and the middle where it fits. `"every"` names each bar that has the room, and thins evenly when they would touch |
+| `mirror` | The first series rises from the zero line and the second hangs under it, each on its own scale |
+| `height` | 180 unless given |
+| `formatValue` | How a figure is written on the scale and in the callout |
+| `describe` | The callout's line for a bar, where the default (`"Nov 12: 41 received, 6 sent"`) is not what the app would say |
+| `summary` | The chart's name for a screen reader |
+
+The scale ends on the first of 2, 5, 10, 20, 50 and so on that holds the tallest bar, with a line at the middle only where that is a whole number. Pointing at a bar, dragging a finger across the bars, or pressing the arrow keys while the chart has focus, names that bar in one line. The callout stands over its bar, or beside a bar that reaches the top. A vertical drag still scrolls the page.
+
+Nothing in the chart moves, so it has no reduced-motion case. Until its box is measured it draws nothing and keeps its height, so nothing under it shifts. `<ChartKey>` writes a chart's series as coloured words with their totals, for the heading's line. Give it colours that read as 12px text.
+
+The chart draws whatever it is given, including a month of zeros. A page with nothing to show should say so in its own words in the chart's place.
 
 ## The sheet
 
