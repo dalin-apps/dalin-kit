@@ -279,6 +279,45 @@ describe("<BarChart>", () => {
     expect(host.querySelector(".dl-chart-tip")?.textContent).toBe("Sun, busy");
   });
 
+  it("lets go of a selection whose bar the new data no longer has", async () => {
+    const three = [{ name: "x", values: [1, 2, 3], color: "c" }];
+    const host = await mount(<BarChart series={three} labels={["a", "b", "c"]} summary="x" width={300} />);
+    const chart = host.querySelector<HTMLElement>(".dl-chart")!;
+    await act(async () => void chart.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true })));
+    expect(host.querySelector(".dl-chart-tip")?.textContent).toBe("c: 3 x");
+    const describe = (i: number) => ["only"][i]!.toUpperCase();
+    await mount(<BarChart series={[{ name: "x", values: [5], color: "c" }]} labels={["a"]} summary="x" width={300} describe={describe} />);
+    expect(host.querySelector(".dl-chart-tip")).toBeNull();
+    expect(host.querySelector(".dl-chart-col")).toBeNull();
+  });
+
+  it("keeps the names at either end of the axis inside the chart", () => {
+    const labels = Array.from({ length: 30 }, () => "Nov 12");
+    const el = render(
+      <BarChart axis="every" width={200} labels={labels} summary="x" series={[{ name: "x", values: labels.map(() => 1), color: "c" }]} />,
+    );
+    const names = [...el.querySelectorAll("text.dl-chart-tick")].filter((t) => t.textContent === "Nov 12");
+    const half = (6 * 7) / 2;
+    for (const t of names) {
+      const x = Number(t.getAttribute("x"));
+      expect(x - half).toBeGreaterThanOrEqual(0);
+      expect(x + half).toBeLessThanOrEqual(200);
+    }
+  });
+
+  it("never draws the callout wider than the chart, and still speaks it whole", async () => {
+    const long = "A very long description of this one bar, longer than the chart";
+    const host = await mount(
+      <BarChart series={[{ name: "x", values: [1, 2], color: "c" }]} labels={["a", "b"]} summary="x" width={300} describe={() => long} />,
+    );
+    const chart = host.querySelector<HTMLElement>(".dl-chart")!;
+    await act(async () => void chart.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    const tip = host.querySelector<HTMLElement>(".dl-chart-tip")!;
+    expect(tip.style.maxWidth).toBe("300px");
+    expect(Number.parseFloat(tip.style.left)).toBeGreaterThanOrEqual(0);
+    expect(host.querySelector(".dl-chart-live")?.textContent).toBe(long);
+  });
+
   it("draws nothing for no bars, and still keeps its place", () => {
     const el = render(<BarChart series={[]} labels={[]} summary="x" width={300} height={120} />);
     expect(el.querySelector("svg")).toBeNull();
@@ -319,6 +358,7 @@ describe("data.css", () => {
   it("draws the chart's type at 12px, never scaled with the box", () => {
     expect(ruleFor(css, ".dl-chart-tick")).toContain("font-size: 12px");
     expect(ruleFor(css, ".dl-chart-tip")).toContain("white-space: nowrap");
+    expect(ruleFor(css, ".dl-chart-tip")).toContain("text-overflow: ellipsis");
   });
 
   it("lets a vertical drag on the chart scroll the page", () => {

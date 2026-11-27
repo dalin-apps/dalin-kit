@@ -86,6 +86,8 @@ export function BarChart({ series, labels, axis = "ends", height = 180, mirror =
     const [at, setAt] = useState(null);
     const [spoken, setSpoken] = useState("");
     const n = labels.length;
+    // The data can shrink under a selection: a bar that is gone is not read.
+    const sel = at !== null && at < n ? at : null;
     const say = (i) => describe?.(i) ?? `${labels[i]}: ${series.map((s) => `${formatValue(s.values[i] ?? 0)} ${s.name}`).join(", ")}`;
     const ready = width > 0 && n > 0;
     const g = ready ? layout({ series, labels, mirror, formatValue }, width, height) : null;
@@ -105,24 +107,30 @@ export function BarChart({ series, labels, axis = "ends", height = 180, mirror =
         if (step === 0 || n === 0)
             return;
         e.preventDefault();
-        const next = Math.max(0, Math.min(n - 1, (at ?? (step > 0 ? -1 : n)) + step));
+        const next = Math.max(0, Math.min(n - 1, (sel ?? (step > 0 ? -1 : n)) + step));
         setAt(next);
         setSpoken(say(next));
     };
     const bw = g ? Math.max(1, g.slot * 0.7) : 0;
     const rx = Math.min(2.5, bw / 2);
-    const text = at !== null && g ? say(at) : "";
-    const tipW = text.length * TICK_CH + 16;
-    const tip = at !== null && g ? placeTip(g.x(at), g.tops[at] ?? g.zero, g.slot, { w: tipW, h: TIP_H }, { left: 0, right: width }) : null;
+    const text = sel !== null && g ? say(sel) : "";
+    // The callout is never wider than the chart. A longer line is cut on
+    // screen, and a key press still speaks it whole.
+    const tipW = Math.min(text.length * TICK_CH + 16, width);
+    const tip = sel !== null && g ? placeTip(g.x(sel), g.tops[sel] ?? g.zero, g.slot, { w: tipW, h: TIP_H }, { left: 0, right: width }) : null;
     return (_jsxs("div", { ref: box, "data-slot": "bar-chart", className: cx("dl-chart", className), style: { height }, role: "group", "aria-label": `${summary}. Arrow keys read each bar.`, tabIndex: 0, onKeyDown: key, onBlur: () => {
             setAt(null);
             setSpoken("");
-        }, children: [g ? (_jsxs("svg", { className: "dl-chart-svg", width: width, height: height, viewBox: `0 0 ${width} ${height}`, "aria-hidden": "true", onPointerDown: point, onPointerMove: point, onPointerLeave: leave, onPointerCancel: leave, children: [g.ticks.map((t, i) => (_jsxs("g", { children: [_jsx("line", { x1: g.left, x2: g.right, y1: t.at, y2: t.at, className: t.at === g.zero ? "dl-chart-zero" : "dl-chart-grid" }), _jsx("text", { x: g.left - 8, y: t.at, className: "dl-chart-tick", textAnchor: "end", dominantBaseline: "central", children: t.text })] }, i))), at !== null ? (_jsx("rect", { className: "dl-chart-col", x: g.x(at) - g.slot / 2, y: PAD.top, width: g.slot, height: height - PAD.top - PAD.bottom })) : null, labels.map((_, i) => (mirror ? mirrored(series, i, g, bw, rx) : stacked(series, i, g, bw, rx))), axisMarks(axis, labels, g.slot, g.right - g.left).map((i, j, all) => {
+        }, children: [g ? (_jsxs("svg", { className: "dl-chart-svg", width: width, height: height, viewBox: `0 0 ${width} ${height}`, "aria-hidden": "true", onPointerDown: point, onPointerMove: point, onPointerLeave: leave, onPointerCancel: leave, children: [g.ticks.map((t, i) => (_jsxs("g", { children: [_jsx("line", { x1: g.left, x2: g.right, y1: t.at, y2: t.at, className: t.at === g.zero ? "dl-chart-zero" : "dl-chart-grid" }), _jsx("text", { x: g.left - 8, y: t.at, className: "dl-chart-tick", textAnchor: "end", dominantBaseline: "central", children: t.text })] }, i))), sel !== null ? (_jsx("rect", { className: "dl-chart-col", x: g.x(sel) - g.slot / 2, y: PAD.top, width: g.slot, height: height - PAD.top - PAD.bottom })) : null, labels.map((_, i) => (mirror ? mirrored(series, i, g, bw, rx) : stacked(series, i, g, bw, rx))), axisMarks(axis, labels, g.slot, g.right - g.left).map((i, j, all) => {
                         const ends = axis === "ends" && all.length > 1;
                         const first = ends && j === 0;
                         const last = ends && j === all.length - 1;
-                        return (_jsx("text", { className: "dl-chart-tick", x: first ? g.left : last ? g.right : g.x(i), y: height - 5, textAnchor: first ? "start" : last ? "end" : "middle", children: labels[i] }, i));
-                    })] })) : null, tip ? (_jsx("span", { className: "dl-chart-tip", style: { left: tip.left, top: tip.top }, "aria-hidden": "true", children: text })) : null, _jsx("span", { className: "dl-chart-live", "aria-live": "polite", children: spoken })] }));
+                        // A name centred under its bar is held inside the chart, so the
+                        // first and last never run past the card's edge.
+                        const half = ((labels[i] ?? "").length * TICK_CH) / 2;
+                        const centred = Math.min(Math.max(g.x(i), half), width - half);
+                        return (_jsx("text", { className: "dl-chart-tick", x: first ? g.left : last ? g.right : centred, y: height - 5, textAnchor: first ? "start" : last ? "end" : "middle", children: labels[i] }, i));
+                    })] })) : null, tip ? (_jsx("span", { className: "dl-chart-tip", style: { left: tip.left, top: tip.top, maxWidth: width }, "aria-hidden": "true", children: text })) : null, _jsx("span", { className: "dl-chart-live", "aria-live": "polite", children: spoken })] }));
 }
 /** One bar's series, stacked from the zero line up, a hair apart. */
 function stacked(series, i, g, bw, rx) {

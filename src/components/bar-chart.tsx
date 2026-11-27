@@ -146,6 +146,8 @@ export function BarChart({
   const [at, setAt] = useState<number | null>(null);
   const [spoken, setSpoken] = useState("");
   const n = labels.length;
+  // The data can shrink under a selection: a bar that is gone is not read.
+  const sel = at !== null && at < n ? at : null;
   const say = (i: number) =>
     describe?.(i) ?? `${labels[i]}: ${series.map((s) => `${formatValue(s.values[i] ?? 0)} ${s.name}`).join(", ")}`;
 
@@ -166,17 +168,19 @@ export function BarChart({
     const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
     if (step === 0 || n === 0) return;
     e.preventDefault();
-    const next = Math.max(0, Math.min(n - 1, (at ?? (step > 0 ? -1 : n)) + step));
+    const next = Math.max(0, Math.min(n - 1, (sel ?? (step > 0 ? -1 : n)) + step));
     setAt(next);
     setSpoken(say(next));
   };
 
   const bw = g ? Math.max(1, g.slot * 0.7) : 0;
   const rx = Math.min(2.5, bw / 2);
-  const text = at !== null && g ? say(at) : "";
-  const tipW = text.length * TICK_CH + 16;
+  const text = sel !== null && g ? say(sel) : "";
+  // The callout is never wider than the chart. A longer line is cut on
+  // screen, and a key press still speaks it whole.
+  const tipW = Math.min(text.length * TICK_CH + 16, width);
   const tip =
-    at !== null && g ? placeTip(g.x(at), g.tops[at] ?? g.zero, g.slot, { w: tipW, h: TIP_H }, { left: 0, right: width }) : null;
+    sel !== null && g ? placeTip(g.x(sel), g.tops[sel] ?? g.zero, g.slot, { w: tipW, h: TIP_H }, { left: 0, right: width }) : null;
 
   return (
     <div
@@ -213,19 +217,23 @@ export function BarChart({
               </text>
             </g>
           ))}
-          {at !== null ? (
-            <rect className="dl-chart-col" x={g.x(at) - g.slot / 2} y={PAD.top} width={g.slot} height={height - PAD.top - PAD.bottom} />
+          {sel !== null ? (
+            <rect className="dl-chart-col" x={g.x(sel) - g.slot / 2} y={PAD.top} width={g.slot} height={height - PAD.top - PAD.bottom} />
           ) : null}
           {labels.map((_, i) => (mirror ? mirrored(series, i, g, bw, rx) : stacked(series, i, g, bw, rx)))}
           {axisMarks(axis, labels, g.slot, g.right - g.left).map((i, j, all) => {
             const ends = axis === "ends" && all.length > 1;
             const first = ends && j === 0;
             const last = ends && j === all.length - 1;
+            // A name centred under its bar is held inside the chart, so the
+            // first and last never run past the card's edge.
+            const half = ((labels[i] ?? "").length * TICK_CH) / 2;
+            const centred = Math.min(Math.max(g.x(i), half), width - half);
             return (
               <text
                 key={i}
                 className="dl-chart-tick"
-                x={first ? g.left : last ? g.right : g.x(i)}
+                x={first ? g.left : last ? g.right : centred}
                 y={height - 5}
                 textAnchor={first ? "start" : last ? "end" : "middle"}
               >
@@ -236,7 +244,7 @@ export function BarChart({
         </svg>
       ) : null}
       {tip ? (
-        <span className="dl-chart-tip" style={{ left: tip.left, top: tip.top }} aria-hidden="true">
+        <span className="dl-chart-tip" style={{ left: tip.left, top: tip.top, maxWidth: width }} aria-hidden="true">
           {text}
         </span>
       ) : null}
